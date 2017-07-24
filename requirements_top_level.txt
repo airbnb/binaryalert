@@ -1,0 +1,5 @@
+boto3
+pyfakefs
+pyhcl
+pylint
+yara-python==3.6.3

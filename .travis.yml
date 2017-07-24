@@ -1,0 +1,6 @@
+language: python
+python: "3.6"
+install: "pip3 install -r requirements.txt"
+script:
+  - "python3 manage.py test"
+  - "find . -name '*.py' -exec pylint '{}' +"
