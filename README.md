@@ -1,4 +1,4 @@
-# BinaryAlert: Real-Time Serverless Malware Detection
+# BinaryAlert: Serverless, Real-time & Retroactive Malware Detection
 ![BinaryAlert Logo](img/logo.png)
 
 BinaryAlert is an open-source serverless AWS pipeline where any file uploaded to an S3 bucket is
@@ -105,3 +105,8 @@ pip3 freeze > requirements.txt
   * [`rules`](rules): Collection of public and private YARA rules.
   * [`terraform`](terraform): AWS infrastructure represented as Terraform configuration files.
   * [`tests`](tests): Unit tests amd mocks.
+
+## Links
+* [Announcement Post](https://medium.com/airbnb-engineering/binaryalert-real-time-serverless-malware-detection-ca44370c1b90)
+* [Twitter](https://twitter.com/binaryalert_io) (unofficial)
+* [Slack](https://binaryalert.herokuapp.com/) (unofficial)
