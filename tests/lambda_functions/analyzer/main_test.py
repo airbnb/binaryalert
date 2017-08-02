@@ -118,26 +118,28 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 },
 
                 'MatchedRule':
-                    {
-                        'MatchedStrings': ['$evil_string'],
-                        'Meta': {
-                            'author': 'Austin Byers',
-                            'description': ('A helpful description about why this rule matches '
-                                            'dastardly evil files.')
-                        },
-                        'RuleFile': 'evil_check.yar',
-                        'RuleName': 'contains_evil',
-                        'RuleTags': ['mock_rule', 'has_meta']
+                {
+                    'MatchedStrings': ['$evil_string'],
+                    'Meta': {
+                        'author': 'Austin Byers',
+                        'description': ('A helpful description about why this rule matches '
+                                        'dastardly evil files.')
                     },
-                    {
-                        'MatchedStrings': [],
-                        'Meta': {},
-                        'RuleFile': 'externals.yar',
-                        'RuleName': 'extension_is_exe',
-                        'RuleTags': ['mock_rule']
-                    }
+                    'RuleFile': 'evil_check.yar',
+                    'RuleName': 'contains_evil',
+                    'RuleTags': ['mock_rule', 'has_meta']
+                },
+                {
+                    'MatchedStrings': [],
+                    'Meta': {},
+                    'RuleFile': 'externals.yar',
+                    'RuleName': 'extension_is_exe',
+                    'RuleTags': ['mock_rule']
+                }
             }
         }
+
+
         self.assertEqual(expected, result)
 
         # Verify that the return value can be encoded as JSON.
