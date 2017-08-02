@@ -116,7 +116,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'S3Location': s3_id,
                     'SamplePath': MOCK_FILE_METADATA['observed_path']
                 },
-                'MatchedRules': [
+
+                'MatchedRule':
                     {
                         'MatchedStrings': ['$evil_string'],
                         'Meta': {
@@ -135,7 +136,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
                         'RuleName': 'extension_is_exe',
                         'RuleTags': ['mock_rule']
                     }
-                ]
             }
         }
         self.assertEqual(expected, result)
