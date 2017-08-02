@@ -116,28 +116,28 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'S3Location': s3_id,
                     'SamplePath': MOCK_FILE_METADATA['observed_path']
                 },
-                'MatchedRules': [
-                    {
-                        'MatchedStrings': ['$evil_string'],
-                        'Meta': {
-                            'author': 'Austin Byers',
-                            'description': ('A helpful description about why this rule matches '
-                                            'dastardly evil files.')
-                        },
-                        'RuleFile': 'evil_check.yar',
-                        'RuleName': 'contains_evil',
-                        'RuleTags': ['mock_rule', 'has_meta']
+                'NumMatchedRules': 2,
+                'MatchedRule1': {
+                    'MatchedStrings': ['$evil_string'],
+                    'Meta': {
+                        'author': 'Austin Byers',
+                        'description': ('A helpful description about why this rule matches '
+                                        'dastardly evil files.')
                     },
-                    {
-                        'MatchedStrings': [],
-                        'Meta': {},
-                        'RuleFile': 'externals.yar',
-                        'RuleName': 'extension_is_exe',
-                        'RuleTags': ['mock_rule']
-                    }
-                ]
+                    'RuleFile': 'evil_check.yar',
+                    'RuleName': 'contains_evil',
+                    'RuleTags': ['mock_rule', 'has_meta']
+                },
+                'MatchedRule2': {
+                    'MatchedStrings': [],
+                    'Meta': {},
+                    'RuleFile': 'externals.yar',
+                    'RuleName': 'extension_is_exe',
+                    'RuleTags': ['mock_rule']
+                }
             }
         }
+
         self.assertEqual(expected, result)
 
         # Verify that the return value can be encoded as JSON.
@@ -185,19 +185,18 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'S3Location': 'S3:{}:KEY2'.format(MOCK_S3_BUCKET_NAME),
                     'SamplePath': ''
                 },
-                'MatchedRules': [
-                    {
-                        'MatchedStrings': ['$evil_string'],
-                        'Meta': {
-                            'author': 'Austin Byers',
-                            'description': ('A helpful description about why this rule matches '
-                                            'dastardly evil files.')
-                        },
-                        'RuleFile': 'evil_check.yar',
-                        'RuleName': 'contains_evil',
-                        'RuleTags': ['mock_rule', 'has_meta']
-                    }
-                ]
+                'NumMatchedRules': 1,
+                'MatchedRule1': {
+                    'MatchedStrings': ['$evil_string'],
+                    'Meta': {
+                        'author': 'Austin Byers',
+                        'description': ('A helpful description about why this rule matches '
+                                        'dastardly evil files.')
+                    },
+                    'RuleFile': 'evil_check.yar',
+                    'RuleName': 'contains_evil',
+                    'RuleTags': ['mock_rule', 'has_meta']
+                }
             },
             'S3:{}:KEY3'.format(MOCK_S3_BUCKET_NAME): {
                 'FileInfo': {
@@ -207,15 +206,14 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'S3Location': 'S3:{}:KEY3'.format(MOCK_S3_BUCKET_NAME),
                     'SamplePath': 'win32'
                 },
-                'MatchedRules': [
-                    {
-                        'MatchedStrings': [],
-                        'Meta': {},
-                        'RuleFile': 'externals.yar',
-                        'RuleName': 'filename_contains_win32',
-                        'RuleTags': ['mock_rule']
-                    }
-                ]
+                'NumMatchedRules': 1,
+                'MatchedRule1': {
+                    'MatchedStrings': [],
+                    'Meta': {},
+                    'RuleFile': 'externals.yar',
+                    'RuleName': 'filename_contains_win32',
+                    'RuleTags': ['mock_rule']
+                }
             }
         }
         self.assertEqual(expected, result)

@@ -97,7 +97,7 @@ class BinaryInfo(object):
 
     def summary(self):
         """Generate a summary dictionary of binary attributes."""
-        return {
+        result = {
             'FileInfo': {
                 'ComputedMD5': self.computed_md5,
                 'ComputedSHA256': self.computed_sha,
@@ -105,15 +105,16 @@ class BinaryInfo(object):
                 'S3Location': self.s3_identifier,
                 'SamplePath': self.observed_path
             },
-            'MatchedRules': [
-                {
-                    # YARA string IDs, e.g. "$string1"
-                    'MatchedStrings': list(sorted(set(t[1] for t in match.strings))),
-                    'Meta': match.meta,
-                    'RuleFile': match.namespace,
-                    'RuleName': match.rule,
-                    'RuleTags': match.tags
-                }
-                for match in self.yara_matches
-            ]
+            'NumMatchedRules': len(self.yara_matches)
         }
+
+        for index, match in enumerate(self.yara_matches, start=1):
+            result['MatchedRule{}'.format(index)] = {
+                # YARA string IDs, e.g. "$string1"
+                'MatchedStrings': list(sorted(set(t[1] for t in match.strings))),
+                'Meta': match.meta,
+                'RuleFile': match.namespace,
+                'RuleName': match.rule,
+                'RuleTags': match.tags
+            }
+        return result
