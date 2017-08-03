@@ -1,4 +1,5 @@
 boto3
+moto
 pyfakefs
 pyhcl
 pylint

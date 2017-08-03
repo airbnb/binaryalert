@@ -160,6 +160,11 @@ class S3BucketEnumerator(object):
         else:
             response = S3_CLIENT.list_objects_v2(Bucket=self.bucket_name)
 
+        if 'Contents' not in response:
+            LOGGER.info('The S3 bucket is empty; nothing to do')
+            self.finished = True
+            return []
+
         self.continuation_token = response.get('NextContinuationToken')
         if not response['IsTruncated']:
             self.finished = True
