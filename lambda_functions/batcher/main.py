@@ -97,8 +97,7 @@ class SQSBatcher(object):
         failures = response.get('Failed', [])
         if failures:
             for failure in failures:
-                LOGGER.error('Unable to enqueue S3 key %s: %s',
-                             self._messages[int(failure['Id'])], failure['Message'])
+                LOGGER.error('Unable to enqueue SQS message: %s', failure)
             boto3.client('cloudwatch').put_metric_data(Namespace='BinaryAlert', MetricData=[{
                 'MetricName': 'BatchEnqueueFailures',
                 'Value': len(failures),

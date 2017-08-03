@@ -9,6 +9,24 @@ import moto
 from tests import boto3_mocks
 
 
+class MockSQSErrorsClient(object):
+    """An SQS client which returns an error for each submitted message."""
+
+    def send_message_batch(self, **kwargs):  # pylint: disable=no-self-use
+        """Return an error for each submitted message."""
+        return {
+            'Failed': [
+                {
+                    'Id': msg['Id'],
+                    'SenderFault': False,
+                    'Code': 123,
+                    'Message': 'Test failure message'
+                }
+                for msg in kwargs['Entries']
+            ]
+        }
+
+
 class MainTest(unittest.TestCase):
     """Test the batcher enqueuing everything from S3 into SQS."""
 
@@ -24,8 +42,9 @@ class MainTest(unittest.TestCase):
         for mock in self._mocks:
             mock.start()
 
+        # Import batch lambda handler _after_ the mocks have been initialized.
         from lambda_functions.batcher import main
-        self.handler = main.batch_lambda_handler
+        self.batcher_main = main
 
         self._bucket = boto3.resource('s3').Bucket(os.environ['S3_BUCKET_NAME'])
         self._bucket.create()
@@ -45,7 +64,7 @@ class MainTest(unittest.TestCase):
 
     def test_batcher_empty_bucket(self):
         """Batcher does nothing for an empty bucket."""
-        result = self.handler({}, boto3_mocks.MockLambdaContext())
+        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(0, result)
         self.assertEqual([], self._sqs_messages())
 
@@ -53,7 +72,7 @@ class MainTest(unittest.TestCase):
         """Batcher enqueues a single S3 object."""
         self._bucket.put_object(Body=b'Object 1', Key='key1')
 
-        result = self.handler({}, boto3_mocks.MockLambdaContext())
+        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(1, result)
 
         expected_sqs_msg = {'Records': [{'s3': {'object': {'key': 'key1'}}}]}
@@ -64,7 +83,7 @@ class MainTest(unittest.TestCase):
         self._bucket.put_object(Body=b'Object 1', Key='key1')
         self._bucket.put_object(Body=b'Object 2', Key='key2')
 
-        result = self.handler({}, boto3_mocks.MockLambdaContext())
+        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(2, result)
 
         expected_sqs_msg = {'Records': [{'s3': {'object': {'key': 'key1'}}},
@@ -77,7 +96,7 @@ class MainTest(unittest.TestCase):
         self._bucket.put_object(Body=b'Object 2', Key='key2')
         self._bucket.put_object(Body=b'Object 3', Key='key3')
 
-        result = self.handler({}, boto3_mocks.MockLambdaContext())
+        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(3, result)
 
         expected_sqs_msgs = [
@@ -86,6 +105,16 @@ class MainTest(unittest.TestCase):
             {'Records': [{'s3': {'object': {'key': 'key3'}}}]}
         ]
         self.assertEqual(expected_sqs_msgs, self._sqs_messages())
+
+    def test_batcher_sqs_errors(self):
+        """Verify SQS errors are logged and reported to CloudWatch."""
+        self.batcher_main.SQS_CLIENT = MockSQSErrorsClient()
+        self._bucket.put_object(Body=b'Object 1', Key='key1')
+        self._bucket.put_object(Body=b'Object 2', Key='key2')
+        self._bucket.put_object(Body=b'Object 3', Key='key3')
+
+        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+        self.assertEqual(3, result)
 
 
 if __name__ == '__main__':
