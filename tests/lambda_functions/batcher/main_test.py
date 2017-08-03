@@ -6,7 +6,6 @@ import unittest
 import boto3
 import moto
 
-from lambda_functions.batcher import main
 from tests import boto3_mocks
 
 
@@ -24,6 +23,9 @@ class MainTest(unittest.TestCase):
         self._mocks = [moto.mock_cloudwatch(), moto.mock_lambda(), moto.mock_s3(), moto.mock_sqs()]
         for mock in self._mocks:
             mock.start()
+
+        from lambda_functions.batcher import main
+        self.handler = main.batch_lambda_handler
 
         self._bucket = boto3.resource('s3').Bucket(os.environ['S3_BUCKET_NAME'])
         self._bucket.create()
@@ -43,7 +45,7 @@ class MainTest(unittest.TestCase):
 
     def test_batcher_empty_bucket(self):
         """Batcher does nothing for an empty bucket."""
-        result = main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+        result = self.handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(0, result)
         self.assertEqual([], self._sqs_messages())
 
@@ -51,7 +53,7 @@ class MainTest(unittest.TestCase):
         """Batcher enqueues a single S3 object."""
         self._bucket.put_object(Body=b'Object 1', Key='key1')
 
-        result = main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+        result = self.handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(1, result)
 
         expected_sqs_msg = {'Records': [{'s3': {'object': {'key': 'key1'}}}]}
@@ -62,7 +64,7 @@ class MainTest(unittest.TestCase):
         self._bucket.put_object(Body=b'Object 1', Key='key1')
         self._bucket.put_object(Body=b'Object 2', Key='key2')
 
-        result = main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+        result = self.handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(2, result)
 
         expected_sqs_msg = {'Records': [{'s3': {'object': {'key': 'key1'}}},
@@ -75,7 +77,7 @@ class MainTest(unittest.TestCase):
         self._bucket.put_object(Body=b'Object 2', Key='key2')
         self._bucket.put_object(Body=b'Object 3', Key='key3')
 
-        result = main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+        result = self.handler({}, boto3_mocks.MockLambdaContext())
         self.assertEqual(3, result)
 
         expected_sqs_msgs = [
