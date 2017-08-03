@@ -97,8 +97,7 @@ class SQSBatcher(object):
         failures = response.get('Failed', [])
         if failures:
             for failure in failures:
-                LOGGER.error('Unable to enqueue S3 key %s: %s',
-                             self._messages[int(failure['Id'])], failure['Message'])
+                LOGGER.error('Unable to enqueue SQS message: %s', failure)
             boto3.client('cloudwatch').put_metric_data(Namespace='BinaryAlert', MetricData=[{
                 'MetricName': 'BatchEnqueueFailures',
                 'Value': len(failures),
@@ -159,6 +158,11 @@ class S3BucketEnumerator(object):
                 Bucket=self.bucket_name, ContinuationToken=self.continuation_token)
         else:
             response = S3_CLIENT.list_objects_v2(Bucket=self.bucket_name)
+
+        if 'Contents' not in response:
+            LOGGER.info('The S3 bucket is empty; nothing to do')
+            self.finished = True
+            return []
 
         self.continuation_token = response.get('NextContinuationToken')
         if not response['IsTruncated']:
