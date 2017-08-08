@@ -90,7 +90,7 @@ information about adding and updating YARA rules.
 
 ## Updating Pip Packages
 The exact `pip3` package versions used are frozen in
-[`requirements.txt`](requirements_top_level.txt). However, to make upgrading packages easier,
+[`requirements.txt`](requirements.txt). However, to make upgrading packages easier,
 [`requirements_top_level.txt`](requirements_top_level.txt) contains only the top-level packages
 required by BinaryAlert. To upgrade the package requirements,
 

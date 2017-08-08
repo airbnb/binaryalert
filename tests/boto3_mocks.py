@@ -5,6 +5,20 @@
 import collections
 import io
 
+from botocore.vendored.requests.adapters import HTTPAdapter
+
+
+def restore_http_adapter(func):
+    """Decorator to manually restore the botocore adapter which moto does not always restore."""
+    # Due to https://github.com/spulec/moto/issues/1026, mocks are not always properly stopped.
+    # This manually restores the mocked out HTTPAdapter library.
+
+    def func_wrapper():
+        real_adapter_send = HTTPAdapter.send
+        func()
+        HTTPAdapter.send = real_adapter_send
+    return func_wrapper
+
 
 class MockLambdaContext(object):
     """http://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html"""
