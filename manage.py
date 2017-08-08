@@ -47,7 +47,7 @@ class Manager(object):
 
     @property
     def help(self):
-        """Return help string about each available command (built from docstrings)."""
+        """Return method docstring for each available command."""
         return '\n'.join(
             '{:<15}{}'.format(command, inspect.getdoc(getattr(self, command)))
             for command in sorted(self.commands)

@@ -12,13 +12,13 @@ LAMBDA_DIR = os.path.dirname(os.path.realpath(__file__))
 
 ANALYZE_SOURCE = os.path.join(LAMBDA_DIR, 'analyzer')
 ANALYZE_DEPENDENCIES = os.path.join(ANALYZE_SOURCE, 'yara_python_3.6.3.zip')
-ANALYZE_ZIPFILE = 'lambda_analyzer'  # ".zip" will be added later
+ANALYZE_ZIPFILE = 'lambda_analyzer'
 
 BATCH_SOURCE = os.path.join(LAMBDA_DIR, 'batcher', 'main.py')
-BATCH_ZIPFILE = 'lambda_batcher.zip'
+BATCH_ZIPFILE = 'lambda_batcher'
 
 DISPATCH_SOURCE = os.path.join(LAMBDA_DIR, 'dispatcher', 'main.py')
-DISPATCH_ZIPFILE = 'lambda_dispatcher.zip'
+DISPATCH_ZIPFILE = 'lambda_dispatcher'
 
 
 def _build_analyzer(target_directory):
@@ -48,14 +48,14 @@ def _build_analyzer(target_directory):
 def _build_batcher(target_directory):
     """Build the batcher Lambda deployment package."""
     print('Creating batcher deploy package...')
-    with zipfile.ZipFile(os.path.join(target_directory, BATCH_ZIPFILE), 'w') as pkg:
+    with zipfile.ZipFile(os.path.join(target_directory, BATCH_ZIPFILE + '.zip'), 'w') as pkg:
         pkg.write(BATCH_SOURCE, os.path.basename(BATCH_SOURCE))
 
 
 def _build_dispatcher(target_directory):
     """Build the dispatcher Lambda deployment package."""
     print('Creating dispatcher deploy package...')
-    with zipfile.ZipFile(os.path.join(target_directory, DISPATCH_ZIPFILE), 'w') as pkg:
+    with zipfile.ZipFile(os.path.join(target_directory, DISPATCH_ZIPFILE + '.zip'), 'w') as pkg:
         pkg.write(DISPATCH_SOURCE, os.path.basename(DISPATCH_SOURCE))
 
 
