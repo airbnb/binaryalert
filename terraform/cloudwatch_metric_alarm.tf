@@ -113,7 +113,7 @@ Read or write requests to the DynamoDB table are being throttled.
 EOF
 
   namespace   = "AWS/DynamoDB"
-  metric_name = "ReadThrottleEvents"
+  metric_name = "ThrottledRequests"
   statistic   = "Sum"
 
   dimensions = {

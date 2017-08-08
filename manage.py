@@ -16,6 +16,7 @@ import hcl
 from lambda_functions.analyzer.main import COMPILED_RULES_FILENAME
 from rules.compile_rules import compile_rules
 from rules.update_rules import update_github_rules
+from tests import boto3_mocks
 
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))  # Directory containing this file.
 TERRAFORM_DIR = os.path.join(PROJECT_DIR, 'terraform')
@@ -58,6 +59,7 @@ def deploy():
     analyze_all()
 
 
+@boto3_mocks.restore_http_adapter
 def test():
     """Run all *_test.py unittests and exit 1 if tests failed."""
     suite = unittest.TestLoader().discover(PROJECT_DIR, pattern='*_test.py')
