@@ -9,11 +9,12 @@ from botocore.vendored.requests.adapters import HTTPAdapter
 
 
 def restore_http_adapter(func):
-    """Decorator to manually restore the botocore adapter which moto does not always restore."""
+    """Decorator to manually restore the botocore adapter in cases where moto does not."""
     # Due to https://github.com/spulec/moto/issues/1026, mocks are not always properly stopped.
     # This manually restores the mocked out HTTPAdapter library.
 
     def func_wrapper():
+        """Remember HTTPAdapter.send before invoking the wrapped function."""
         real_adapter_send = HTTPAdapter.send
         func()
         HTTPAdapter.send = real_adapter_send
