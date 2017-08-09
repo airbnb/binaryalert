@@ -18,6 +18,7 @@ def restore_http_adapter(func):
         real_adapter_send = HTTPAdapter.send
         func()
         HTTPAdapter.send = real_adapter_send
+    func_wrapper.__doc__ = func.__doc__  # Replace docstring of inner function with the original.
     return func_wrapper
 
 
