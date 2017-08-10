@@ -6,7 +6,9 @@ certifi==2017.7.27.1
 chardet==3.0.4
 cookies==2.2.1
 coverage==4.4.1
+coveralls==1.1
 dicttoxml==1.7.4
+docopt==0.6.2
 docutils==0.14
 idna==2.5
 isort==4.2.15
