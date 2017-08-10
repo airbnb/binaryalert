@@ -1,12 +1,13 @@
 astroid==1.5.3
 boto==2.48.0
 boto3==1.4.5
-botocore==1.5.92
+botocore==1.5.95
 certifi==2017.7.27.1
 chardet==3.0.4
 cookies==2.2.1
+coverage==4.4.1
 dicttoxml==1.7.4
-docutils==0.13.1
+docutils==0.14
 idna==2.5
 isort==4.2.15
 Jinja2==2.9.6

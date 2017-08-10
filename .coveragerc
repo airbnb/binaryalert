@@ -1,0 +1,6 @@
+[run]
+source=.
+omit=venv/*
+
+[report]
+fail_under=85
