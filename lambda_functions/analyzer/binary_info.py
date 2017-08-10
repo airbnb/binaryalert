@@ -105,11 +105,12 @@ class BinaryInfo(object):
                 'S3Location': self.s3_identifier,
                 'SamplePath': self.observed_path
             },
-            'NumMatchedRules': len(self.yara_matches)
+            'NumMatchedRules': len(self.yara_matches),
+            'MatchedRules': {}
         }
 
         for index, match in enumerate(self.yara_matches, start=1):
-            result['MatchedRule{}'.format(index)] = {
+            result['MatchedRules']['Rule{}'.format(index)] = {
                 # YARA string IDs, e.g. "$string1"
                 'MatchedStrings': list(sorted(set(t[1] for t in match.strings))),
                 'Meta': match.meta,
