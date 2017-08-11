@@ -116,7 +116,7 @@ class Manager(object):
         test_filename = 'eicar_test_{}.txt'.format(uuid.uuid4())
         s3_identifier = 'S3:{}:{}'.format(bucket_name, test_filename)
 
-        print('Uploading {}...'.format(s3_identifier))
+        print('Uploading EICAR test file {}...'.format(s3_identifier))
         bucket = boto3.resource('s3').Bucket(bucket_name)
         bucket.put_object(
             Body=EICAR_STRING.encode('UTF-8'),
@@ -124,8 +124,8 @@ class Manager(object):
             Metadata={'observed_path': test_filename}
         )
 
-        print('File uploaded! Waiting for new Dynamo entry to appear...')
         table_name = '{}_binaryalert_matches'.format(self._config['name_prefix'])
+        print('EICAR test file uploaded! Connecting to table DynamoDB:{}'.format(table_name))
         table = boto3.resource('dynamodb').Table(table_name)
         eicar_sha256 = hashlib.sha256(EICAR_STRING.encode('UTF-8')).hexdigest()
         dynamo_record_found = False
@@ -133,7 +133,8 @@ class Manager(object):
 
         for attempt in range(1, 11):
             time.sleep(5)
-            print('\t[{}/10] Scanning DynamoDB:{}...'.format(attempt, table_name))
+            print('\t[{}/10] Querying DynamoDB table for the expected YARA match entry...'.format(
+                attempt))
             items = table.query(
                 Select='ALL_ATTRIBUTES',
                 Limit=1,
@@ -143,24 +144,24 @@ class Manager(object):
                 FilterExpression=Attr('S3Objects').contains(s3_identifier)
             ).get('Items')
             if items:
-                print('\tSUCCESS: Dynamo entry found!\n')
+                print('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n')
                 dynamo_record_found = True
                 lambda_version = items[0]['LambdaVersion']
                 pprint.pprint(items[0])
                 break
             elif attempt == 10:
-                print('\nFAIL: Entry not found')
+                print('\nFAIL: Expected DynamoDB entry for the EICAR file was *not* found!\n')
 
         print('\nRemoving EICAR test file from S3...')
         bucket.delete_objects(Delete={'Objects': [{'Key': test_filename}]})
 
-        print('Removing Dynamo EICAR entry...')
+        print('Removing DynamoDB EICAR entry...')
         table.delete_item(Key={'SHA256': eicar_sha256, 'LambdaVersion': lambda_version})
 
         if dynamo_record_found:
             print('\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).')
         else:
-            sys.exit('\nLive test failed!')
+            sys.exit('\nLive test failed!')  # TODO: Link to troubleshooting documentation
 
     @staticmethod
     def update_rules():
