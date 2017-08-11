@@ -1,19 +1,11 @@
-import "pe"
+include "../../MachO.yara"
 
-private rule MachO
-{
-    meta:
-        description = "Mach-O binaries"
-    condition:
-        uint32(0) == 0xfeedface or uint32(0) == 0xcefaedfe or uint32(0) == 0xfeedfacf or uint32(0) == 0xcffaedfe or uint32(0) == 0xcafebabe or uint32(0) == 0xbebafeca
-}
-
-rule tool_macpmem
+rule hacktool_macos_macpmem
 {
     meta:
         description = "MacPmem enables read/write access to physical memory on macOS. Can be used by CSIRT teams and attackers."
         reference = "https://github.com/google/rekall/tree/master/tools/osx/MacPmem"
-        author = "Airbnb CSIRT"
+        author = "@mimeframe"
     strings:
         // osxpmem
         $a1 = "%s/MacPmem.kext" wide ascii
