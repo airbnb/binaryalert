@@ -125,11 +125,10 @@ class Manager(object):
         )
 
         table_name = '{}_binaryalert_matches'.format(self._config['name_prefix'])
-        print('EICAR test file uploaded! Connecting to table DynamoDB:{}'.format(table_name))
+        print('EICAR test file uploaded! Connecting to table DynamoDB:{}...'.format(table_name))
         table = boto3.resource('dynamodb').Table(table_name)
         eicar_sha256 = hashlib.sha256(EICAR_STRING.encode('UTF-8')).hexdigest()
         dynamo_record_found = False
-        lambda_version = 0
 
         for attempt in range(1, 11):
             time.sleep(5)
@@ -143,20 +142,21 @@ class Manager(object):
                 KeyConditionExpression=Key('SHA256').eq(eicar_sha256),
                 FilterExpression=Attr('S3Objects').contains(s3_identifier)
             ).get('Items')
+
             if items:
                 print('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n')
                 dynamo_record_found = True
-                lambda_version = items[0]['LambdaVersion']
                 pprint.pprint(items[0])
+
+                print('\nRemoving DynamoDB EICAR entry...')
+                lambda_version = items[0]['LambdaVersion']
+                table.delete_item(Key={'SHA256': eicar_sha256, 'LambdaVersion': lambda_version})
                 break
             elif attempt == 10:
                 print('\nFAIL: Expected DynamoDB entry for the EICAR file was *not* found!\n')
 
-        print('\nRemoving EICAR test file from S3...')
+        print('Removing EICAR test file from S3...')
         bucket.delete_objects(Delete={'Objects': [{'Key': test_filename}]})
-
-        print('Removing DynamoDB EICAR entry...')
-        table.delete_item(Key={'SHA256': eicar_sha256, 'LambdaVersion': lambda_version})
 
         if dynamo_record_found:
             print('\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).')
