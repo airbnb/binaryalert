@@ -117,23 +117,25 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'SamplePath': MOCK_FILE_METADATA['observed_path']
                 },
                 'NumMatchedRules': 2,
-                'MatchedRule1': {
-                    'MatchedStrings': ['$evil_string'],
-                    'Meta': {
-                        'author': 'Austin Byers',
-                        'description': ('A helpful description about why this rule matches '
-                                        'dastardly evil files.')
+                'MatchedRules': {
+                    'Rule1': {
+                        'MatchedStrings': ['$evil_string'],
+                        'Meta': {
+                            'author': 'Austin Byers',
+                            'description': ('A helpful description about why this rule matches '
+                                            'dastardly evil files.')
+                        },
+                        'RuleFile': 'evil_check.yar',
+                        'RuleName': 'contains_evil',
+                        'RuleTags': ['mock_rule', 'has_meta']
                     },
-                    'RuleFile': 'evil_check.yar',
-                    'RuleName': 'contains_evil',
-                    'RuleTags': ['mock_rule', 'has_meta']
-                },
-                'MatchedRule2': {
-                    'MatchedStrings': [],
-                    'Meta': {},
-                    'RuleFile': 'externals.yar',
-                    'RuleName': 'extension_is_exe',
-                    'RuleTags': ['mock_rule']
+                    'Rule2': {
+                        'MatchedStrings': [],
+                        'Meta': {},
+                        'RuleFile': 'externals.yar',
+                        'RuleName': 'extension_is_exe',
+                        'RuleTags': ['mock_rule']
+                    }
                 }
             }
         }
@@ -186,16 +188,18 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'SamplePath': ''
                 },
                 'NumMatchedRules': 1,
-                'MatchedRule1': {
-                    'MatchedStrings': ['$evil_string'],
-                    'Meta': {
-                        'author': 'Austin Byers',
-                        'description': ('A helpful description about why this rule matches '
-                                        'dastardly evil files.')
-                    },
-                    'RuleFile': 'evil_check.yar',
-                    'RuleName': 'contains_evil',
-                    'RuleTags': ['mock_rule', 'has_meta']
+                'MatchedRules': {
+                    'Rule1': {
+                        'MatchedStrings': ['$evil_string'],
+                        'Meta': {
+                            'author': 'Austin Byers',
+                            'description': ('A helpful description about why this rule matches '
+                                            'dastardly evil files.')
+                        },
+                        'RuleFile': 'evil_check.yar',
+                        'RuleName': 'contains_evil',
+                        'RuleTags': ['mock_rule', 'has_meta']
+                    }
                 }
             },
             'S3:{}:KEY3'.format(MOCK_S3_BUCKET_NAME): {
@@ -207,12 +211,14 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'SamplePath': 'win32'
                 },
                 'NumMatchedRules': 1,
-                'MatchedRule1': {
-                    'MatchedStrings': [],
-                    'Meta': {},
-                    'RuleFile': 'externals.yar',
-                    'RuleName': 'filename_contains_win32',
-                    'RuleTags': ['mock_rule']
+                'MatchedRules': {
+                    'Rule1': {
+                        'MatchedStrings': [],
+                        'Meta': {},
+                        'RuleFile': 'externals.yar',
+                        'RuleName': 'filename_contains_win32',
+                        'RuleTags': ['mock_rule']
+                    }
                 }
             }
         }
