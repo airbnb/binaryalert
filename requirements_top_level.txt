@@ -1,4 +1,6 @@
 boto3
+coverage
+coveralls
 moto
 pyfakefs
 pyhcl

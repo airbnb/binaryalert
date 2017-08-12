@@ -1,4 +1,8 @@
 # BinaryAlert: Serverless, Real-time & Retroactive Malware Detection
+[![Build Status](https://travis-ci.org/airbnb/binaryalert.svg?branch=master)](https://travis-ci.org/airbnb/binaryalert)
+[![Coverage Status](https://coveralls.io/repos/github/airbnb/binaryalert/badge.svg?branch=master)](https://coveralls.io/github/airbnb/binaryalert?branch=master)
+
+
 ![BinaryAlert Logo](img/logo.png)
 
 BinaryAlert is an open-source serverless AWS pipeline where any file uploaded to an S3 bucket is
