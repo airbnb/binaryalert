@@ -31,6 +31,21 @@ LAMBDA_ALIASES_TERRAFORM_TARGETS = [
 ]
 
 
+class ManagerError(Exception):
+    """Top-level exception for Manager errors."""
+    pass
+
+
+class InvalidConfigError(ManagerError):
+    """BinaryAlert config is not valid."""
+    pass
+
+
+class TestFailureError(ManagerError):
+    """Exception raised when a BinaryAlert test fails."""
+    pass
+
+
 class Manager(object):
     """BinaryAlert management utility."""
 
@@ -64,11 +79,31 @@ class Manager(object):
         Args:
             command: [String] Command in self.commands.
         """
-        getattr(self, command)()  # Validation already happened in the ArgumentParser.
+        try:
+            getattr(self, command)()  # Validation already happened in the ArgumentParser.
+        except ManagerError as error:
+            # Print error message, not full stack trace.
+            sys.exit('\n{}: {}'.format(type(error).__name__, error))
 
-    @staticmethod
-    def apply():
-        """Terraform validate and apply any configuration/package changes."""
+    def _validate_config(self):
+        """The BinaryAlert config must be well-defined before any deploy or boto3 call.
+
+        Raises:
+            InvalidConfigError: If 'aws_region' or 'name_prefix' is not defined.
+        """
+        if not self._config.get('aws_region') or not self._config.get('name_prefix'):
+            raise InvalidConfigError(
+                '"aws_region" and "name_prefix" must be non-empty strings in {}'.format(
+                    CONFIG_FILE))
+
+    def apply(self):
+        """Terraform validate and apply any configuration/package changes.
+
+        Raises:
+            InvalidConfigError: If 'name_prefix' is an empty string.
+        """
+        self._validate_config()
+
         # Validate and format the terraform files.
         os.chdir(TERRAFORM_DIR)
         subprocess.check_call(['terraform', 'validate'])
@@ -87,6 +122,7 @@ class Manager(object):
 
     def analyze_all(self):
         """Start a batcher to asynchronously re-analyze the entire S3 bucket."""
+        self._validate_config()
         function_name = '{}_binaryalert_batcher'.format(self._config['name_prefix'])
 
         print('Asynchronously invoking {}...'.format(function_name))
@@ -111,6 +147,7 @@ class Manager(object):
 
     def live_test(self):
         """Upload an EICAR test file to BinaryAlert which should trigger a YARA match alert."""
+        self._validate_config()
         bucket_name = '{}.binaryalert-binaries.{}'.format(
             self._config['name_prefix'].replace('_', '.'), self._config['aws_region'])
         test_filename = 'eicar_test_{}.txt'.format(uuid.uuid4())
@@ -161,7 +198,8 @@ class Manager(object):
         if dynamo_record_found:
             print('\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).')
         else:
-            sys.exit('\nLive test failed!')  # TODO: Link to troubleshooting documentation
+            # TODO: Link to troubleshooting documentation
+            raise TestFailureError('\nLive test failed!')
 
     @staticmethod
     def update_rules():
@@ -171,11 +209,15 @@ class Manager(object):
     @staticmethod
     @boto3_mocks.restore_http_adapter
     def test():
-        """Run unit tests (*_test.py)."""
+        """Run unit tests (*_test.py).
+
+        Raises:
+            TestFailureError: If any of the unit tests failed.
+        """
         suite = unittest.TestLoader().discover(PROJECT_DIR, pattern='*_test.py')
         test_result = unittest.TextTestRunner(verbosity=1).run(suite)
         if not test_result.wasSuccessful():
-            sys.exit('Unit tests failed')  # Exit code 1
+            raise TestFailureError('Unit tests failed')
 
 
 def main():
