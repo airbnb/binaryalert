@@ -69,6 +69,7 @@ class Manager(object):
     def help(self):
         """Return method docstring for each available command."""
         return '\n'.join(
+            # Use the first line of each docstring for the CLI help output.
             '{:<15}{}'.format(command, inspect.getdoc(getattr(self, command)).split('\n')[0])
             for command in sorted(self.commands)
         )
@@ -82,7 +83,7 @@ class Manager(object):
         try:
             getattr(self, command)()  # Command validation already happened in the ArgumentParser.
         except ManagerError as error:
-            # Print error message, not full stack trace.
+            # Print error type and message, not full stack trace.
             sys.exit('{}: {}'.format(type(error).__name__, error))
 
     def _validate_config(self):
@@ -97,11 +98,7 @@ class Manager(object):
                     CONFIG_FILE))
 
     def apply(self):
-        """Terraform validate and apply any configuration/package changes.
-
-        Raises:
-            InvalidConfigError: If 'name_prefix' is an empty string.
-        """
+        """Terraform validate and apply any configuration/package changes."""
         self._validate_config()
 
         # Validate and format the terraform files.
@@ -146,7 +143,11 @@ class Manager(object):
         self.analyze_all()
 
     def live_test(self):
-        """Upload an EICAR test file to BinaryAlert which should trigger a YARA match alert."""
+        """Upload an EICAR test file to BinaryAlert which should trigger a YARA match alert.
+
+        Raises:
+            TestFailureError: If the live test failed (YARA match not found).
+        """
         self._validate_config()
         bucket_name = '{}.binaryalert-binaries.{}'.format(
             self._config['name_prefix'].replace('_', '.'), self._config['aws_region'])
