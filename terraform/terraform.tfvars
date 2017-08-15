@@ -6,7 +6,7 @@
 // AWS region in which to deploy the BinaryAlert components.
 aws_region = "us-east-1"
 
-// Prefix used in all resource names (required for uniqueness). E.g. "company_team."
+// Prefix used in all resource names (required for uniqueness). E.g. "company_team"
 name_prefix = "" // UNIQUE PREFIX HERE
 
 /* ********** Log Retention ********** */
