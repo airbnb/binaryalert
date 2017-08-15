@@ -69,7 +69,7 @@ class Manager(object):
     def help(self):
         """Return method docstring for each available command."""
         return '\n'.join(
-            '{:<15}{}'.format(command, inspect.getdoc(getattr(self, command)))
+            '{:<15}{}'.format(command, inspect.getdoc(getattr(self, command)).split('\n')[0])
             for command in sorted(self.commands)
         )
 
@@ -80,10 +80,10 @@ class Manager(object):
             command: [String] Command in self.commands.
         """
         try:
-            getattr(self, command)()  # Validation already happened in the ArgumentParser.
+            getattr(self, command)()  # Command validation already happened in the ArgumentParser.
         except ManagerError as error:
             # Print error message, not full stack trace.
-            sys.exit('\n{}: {}'.format(type(error).__name__, error))
+            sys.exit('{}: {}'.format(type(error).__name__, error))
 
     def _validate_config(self):
         """The BinaryAlert config must be well-defined before any deploy or boto3 call.
@@ -93,7 +93,7 @@ class Manager(object):
         """
         if not self._config.get('aws_region') or not self._config.get('name_prefix'):
             raise InvalidConfigError(
-                '"aws_region" and "name_prefix" must be non-empty strings in {}'.format(
+                '"aws_region" and "name_prefix" must be non-empty strings defined in {}'.format(
                     CONFIG_FILE))
 
     def apply(self):
