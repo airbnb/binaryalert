@@ -1,4 +1,5 @@
 language: python
+cache: pip
 python: "3.6"
 install:
   - pip3 install -r requirements.txt
@@ -6,5 +7,5 @@ script:
   - coverage run manage.py test
   - coverage report  # Required coverage threshold specified in .coveragerc
   - find . -name '*.py' -exec pylint '{}' +
-after_sucess:
+after_success:
   - coveralls
