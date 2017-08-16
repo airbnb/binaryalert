@@ -13,22 +13,25 @@ REMOTE_RULE_SOURCES = {
 
 def update_github_rules():
     """Update YARA rules cloned from GitHub."""
-    # Remove existing github rules.
-    shutil.rmtree(os.path.join(RULES_DIR, 'github.com'))
-
     for url, folders in REMOTE_RULE_SOURCES.items():
         # Clone repo into a temporary directory.
         print('Cloning YARA rules from {}/{}...'.format(url, folders))
         cloned_repo_root = os.path.join(tempfile.gettempdir(), os.path.basename(url))
-        subprocess.check_call(['git', 'clone', '--quiet', url, cloned_repo_root])
+        if os.path.exists(cloned_repo_root):
+            shutil.rmtree(cloned_repo_root)
+        subprocess.check_call(['git', 'clone', '--depth', '1', url, cloned_repo_root])
 
         # Copy each specified folder into the target rules directory.
         for folder in folders:
             source = os.path.join(cloned_repo_root, folder)
-            dest = os.path.join(RULES_DIR, url.split('//')[1], folder)
-            shutil.copytree(source, dest)
+            destination = os.path.join(RULES_DIR, url.split('//')[1], folder)
+            if os.path.exists(destination):
+                # Remove existing rules in this folder before copying
+                # (in case upstream rules were deleted).
+                shutil.rmtree(destination)
+            shutil.copytree(source, destination)
 
-        shutil.rmtree(cloned_repo_root)
+        shutil.rmtree(cloned_repo_root)  # Remove temporary cloned repo.
 
 
 if __name__ == '__main__':
