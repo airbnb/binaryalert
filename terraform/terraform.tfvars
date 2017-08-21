@@ -1,13 +1,26 @@
 /* BinaryAlert configuration. */
+// Auto-Configured sections are managed with "python3 ../manage.py configure"
+// Other (advanced) configuration can be updated directly in this file.
 
-/* ********** Base Configuration ********** */
+/* ********** [Auto-Configured] Base Configuration ********** */
 // These are the only settings you need to get started.
 
 // AWS region in which to deploy the BinaryAlert components.
 aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = "" // UNIQUE PREFIX HERE
+name_prefix = ""
+
+
+/* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
+enable_carbon_black_downloader = 0
+
+// URL of the CarbonBlack server.
+carbon_black_url = ""
+
+// The encrypted CarbonBlack API token will automatically be generated and saved here:
+encrypted_carbon_black_api_token = ""
+
 
 /* ********** Log Retention ********** */
 // Pre-existing bucket in which to store S3 access logs. If not specified, one will be created.
@@ -20,7 +33,7 @@ s3_log_prefix = "s3-access-logs/"
 s3_log_expiration_days = 60
 
 // How long to retain Lambda function logs.
-lambda_log_retention_days = 90
+lambda_log_retention_days = 60
 
 
 /* ********** Advanced Configuration ********** */
@@ -36,7 +49,7 @@ lambda_log_retention_days = 90
 
 // How long messages should be retained in SQS before being dropped.
 // Messages will continue to be dispatched to analyzers until they timeout.
-sqs_retention_minutes = 30
+sqs_retention_minutes = 60
 
 // Number of S3 object keys to pack into a single SQS message.
 // Each downstream analyzer will process at most 10 SQS messages, each with this many objects.
@@ -56,12 +69,16 @@ lambda_dispatch_frequency_minutes = 1
 lambda_dispatch_limit = 50
 
 // Memory and time limits for the dispatching function.
-lambda_dispatch_memory_mb   = 128
+lambda_dispatch_memory_mb = 128
 lambda_dispatch_timeout_sec = 40
 
 // Memory and time limits for the analyzer functions.
-lambda_analyze_memory_mb   = 512
-lambda_analyze_timeout_sec = 240
+lambda_analyze_memory_mb = 1024
+lambda_analyze_timeout_sec = 300
+
+// Memory and time limits for the downloader function.
+lambda_download_memory_mb = 128
+lambda_download_timeout_sec = 300
 
 // Alarm if no binaries are analyzed for this amount of time.
 expected_analysis_frequency_minutes = 30
@@ -69,5 +86,5 @@ expected_analysis_frequency_minutes = 30
 // Provisioned capacity for the Dynamo table which stores match results.
 // Capacity is (very roughly) maximum number of operations per second. See Dynamo documentation.
 // Since there will likely be very few matches, these numbers can be quite low.
-dynamo_read_capacity  = 10
+dynamo_read_capacity = 10
 dynamo_write_capacity = 5

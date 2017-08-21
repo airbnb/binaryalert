@@ -11,6 +11,9 @@ lambda_*.zip
 # Virtualenv
 venv/
 
+# Compiled YARA rules
+compiled_yara_rules.bin
+
 # IDE
 .idea/
 

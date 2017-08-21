@@ -21,6 +21,31 @@ resource "aws_iam_policy" "base_policy" {
   policy = "${data.aws_iam_policy_document.base_policy.json}"
 }
 
+data "aws_iam_policy_document" "binaryalert_downloader_policy" {
+  count = "${var.enable_carbon_black_downloader}"
+
+  statement {
+    sid       = "DecryptCarbonBlackCredentials"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = ["${aws_kms_key.carbon_black_credentials.arn}"]
+  }
+
+  statement {
+    sid       = "UploadToBinaryAlertBucket"
+    effect    = "Allow"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.binaryalert_binaries.arn}/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "binaryalert_downloader_policy" {
+  count  = "${var.enable_carbon_black_downloader}"
+  name   = "${var.name_prefix}_binaryalert_downloader_policy"
+  role   = "${module.binaryalert_downloader.role_id}"
+  policy = "${data.aws_iam_policy_document.binaryalert_downloader_policy.json}"
+}
+
 data "aws_iam_policy_document" "binaryalert_batcher_policy" {
   statement {
     sid       = "InvokeBinaryAlertBatcher"

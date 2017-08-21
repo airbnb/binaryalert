@@ -71,9 +71,11 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
       days = 1
     }
   }
+
   tags {
     Name = "BinaryAlert"
   }
+
   versioning {
     enabled = true
   }
