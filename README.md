@@ -14,8 +14,9 @@ quickly contain the threat before it spreads.
 ## Features
   * **Built with Amazon Web Services (AWS):** An AWS account is all you need to deploy BinaryAlert.
   * **Broad YARA Support:** Add your own YARA rules and/or automatically clone them from third-party
-  repos. Both the [`PE`](http://yara.readthedocs.io/en/latest/modules/pe.html) and
-  [`math`](http://yara.readthedocs.io/en/latest/modules/math.html) modules are supported.
+  repos. [`PE`](http://yara.readthedocs.io/en/latest/modules/pe.html),
+  [`math`](http://yara.readthedocs.io/en/latest/modules/math.html), and
+   [`hash`](http://yara.readthedocs.io/en/latest/modules/hash.html) YARA modules are supported.
   * **Real-Time:** Files uploaded to BinaryAlert (S3 bucket) are immediately queued for analysis.
   * **Serverless:** All computation is handled by [Lambda](https://aws.amazon.com/lambda/)
   functions. No servers to manage means stronger security and automatic scaling!

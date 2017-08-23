@@ -17,7 +17,7 @@ and install `yara-python`:
 ```
 $ sudo su
 # yum update
-# yum install gcc python35-devel.x86_64 python35-pip.noarch
+# yum install gcc openssl-devel.x86_64 python35-devel.x86_64 python35-pip.noarch
 # python3
     >>> import pip
     >>> pip.main(['install', '--upgrade', 'pip'])
@@ -30,5 +30,11 @@ $ sudo su
 # cp /usr/lib64/libpython3.5m.so.1.0 .
 # zip -r yara_python_VERSION.zip *
 ```
+
+Some notes:
+* Python3.6 is not currently available in the public Lambda AMI. You can either manually install
+Python3.6 from source or (what's done here) include the required Python3.5 bytecode in the zipfile.
+* The openssl development libraries are required to support the "hash" module.
+
 Then replace [`yara_python_3.6.3.zip`](yara_python_3.6.3.zip) in the repo with the newly generated
 package from the EC2 instance and update the filename in [`manage.py`](../../manage.py).
