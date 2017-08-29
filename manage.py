@@ -103,19 +103,22 @@ class Manager(object):
 
         # Validate and format the terraform files.
         os.chdir(TERRAFORM_DIR)
-        subprocess.check_call(['terraform', 'validate'])
+        # TODO: In Terraform 0.10.3, the -var-file flag won't be necessary here
+        subprocess.check_call(['terraform', 'validate', '-var-file', CONFIG_FILE])
         subprocess.check_call(['terraform', 'fmt'])
 
         # Setup the backend if needed and reload modules.
         subprocess.check_call(['terraform', 'init'])
 
-        # Apply changes.
-        subprocess.check_call(['terraform', 'apply'])
+        # Apply changes (requires interactive approval)
+        subprocess.check_call(['terraform', 'apply', '-auto-approve=false'])
 
         # A second apply is unfortunately necessary to update the Lambda aliases.
         print('\nRe-applying to update Lambda aliases...')
         subprocess.check_call(
-            ['terraform', 'apply', '-refresh=false'] + LAMBDA_ALIASES_TERRAFORM_TARGETS)
+            ['terraform', 'apply', '-auto-approve=true', '-refresh=false'] +
+            LAMBDA_ALIASES_TERRAFORM_TARGETS
+        )
 
     def analyze_all(self):
         """Start a batcher to asynchronously re-analyze the entire S3 bucket."""
