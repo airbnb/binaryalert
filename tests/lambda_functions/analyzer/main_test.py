@@ -4,6 +4,7 @@ import json
 import os
 import unittest
 from unittest import mock
+import urllib
 
 import boto3
 from pyfakefs import fake_filesystem_unittest
@@ -18,7 +19,7 @@ MOCK_FILE_METADATA = {
     'observed_path': '/path/to/mock-evil.exe',
     'reported_md5': 'REPORTED MD5'
 }
-MOCK_S3_OBJECT_KEY = 'random-uuid'
+MOCK_S3_OBJECT_KEY = 'space plus+file.test'
 
 # Mimics minimal parts of S3:ObjectAdded event that triggers the lambda function.
 LAMBDA_VERSION = 1
@@ -77,7 +78,10 @@ class MainTest(fake_filesystem_unittest.TestCase):
         boto3.client = mock.MagicMock(side_effect=self._boto3_client_mock)
 
         # Create test event.
-        self._test_event = {'S3Objects': [MOCK_S3_OBJECT_KEY], 'SQSReceipts': MOCK_SQS_RECEIPTS}
+        self._test_event = {
+            'S3Objects': [urllib.parse.quote_plus(MOCK_S3_OBJECT_KEY)],
+            'SQSReceipts': MOCK_SQS_RECEIPTS
+        }
 
     def tearDown(self):
         """Restore boto3.client to its original."""
