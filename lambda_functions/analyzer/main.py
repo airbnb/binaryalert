@@ -7,6 +7,7 @@
 # Expects a binary YARA rules file to be at './compiled_yara_rules.bin'
 import logging
 import os
+import urllib
 
 from yara import Error as YaraError
 from botocore.exceptions import ClientError as BotoError
@@ -71,7 +72,9 @@ def analyze_lambda_handler(event_data, lambda_context):
 
     LOGGER.info('Processing %d record(s)', len(event_data['S3Objects']))
     for s3_key in event_data['S3Objects']:
-        LOGGER.info('Analyzing %s', s3_key)
+        # S3 keys in event notifications are url-encoded.
+        s3_key = urllib.parse.unquote_plus(s3_key)
+        LOGGER.info('Analyzing "%s"', s3_key)
 
         with binary_info.BinaryInfo(os.environ['S3_BUCKET_NAME'], s3_key, ANALYZER) as binary:
             result[binary.s3_identifier] = binary.summary()
