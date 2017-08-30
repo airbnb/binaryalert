@@ -35,7 +35,7 @@ quickly contain the threat before it spreads.
 ## Quick Start
   1. Install dependencies
       1. Install Python3.6, pip3, [virtualenv](https://virtualenv.pypa.io/en/stable/), and
-      [Terraform](https://www.terraform.io/intro/getting-started/install.html).
+      [Terraform v0.10.1+](https://www.terraform.io/downloads.html).
       2. Create a virtual environment: `virtualenv -p python3 venv`
       3. Activate the virtual env: `source venv/bin/activate`
       4. Install third-party libraries: `pip3 install -r requirements.txt`
