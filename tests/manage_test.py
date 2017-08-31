@@ -287,12 +287,12 @@ class ManagerTest(FakeFilesystemBase):
         """Validate order of Terraform operations."""
         self.manager.apply()
         mock_subprocess.assert_has_calls([
-            mock.call(['terraform', 'validate']),
+            mock.call(['terraform', 'validate', '-var-file', manage.CONFIG_FILE]),
             mock.call(['terraform', 'fmt']),
             mock.call(['terraform', 'init']),
-            mock.call(['terraform', 'apply']),
+            mock.call(['terraform', 'apply', '-auto-approve=false']),
             mock.call([
-                'terraform', 'apply', '-refresh=false',
+                'terraform', 'apply', '-auto-approve=true', '-refresh=false',
                 '-target=module.binaryalert_analyzer.aws_lambda_alias.production_alias',
                 '-target=module.binaryalert_batcher.aws_lambda_alias.production_alias',
                 '-target=module.binaryalert_dispatcher.aws_lambda_alias.production_alias',

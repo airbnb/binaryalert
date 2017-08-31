@@ -87,13 +87,15 @@ def _build_downloader(target_directory):
     shutil.rmtree(temp_package_dir)
 
 
-def build(target_directory):
+def build(target_directory, downloader=False):
     """Build Lambda deployment packages.
 
     Args:
         target_directory: [String] Path to folder which will store generated zipfiles.
+        downloader: [bool] Whether the downloader should be built.
     """
     _build_analyzer(target_directory)
     _build_batcher(target_directory)
     _build_dispatcher(target_directory)
-    _build_downloader(target_directory)
+    if downloader:
+        _build_downloader(target_directory)

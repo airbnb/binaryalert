@@ -7,6 +7,7 @@ import base64
 import logging
 import os
 import shutil
+import tempfile
 from typing import Any, Dict
 import zipfile
 
@@ -45,7 +46,7 @@ def _download_from_carbon_black(binary: Binary) -> str:
     Returns:
         Path where file was downloaded.
     """
-    download_path = '/tmp/carbonblack_{}'.format(binary.md5)
+    download_path = os.path.join(tempfile.gettempdir(), 'carbonblack_{}'.format(binary.md5))
     LOGGER.info('Downloading %s to %s', binary.webui_link, download_path)
     with binary.file as cb_file, open(download_path, 'wb') as target_file:
         shutil.copyfileobj(cb_file, target_file)

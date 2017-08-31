@@ -1,6 +1,7 @@
 """Keeps track of all information associated with and computed about a binary."""
 import logging
 import os
+import tempfile
 import time
 import uuid
 
@@ -29,7 +30,8 @@ class BinaryInfo(object):
         self.object_key = object_key
         self.s3_identifier = 'S3:{}:{}'.format(bucket_name, object_key)
 
-        self.download_path = '/tmp/binaryalert_{}'.format(str(uuid.uuid4()))
+        self.download_path = os.path.join(
+            tempfile.gettempdir(), 'binaryalert_{}'.format(uuid.uuid4()))
         self.yara_analyzer = yara_analyzer
 
         # Computed after file download and analysis.
@@ -69,7 +71,7 @@ class BinaryInfo(object):
 
     def _download_from_s3(self):
         """Download binary from S3 and measure elapsed time."""
-        LOGGER.debug('Downloading to %s', self.download_path)
+        LOGGER.debug('Downloading %s to %s', self.object_key, self.download_path)
 
         start_time = time.time()
         s3_metadata = analyzer_aws_lib.download_from_s3(

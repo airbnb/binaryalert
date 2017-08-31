@@ -81,5 +81,5 @@ class BuildTest(unittest.TestCase):
 
     def test_build_all(self, mock_print):
         """Verify that the top-level build function executes without error."""
-        build.build(self._tempdir)
+        build.build(self._tempdir, downloader=True)
         self.assertEqual(4, mock_print.call_count)

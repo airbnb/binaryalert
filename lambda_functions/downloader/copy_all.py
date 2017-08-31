@@ -8,6 +8,7 @@
 #        python3 copy_all.py 2>&1 | tee copy.log
 import logging
 import multiprocessing
+import os
 import queue
 
 import cbapi
@@ -17,8 +18,9 @@ if __package__:
 else:
     import main
 
-LOG_FORMAT = '%(asctime)s %(levelname)-6s %(message)s'
-LOG_LEVEL = logging.DEBUG
+logging.basicConfig(format='%(asctime)s %(levelname)-6s %(message)s')
+LOGGER = logging.getLogger('carbon_black_copy')
+LOGGER.setLevel(logging.DEBUG)
 
 NUM_CONSUMERS = 32  # Number of consumer threads executing copy tasks (optimized by experiment).
 MAX_TASK_QUEUE_SIZE = NUM_CONSUMERS * 20  # Maximum number of tasks in the queue at any time.
@@ -64,10 +66,6 @@ class Consumer(multiprocessing.Process):
         self.task_queue = task_queue
         self.failed_queue = failed_queue
 
-        # Each process needs its own logger to avoid race conditions.
-        self.logger = logging.getLogger(self.name)
-        self.logger.setLevel(LOG_LEVEL)
-
     def run(self):
         """Grab Tasks and execute them until an empty task signals a shutdown."""
         while True:
@@ -76,36 +74,40 @@ class Consumer(multiprocessing.Process):
 
             # Exit if we encounter an empty task.
             if copy_task is None:
-                self.logger.info('[%s] Exiting', self.name)
+                LOGGER.info('[%s] Exiting', self.name)
                 self.task_queue.task_done()
                 return
 
             # Execute the copy task, logging any failure.
-            self.logger.info('[%s] Executing %s', self.name, copy_task)
+            LOGGER.info('[%s] Executing %s', self.name, copy_task)
             try:
                 copy_task()
             except Exception:  # pylint: disable=broad-except
                 # This is a long-running job: catch any Exception, mark as failure, and continue.
-                self.logger.exception('[%s] %s', self.name, copy_task)
+                LOGGER.exception('[%s] %s', self.name, copy_task)
                 self.failed_queue.put(copy_task.md5)
             finally:
                 # Mark the task as complete and move on to the next one.
                 self.task_queue.task_done()
 
 
+def _validate_env() -> None:
+    """Raise a KeyError if the required environment variables are not set."""
+    for key in ['CARBON_BLACK_URL', 'ENCRYPTED_CARBON_BLACK_API_TOKEN', 'TARGET_S3_BUCKET']:
+        if key not in os.environ:
+            raise KeyError('Please define the {} environment variable'.format(key))
+
+
 def copy_all_binaries():
     """Copy every binary in CarbonBlack into the BinaryAlert input S3 bucket."""
-    # Create the logger.
-    logging.basicConfig(format=LOG_FORMAT)
-    logger = logging.getLogger('carbon_black_copy')
-    logger.setLevel(LOG_LEVEL)
+    _validate_env()
 
     # Create process communication queues.
     tasks = multiprocessing.JoinableQueue(MAX_TASK_QUEUE_SIZE)  # CopyTasks to execute.
     failures = multiprocessing.Queue()  # A list of MD5s which failed to copy.
 
     # Start the consumer processes.
-    logger.info('Start %d consumers', NUM_CONSUMERS)
+    LOGGER.info('Start %d consumers', NUM_CONSUMERS)
     consumers = [Consumer(tasks, failures) for _ in range(NUM_CONSUMERS)]
     for worker in consumers:
         worker.start()
@@ -116,7 +118,7 @@ def copy_all_binaries():
     # As soon as a CopyTask is enqueued, any worker process (Consumer) can immediately execute it.
     for index, binary in enumerate(main.CARBON_BLACK.select(cbapi.response.models.Binary).all()):
         copy_task = CopyTask(index, binary.md5)
-        logger.debug('Enqueuing %s', copy_task)
+        LOGGER.debug('Enqueuing %s', copy_task)
         tasks.put(copy_task)  # Block if necessary until the task queue has space.
 
     # Add a "poison pill" for each Consumer, marking the end of the task queue.
@@ -125,7 +127,7 @@ def copy_all_binaries():
 
     # Wait for all of the tasks to finish.
     tasks.join()
-    logger.info('All CopyTasks Finished!')
+    LOGGER.info('All CopyTasks Finished!')
 
     # Grab the MD5s which failed to copy, if any.
     failed_md5s = []
@@ -137,7 +139,7 @@ def copy_all_binaries():
 
     # Log all offending MD5s, one per line.
     if failed_md5s:
-        logger.error(
+        LOGGER.error(
             '%d %s failed to copy: \n%s', len(failed_md5s),
             'binary' if len(failed_md5s) == 1 else 'binaries', '\n'.join(sorted(failed_md5s)))
 

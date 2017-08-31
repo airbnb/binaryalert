@@ -1,6 +1,7 @@
 """Unit tests for downloader/copy_all.py script."""
 # pylint: disable=no-self-use
 import base64
+import importlib
 import multiprocessing
 import os
 from typing import Any, Dict, List
@@ -44,11 +45,11 @@ class MockMain(object):
 
     def download_lambda_handler(self, event: Dict[str, Any], _):
         """Record requests to the downloader function."""
+        if self.inject_errors:
+            raise FileNotFoundError
         with self.index.get_lock():
             self.download_invocations[self.index.value] = int(event['md5'].split('-')[2])
             self.index.value += 1
-        if self.inject_errors:
-            raise FileNotFoundError
 
 
 @mock.patch('boto3.client', mock.MagicMock())
@@ -88,7 +89,6 @@ class CopyAllTest(unittest.TestCase):
         mock_logger.assert_has_calls(
             [mock.call('carbon_black_copy')] +
             [mock.call().debug('Enqueuing %s', mock.ANY)] * NUM_BINARIES +
-            [mock.call('Consumer-{}'.format(i)) for i in range(1, copy_all.NUM_CONSUMERS)] +
             [mock.call().info('All CopyTasks Finished!')],
             any_order=True
         )
@@ -98,6 +98,7 @@ class CopyAllTest(unittest.TestCase):
         mock_main = MockMain(inject_errors=True)
 
         from lambda_functions.downloader import copy_all
+        importlib.reload(copy_all)  # Reloading is required for the mock logger to be reset.
         copy_all.main = mock_main
         copy_all.copy_all_binaries()
 

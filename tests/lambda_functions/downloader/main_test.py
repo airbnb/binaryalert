@@ -3,6 +3,7 @@
 import base64
 import io
 import os
+import tempfile
 from unittest import mock
 
 import boto3
@@ -50,8 +51,9 @@ class MainTest(fake_filesystem_unittest.TestCase):
         os.environ['TARGET_S3_BUCKET'] = 'test-s3-bucket'
 
         # Setup fake filesystem.
+        temp_dir = tempfile.gettempdir()  # Get real temp directory before starting fake filesystem.
         self.setUpPyfakefs()
-        os.mkdir('/tmp')
+        os.makedirs(temp_dir)
 
         # Create a mock binary.
         self._binary = MockBinary(
@@ -101,9 +103,9 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
             # Verify the log statements.
             mock_info_logger.assert_has_calls([
-                mock.call('Invoked with event %s', mock.ANY),
+                mock.call('Invoked with event %s', {'md5': 'ABC123'}),
                 mock.call(
-                    'Downloading %s to %s', self._binary.webui_link, '/tmp/carbonblack_ABC123'),
+                    'Downloading %s to %s', self._binary.webui_link, mock.ANY),
                 mock.call('Retrieving binary metadata'),
                 mock.call('Uploading to S3 with key %s', upload_s3_key)
             ])
