@@ -373,7 +373,7 @@ class Manager(object):
 
     def build(self) -> None:
         """Build Lambda packages (saves *.zip files in terraform/)."""
-        lambda_build(TERRAFORM_DIR, self._config.enable_carbon_black_downloader == '1')
+        lambda_build(TERRAFORM_DIR, self._config.enable_carbon_black_downloader == 1)
 
     def cb_copy_all(self) -> None:
         """Copy all binaries from CarbonBlack into BinaryAlert.
