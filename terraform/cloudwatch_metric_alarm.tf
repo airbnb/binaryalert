@@ -68,9 +68,9 @@ EOF
     QueueName = "${aws_sqs_queue.s3_object_queue.name}"
   }
 
-  // The queue is consistently more than 15 minutes behind.
+  // The queue is consistently more than 30 minutes behind.
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = 900
+  threshold                 = 1800
   period                    = 60
   evaluation_periods        = 15
   alarm_actions             = ["${aws_sns_topic.metric_alarms.arn}"]

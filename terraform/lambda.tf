@@ -1,3 +1,36 @@
+// Create the CarbonBlack downloading Lambda function.
+module "binaryalert_downloader" {
+  enabled = "${var.enable_carbon_black_downloader}"
+
+  source          = "modules/lambda"
+  function_name   = "${var.name_prefix}_binaryalert_downloader"
+  description     = "Copies binaries from CarbonBlack into the BinaryAlert S3 bucket"
+  base_policy_arn = "${aws_iam_policy.base_policy.arn}"
+  handler         = "main.download_lambda_handler"
+  memory_size_mb  = "${var.lambda_download_memory_mb}"
+  timeout_sec     = "${var.lambda_download_timeout_sec}"
+  filename        = "lambda_downloader.zip"
+
+  environment_variables = {
+    CARBON_BLACK_URL                 = "${var.carbon_black_url}"
+    ENCRYPTED_CARBON_BLACK_API_TOKEN = "${var.encrypted_carbon_black_api_token}"
+    TARGET_S3_BUCKET                 = "${aws_s3_bucket.binaryalert_binaries.id}"
+  }
+
+  log_retention_days = "${var.lambda_log_retention_days}"
+
+  alarm_errors_help = <<EOF
+The downloader often times out while waiting for CarbonBlack to process the binary.
+  - If there are a large number of binaries being analyzed right now, this alarm should resolve
+    itself once the spike subsides.
+  - If this error persists, start troubleshooting the downloader logs.
+EOF
+
+  alarm_errors_threshold     = 500
+  alarm_errors_interval_secs = 300
+  alarm_sns_arns             = ["${aws_sns_topic.metric_alarms.arn}"]
+}
+
 // Create the batch Lambda function.
 module "binaryalert_batcher" {
   source          = "modules/lambda"
