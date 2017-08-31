@@ -368,7 +368,7 @@ class Manager(object):
         print('\nRe-applying to update Lambda aliases...')
         subprocess.check_call(
             ['terraform', 'apply', '-auto-approve=true', '-refresh=false'] +
-            LAMBDA_ALIASES_TERRAFORM_TARGETS
+            ['-target=' + alias for alias in LAMBDA_ALIASES_TERRAFORM_IDS]
         )
 
     def build(self) -> None:
