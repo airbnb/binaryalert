@@ -22,30 +22,17 @@ locals {
           period = 300
 
           // Due to https://github.com/hashicorp/terraform/issues/15971,
-          // nested lists are flattened during jsonencoding. That won't work here,
-          // so we json-encode each nested list as a string and use string replacements
-          // to remove the extra quotes and make them a real nested list.
-          metrics = [
-            "${jsonencode(local.analyzed_binaries)}",
-            "${jsonencode(local.matched_binaries)}",
-          ]
+          // nested lists must be constructed with the "list" command instead of [] notation.
+          metrics = "${list(local.analyzed_binaries, local.matched_binaries)}"
         }
       },
     ]
   }
 }
 
-locals {
-  // Un-stringify the nested lists.
-  replace1               = "${replace(jsonencode(local.dashboard_body), "\"[", "[")}"
-  replace2               = "${replace(local.replace1, "\\", "")}"
-  nested_list_correction = "${replace(local.replace2, "\"]\"", "\"]")}"
-
-  // Numbers must be numbers, not strings (uses regex capture group).
-  number_replace = "${replace(local.nested_list_correction, "/\"(\\d+)\"/", "$1")}"
-}
-
 resource "aws_cloudwatch_dashboard" "binaryalert" {
   dashboard_name = "BinaryAlert"
-  dashboard_body = "${local.number_replace}"
+
+  // Encode to JSON and remove quotes around numbers.
+  dashboard_body = "${replace(jsonencode(local.dashboard_body), "/\"(\\d+)\"/", "$1")}"
 }
