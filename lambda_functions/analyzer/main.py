@@ -7,40 +7,28 @@
 # Expects a binary YARA rules file to be at './compiled_yara_rules.bin'
 import logging
 import os
+from typing import Any, Dict
 import urllib
 
-from yara import Error as YaraError
 from botocore.exceptions import ClientError as BotoError
 
 if __package__:
     # Imported by unit tests or other external code.
     from lambda_functions.analyzer import analyzer_aws_lib, binary_info, yara_analyzer
+    from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH, LOGGER
 else:
-    import analyzer_aws_lib
-    import binary_info
-    import yara_analyzer
-
-LOGGER = logging.getLogger()
-LOGGER.setLevel(logging.INFO)
-
-THIS_DIRECTORY = os.path.dirname(os.path.realpath(__file__))  # Directory containing this file.
-COMPILED_RULES_FILENAME = 'compiled_yara_rules.bin'  # Binary YARA rules file.
-COMPILED_RULES_FILEPATH = os.path.join(THIS_DIRECTORY, COMPILED_RULES_FILENAME)
+    import analyzer_aws_lib, binary_info, yara_analyzer
+    from common import COMPILED_RULES_FILEPATH, LOGGER
 
 # Build the YaraAnalyzer from the compiled rules file at import time (i.e. once per container).
 # This saves 50-100+ ms per Lambda invocation, depending on the size of the rules file.
-# However, this breaks imports when the compiled rules file doesn't exist (e.g. unit tests).
-# Fail-safe to computing the ANALYZER during the handler if we have to.
-try:
-    ANALYZER = yara_analyzer.YaraAnalyzer(COMPILED_RULES_FILEPATH)
-    # Due to a bug in yara-python, num_rules only be computed once. Thereafter, it will return 0.
-    # So we have to compute this here since multiple invocations may share the same analyzer.
-    NUM_YARA_RULES = ANALYZER.num_rules
-except YaraError:
-    ANALYZER = None
+ANALYZER = yara_analyzer.YaraAnalyzer(COMPILED_RULES_FILEPATH)
+# Due to a bug in yara-python, num_rules only be computed once. Thereafter, it will return 0.
+# So we have to compute this here since multiple invocations may share the same analyzer.
+NUM_YARA_RULES = ANALYZER.num_rules
 
 
-def analyze_lambda_handler(event_data, lambda_context):
+def analyze_lambda_handler(event_data: Dict[str, Any], lambda_context) -> Dict[str, Dict[str, Any]]:
     """Lambda function entry point.
 
     Args:
@@ -52,17 +40,17 @@ def analyze_lambda_handler(event_data, lambda_context):
         lambda_context: LambdaContext object (with .function_version).
 
     Returns:
-        A dict mapping S3 object identifier [string] to a summary [dict] of file info and matched
-        YARA rule information.
+        A dict mapping S3 object identifier to a summary of file info and matched YARA rules.
+        Example: {
+            'S3:bucket:key': {
+                'FileInfo': { ... },
+                'NumMatchedRules': 1,
+                'MatchedRules': { ... }
+            }
+        }
     """
     result = {}
     binaries = []  # List of the BinaryInfo data.
-
-    # Build the YaraAnalyzer now if we could not do it when this file was imported.
-    global ANALYZER, NUM_YARA_RULES  # pylint: disable=global-statement
-    if not ANALYZER:
-        ANALYZER = yara_analyzer.YaraAnalyzer(COMPILED_RULES_FILEPATH)
-        NUM_YARA_RULES = ANALYZER.num_rules
 
     # The Lambda version must be an integer.
     try:

@@ -1,18 +1,20 @@
 """Memory-efficient file hashing."""
 import hashlib
+import io
+from typing import Tuple
 
 MB = 2 ** 20  # ~ 1 million bytes
 
 
-def _read_in_chunks(file_object, chunk_size=2*MB):
+def _read_in_chunks(file_object: io.FileIO, chunk_size: int = 2*MB) -> str:
     """Read a file in fixed-size chunks (to minimize memory usage for large files).
 
     Args:
         file_object: An opened file-like object supporting read().
-        chunk_size: [int] Max size (in bytes) of each file chunk.
+        chunk_size: Max size (in bytes) of each file chunk.
 
     Yields:
-        [string] file chunks, each of size at most chunk_size.
+        File chunks, each of size at most chunk_size.
     """
     while True:
         chunk = file_object.read(chunk_size)
@@ -22,16 +24,16 @@ def _read_in_chunks(file_object, chunk_size=2*MB):
             return  # End of file.
 
 
-def compute_hashes(file_path):
+def compute_hashes(file_path: str) -> Tuple[str, str]:
     """Compute SHA and MD5 hashes for the specified file object.
 
     The MD5 is only included to be compatible with other security tools.
 
     Args:
-        file_path: [string] File path to be analyzed.
+        file_path: File path to be analyzed.
 
     Returns:
-        String tuple (sha_hash, md5_hash).
+        SHA256 hash, MD5 hash.
     """
     sha = hashlib.sha256()
     md5 = hashlib.md5()
