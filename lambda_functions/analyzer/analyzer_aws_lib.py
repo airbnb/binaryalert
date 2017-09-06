@@ -1,6 +1,5 @@
 """Collection of boto3 calls to AWS resources for the analyzer function."""
 import json
-import logging
 from typing import Dict, List, Set, Tuple, Union
 
 import boto3
@@ -25,7 +24,7 @@ SQS = boto3.resource('sqs')
 
 def download_from_s3(
         bucket_name: str, object_key: str, download_path: str) -> Tuple[str, Dict[str, str]]:
-    """Download an object from S3 into local /tmp storage.
+    """Download an object from S3 to the given download path.
 
     Args:
         bucket_name: S3 bucket name.

@@ -5,7 +5,6 @@
 #   YARA_MATCHES_DYNAMO_TABLE_NAME: Name of the Dynamo table which stores YARA match results.
 #   YARA_ALERTS_SNS_TOPIC_ARN: ARN of the SNS topic which should be alerted on a YARA match.
 # Expects a binary YARA rules file to be at './compiled_yara_rules.bin'
-import logging
 import os
 from typing import Any, Dict
 import urllib
@@ -17,8 +16,10 @@ if __package__:
     from lambda_functions.analyzer import analyzer_aws_lib, binary_info, yara_analyzer
     from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH, LOGGER
 else:
-    import analyzer_aws_lib, binary_info, yara_analyzer
+    import analyzer_aws_lib
+    import binary_info
     from common import COMPILED_RULES_FILEPATH, LOGGER
+    import yara_analyzer
 
 # Build the YaraAnalyzer from the compiled rules file at import time (i.e. once per container).
 # This saves 50-100+ ms per Lambda invocation, depending on the size of the rules file.

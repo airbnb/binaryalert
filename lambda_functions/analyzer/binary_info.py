@@ -1,5 +1,4 @@
 """Keeps track of all information associated with and computed about a binary."""
-import logging
 import os
 import tempfile
 import time

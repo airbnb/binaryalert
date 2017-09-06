@@ -64,11 +64,9 @@ class MainTest(fake_filesystem_unittest.TestCase):
         self.maxDiff = None  # pylint: disable=invalid-name
 
         # Set up the fake filesystem.
-        temp_dir = tempfile.gettempdir()
         self.setUpPyfakefs()
-        os.mkdir('/tmp')
         os.makedirs(os.path.dirname(COMPILED_RULES_FILEPATH))
-        os.makedirs(temp_dir)
+        os.makedirs(tempfile.gettempdir())
         yara_mocks.save_test_yara_rules(COMPILED_RULES_FILEPATH)
 
         # Set environment variables.
@@ -247,8 +245,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
             )
         ])
 
-        # Verify that the downloaded file was removed from /tmp.
-        self.assertEqual([], os.listdir('/tmp'))
+        # Verify that the downloaded file was removed from temp storage.
+        self.assertEqual([], os.listdir(tempfile.gettempdir()))
 
 
 if __name__ == '__main__':
