@@ -56,19 +56,18 @@ def _download_from_carbon_black(binary: Binary) -> str:
 @backoff.on_exception(backoff.expo, (ObjectNotFoundError, zipfile.BadZipFile), max_tries=8,
                       jitter=backoff.full_jitter)
 def _build_metadata(binary: Binary) -> Dict[str, str]:
-    """Return basic CarbonBlack metadata to make it easier to triage YARA match alerts."""
+    """Return basic metadata to make it easier to triage YARA match alerts."""
     LOGGER.info('Retrieving binary metadata')
     return {
         'carbon_black_group': ','.join(binary.group),
         'carbon_black_host_count': str(binary.host_count),
-        'carbon_black_last_seen': binary.last_seen,
         'carbon_black_md5': binary.md5,
-        'carbon_black_observed_filename': (
+        'carbon_black_os_type': binary.os_type,
+        'carbon_black_virustotal_score': str(binary.virustotal.score),
+        'filepath': (
             # Throw out any non-ascii characters (S3 metadata must be ascii).
             binary.observed_filenames[0].encode('ascii', 'ignore').decode('ascii')
-        ),
-        'carbon_black_os_type': binary.os_type,
-        'carbon_black_virustotal_score': str(binary.virustotal.score)
+        )
     }
 
 

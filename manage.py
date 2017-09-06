@@ -425,7 +425,7 @@ class Manager(object):
         bucket.put_object(
             Body=EICAR_STRING.encode('UTF-8'),
             Key=test_filename,
-            Metadata={'observed_path': test_filename}
+            Metadata={'filepath': test_filename}
         )
 
         table_name = '{}_binaryalert_matches'.format(self._config.name_prefix)
@@ -442,7 +442,7 @@ class Manager(object):
                 Select='ALL_ATTRIBUTES',
                 Limit=1,
                 ConsistentRead=True,
-                ScanIndexForward=False,  # Sort by LambdaVersion descending (e.g. newest first).
+                ScanIndexForward=False,  # Sort by AnalyzerVersion descending (e.g. newest first).
                 KeyConditionExpression=Key('SHA256').eq(eicar_sha256),
                 FilterExpression=Attr('S3Objects').contains(s3_identifier)
             ).get('Items')
@@ -453,8 +453,8 @@ class Manager(object):
                 pprint.pprint(items[0])
 
                 print('\nRemoving DynamoDB EICAR entry...')
-                lambda_version = items[0]['LambdaVersion']
-                table.delete_item(Key={'SHA256': eicar_sha256, 'LambdaVersion': lambda_version})
+                lambda_version = items[0]['AnalyzerVersion']
+                table.delete_item(Key={'SHA256': eicar_sha256, 'AnalyzerVersion': lambda_version})
                 break
             elif attempt == 10:
                 print('\nFAIL: Expected DynamoDB entry for the EICAR file was *not* found!\n')

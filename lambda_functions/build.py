@@ -7,7 +7,7 @@ import zipfile
 
 import pip
 
-from lambda_functions.analyzer.main import COMPILED_RULES_FILENAME
+from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
 from rules.compile_rules import compile_rules
 
 LAMBDA_DIR = os.path.dirname(os.path.realpath(__file__))
