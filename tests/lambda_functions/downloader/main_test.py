@@ -88,11 +88,10 @@ class MainTest(fake_filesystem_unittest.TestCase):
             expected_metadata = {
                 'carbon_black_group': 'Production,Laptops',
                 'carbon_black_host_count': '2',
-                'carbon_black_last_seen': 'sometime-recently',
                 'carbon_black_md5': 'ABC123',
-                'carbon_black_observed_filename': '/Users/name/file.txt',
                 'carbon_black_os_type': 'Linux',
-                'carbon_black_virustotal_score': '0'
+                'carbon_black_virustotal_score': '0',
+                'filepath': '/Users/name/file.txt'
             }
 
             self.download_main.S3_BUCKET.assert_has_calls([

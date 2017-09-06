@@ -37,6 +37,7 @@ class BuildTest(unittest.TestCase):
                 '__init__.py',
                 'analyzer_aws_lib.py',
                 'binary_info.py',
+                'common.py',
                 'compiled_yara_rules.bin',
                 'file_hash.py',
                 'libpython3.5m.so.1.0',

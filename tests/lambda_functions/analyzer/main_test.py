@@ -2,35 +2,53 @@
 import hashlib
 import json
 import os
+import tempfile
 import unittest
 from unittest import mock
 import urllib
 
-import boto3
 from pyfakefs import fake_filesystem_unittest
 
-from lambda_functions.analyzer import main
+from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH
 from tests import boto3_mocks, yara_mocks
 
-# Mock S3 bucket and object.
+# Mock S3 bucket and objects.
 MOCK_S3_BUCKET_NAME = 'mock-bucket'
-MOCK_FILE_CONTENTS = 'Hello, evil world!\n'
-MOCK_FILE_METADATA = {
-    'observed_path': '/path/to/mock-evil.exe',
-    'reported_md5': 'REPORTED MD5'
-}
-MOCK_S3_OBJECT_KEY = 'space plus+file.test'
+FILE_MODIFIED_TIME = 'test-last-modified'
+GOOD_FILE_CONTENTS = 'Hello, world!\n'
+GOOD_FILE_METADATA = {'filepath': 'win32'}
+GOOD_S3_OBJECT_KEY = 'space plus+file.test'
+EVIL_FILE_CONTENTS = 'Hello, evil world!\n'
+EVIL_FILE_METADATA = {'filepath': '/path/to/mock-evil.exe'}
+EVIL_S3_OBJECT_KEY = 'evil.exe'
+
+MOCK_DYNAMO_TABLE_NAME = 'mock-dynamo-table'
+MOCK_SNS_TOPIC_ARN = 's3:mock-sns-arn'
+MOCK_SQS_URL = 'https://sqs.mock.url'
+MOCK_SQS_RECEIPTS = ['sqs_receipt1', 'sqs_receipt2']
 
 # Mimics minimal parts of S3:ObjectAdded event that triggers the lambda function.
 LAMBDA_VERSION = 1
 TEST_CONTEXT = boto3_mocks.MockLambdaContext(LAMBDA_VERSION)
 
-MOCK_DYNAMO_TABLE_NAME = 'mock-dynamo-table'
-HASH_KEY = 'SHA256'
-RANGE_KEY = 'LambdaVersion'
-MOCK_SNS_TOPIC_ARN = 's3:mock-sns-arn'
-MOCK_SQS_URL = 'https://sqs.mock.url'
-MOCK_SQS_RECEIPTS = ['sqs_receipt1', 'sqs_receipt2']
+
+class MockS3Object(object):
+    """Simple mock for boto3.resource('s3').Object"""
+    def __init__(self, bucket_name, object_key):
+        self.name = bucket_name
+        self.key = object_key
+
+    def download_file(self, download_path):
+        with open(download_path, 'w') as f:
+            f.write(GOOD_FILE_CONTENTS if self.key == GOOD_S3_OBJECT_KEY else EVIL_FILE_CONTENTS)
+
+    @property
+    def last_modified(self):
+        return FILE_MODIFIED_TIME
+
+    @property
+    def metadata(self):
+        return GOOD_FILE_METADATA if self.key == GOOD_S3_OBJECT_KEY else EVIL_FILE_METADATA
 
 
 class MainTest(fake_filesystem_unittest.TestCase):
@@ -46,79 +64,97 @@ class MainTest(fake_filesystem_unittest.TestCase):
         self.maxDiff = None  # pylint: disable=invalid-name
 
         # Set up the fake filesystem.
+        temp_dir = tempfile.gettempdir()
         self.setUpPyfakefs()
         os.mkdir('/tmp')
-        os.makedirs(os.path.dirname(main.COMPILED_RULES_FILEPATH))
-        yara_mocks.save_test_yara_rules(main.COMPILED_RULES_FILEPATH)
+        os.makedirs(os.path.dirname(COMPILED_RULES_FILEPATH))
+        os.makedirs(temp_dir)
+        yara_mocks.save_test_yara_rules(COMPILED_RULES_FILEPATH)
 
-        # Mock cloudwatch client.
-        self._mock_cloudwatch_client = boto3_mocks.MockCloudwatchCient()
-
-        # Create a mock Dynamo table.
-        self._mock_dynamo_client = boto3_mocks.MockDynamoDBClient(
-            MOCK_DYNAMO_TABLE_NAME, HASH_KEY, RANGE_KEY)
-        self._mock_dynamo_table = self._mock_dynamo_client.tables[MOCK_DYNAMO_TABLE_NAME]
-        os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'] = MOCK_DYNAMO_TABLE_NAME
-
-        # Create a mock S3 bucket and "upload" a file to it.
-        self._mock_s3_client = boto3_mocks.MockS3Client(
-            MOCK_S3_BUCKET_NAME, MOCK_S3_OBJECT_KEY, MOCK_FILE_CONTENTS, MOCK_FILE_METADATA)
+        # Set environment variables.
         os.environ['S3_BUCKET_NAME'] = MOCK_S3_BUCKET_NAME
-
-        # Create mock SNS topic.
-        self._mock_sns_client = boto3_mocks.MockSNSClient()
-        os.environ['YARA_ALERTS_SNS_TOPIC_ARN'] = MOCK_SNS_TOPIC_ARN
-
-        # Create mock SQS queue.
-        self._mock_sqs_client = boto3_mocks.MockSQSClient(MOCK_SQS_URL, MOCK_SQS_RECEIPTS)
         os.environ['SQS_QUEUE_URL'] = MOCK_SQS_URL
-
-        # Enable the boto3 mocks.
-        self._real_boto3_client = boto3.client
-        boto3.client = mock.MagicMock(side_effect=self._boto3_client_mock)
+        os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'] = MOCK_DYNAMO_TABLE_NAME
+        os.environ['YARA_ALERTS_SNS_TOPIC_ARN'] = MOCK_SNS_TOPIC_ARN
 
         # Create test event.
         self._test_event = {
-            'S3Objects': [urllib.parse.quote_plus(MOCK_S3_OBJECT_KEY)],
+            # Two objects, which match different YARA rules.
+            'S3Objects': [urllib.parse.quote_plus(GOOD_S3_OBJECT_KEY), EVIL_S3_OBJECT_KEY],
             'SQSReceipts': MOCK_SQS_RECEIPTS
         }
 
-    def tearDown(self):
-        """Restore boto3.client to its original."""
-        boto3.client = self._real_boto3_client
+        # Import the module under test (now that YARA is mocked out).
+        with mock.patch('boto3.client'), mock.patch('boto3.resource'):
+            from lambda_functions.analyzer import main
+            self.main = main
+
+        # Reset each boto3 resource (sometimes necessary depending on import order).
+        self.main.analyzer_aws_lib.CLOUDWATCH = mock.MagicMock()
+        self.main.analyzer_aws_lib.DYNAMODB = mock.MagicMock()
+        self.main.analyzer_aws_lib.S3 = mock.MagicMock()
+        self.main.analyzer_aws_lib.SNS = mock.MagicMock()
+        self.main.analyzer_aws_lib.SQS = mock.MagicMock()
+
+        # Mock S3 Object
+        self.main.analyzer_aws_lib.S3.Object = MockS3Object
 
     @classmethod
     def tearDownClass(cls):
         """Restore YARA calls to their original."""
         yara_mocks.disable_yara_mocks()
 
-    def _boto3_client_mock(self, service_name):
-        """Return one of the internal mocks for boto3.client()."""
-        service_map = {
-            'cloudwatch': self._mock_cloudwatch_client,
-            'dynamodb': self._mock_dynamo_client,
-            's3': self._mock_s3_client,
-            'sns': self._mock_sns_client,
-            'sqs': self._mock_sqs_client
-        }
-        return service_map[service_name]
-
     def test_new_matching_file_added(self):
         """Verify return value, Dynamo update, and SNS alert when a new file matches a YARA rule."""
-        md5 = hashlib.md5(MOCK_FILE_CONTENTS.encode('utf-8')).hexdigest()
-        sha = hashlib.sha256(MOCK_FILE_CONTENTS.encode('utf-8')).hexdigest()
-        result = main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
+        with mock.patch.object(self.main, 'LOGGER') as mock_logger:
+            result = self.main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
+            # Verify logging statements.
+            mock_logger.assert_has_calls([
+                mock.call.info('Processing %d record(s)', 2),
+                mock.call.info('Analyzing "%s"', GOOD_S3_OBJECT_KEY),
+                mock.call.warning(
+                    '%s matched YARA rules: %s',
+                    mock.ANY,
+                    {'externals.yar:filename_contains_win32'}
+                ),
+                mock.call.info('Analyzing "%s"', EVIL_S3_OBJECT_KEY),
+                mock.call.warning(
+                    '%s matched YARA rules: %s',
+                    mock.ANY,
+                    {'evil_check.yar:contains_evil', 'externals.yar:extension_is_exe'}
+                )
+            ])
 
         # Verify return value.
-        s3_id = 'S3:{}:{}'.format(MOCK_S3_BUCKET_NAME, MOCK_S3_OBJECT_KEY)
+        good_s3_id = 'S3:{}:{}'.format(MOCK_S3_BUCKET_NAME, GOOD_S3_OBJECT_KEY)
+        evil_s3_id = 'S3:{}:{}'.format(MOCK_S3_BUCKET_NAME, EVIL_S3_OBJECT_KEY)
         expected = {
-            s3_id: {
+            good_s3_id: {
                 'FileInfo': {
-                    'ComputedMD5': md5,
-                    'ComputedSHA256': sha,
-                    'ReportedMD5': MOCK_FILE_METADATA['reported_md5'],
-                    'S3Location': s3_id,
-                    'SamplePath': MOCK_FILE_METADATA['observed_path']
+                    'MD5': hashlib.md5(GOOD_FILE_CONTENTS.encode('utf-8')).hexdigest(),
+                    'S3LastModified': FILE_MODIFIED_TIME,
+                    'S3Location': good_s3_id,
+                    'S3Metadata': GOOD_FILE_METADATA,
+                    'SHA256': hashlib.sha256(GOOD_FILE_CONTENTS.encode('utf-8')).hexdigest()
+                },
+                'NumMatchedRules': 1,
+                'MatchedRules': {
+                    'Rule1': {
+                        'MatchedStrings': [],
+                        'Meta': {},
+                        'RuleFile': 'externals.yar',
+                        'RuleName': 'filename_contains_win32',
+                        'RuleTags': ['mock_rule']
+                    }
+                }
+            },
+            evil_s3_id: {
+                'FileInfo': {
+                    'MD5': hashlib.md5(EVIL_FILE_CONTENTS.encode('utf-8')).hexdigest(),
+                    'S3LastModified': FILE_MODIFIED_TIME,
+                    'S3Location': evil_s3_id,
+                    'S3Metadata': EVIL_FILE_METADATA,
+                    'SHA256': hashlib.sha256(EVIL_FILE_CONTENTS.encode('utf-8')).hexdigest()
                 },
                 'NumMatchedRules': 2,
                 'MatchedRules': {
@@ -149,95 +185,70 @@ class MainTest(fake_filesystem_unittest.TestCase):
         # Verify that the return value can be encoded as JSON.
         json.dumps(result)
 
-        # Verify that a new entry was made to Dynamo with all of the expected data.
-        key_value_dict = self._mock_dynamo_table.items[(sha, str(LAMBDA_VERSION))].key_value_dict
-        for expected in [md5, MOCK_S3_OBJECT_KEY, 'evil_check.yar:contains_evil']:
-            self.assertIn(expected, str(key_value_dict.values()))
+        # Verify that the Dynamo table was created.
+        self.main.analyzer_aws_lib.DYNAMODB.assert_has_calls([
+            mock.call.Table(MOCK_DYNAMO_TABLE_NAME)
+        ])
 
-        # Verify that an alert was published to SNS.
-        alert = self._mock_sns_client.topics[MOCK_SNS_TOPIC_ARN][0]['Message']
-        for data in [md5, sha, 'evil_check.yar', 'externals.yar', s3_id]:
-            self.assertIn(data, alert)
+        # Verify an SNS message was published.
+        self.main.analyzer_aws_lib.SNS.assert_has_calls([
+            mock.call.Topic(MOCK_SNS_TOPIC_ARN),
+            mock.call.Topic().publish(
+                Message=mock.ANY,
+                Subject='[BinaryAlert] win32 matches a YARA rule'
+            ),
+            mock.call.Topic(MOCK_SNS_TOPIC_ARN),
+            mock.call.Topic().publish(
+                Message=mock.ANY,
+                Subject='[BinaryAlert] /path/to/mock-evil.exe matches a YARA rule'
+            )
+        ])
 
-        # Verify that the SQS receipts were deleted.
-        self.assertEqual([], self._mock_sqs_client.queues[MOCK_SQS_URL])
+        # Verify the SQS receipts were deleted.
+        self.main.analyzer_aws_lib.SQS.assert_has_calls([
+            mock.call.Queue(MOCK_SQS_URL),
+            mock.call.Queue().delete_messages(Entries=[
+                {'Id': '0', 'ReceiptHandle': 'sqs_receipt1'},
+                {'Id': '1', 'ReceiptHandle': 'sqs_receipt2'}
+            ])
+        ])
 
-        # Verify that the correct metrics were published to Cloudwatch.
-        expected_metrics = {
-            'AnalyzedBinaries': 1, 'MatchedBinaries': 1, 'YaraRules': 3, 'LambdaVersion': 1
-        }
-        for metric in self._mock_cloudwatch_client.metric_data['BinaryAlert']:
-            if metric['MetricName'] in expected_metrics:
-                self.assertEqual(expected_metrics[metric['MetricName']], metric['Value'])
+        # Verify the correct metrics were published to Cloudwatch.
+        self.main.analyzer_aws_lib.CLOUDWATCH.assert_has_calls([
+            mock.call.put_metric_data(
+                MetricData=[
+                    {
+                        'MetricName': 'AnalyzedBinaries',
+                        'Value': 2,
+                        'Unit': 'Count'
+                    },
+                    {
+                        'MetricName': 'MatchedBinaries',
+                        'Value': 2,
+                        'Unit': 'Count'
+                    },
+                    {
+                        'MetricName': 'YaraRules',
+                        'Value': 3,
+                        'Unit': 'Count'
+                    },
+                    {
+                        'MetricName': 'S3DownloadLatency',
+                        'StatisticValues': {
+                            'Minimum': mock.ANY,
+                            'Maximum': mock.ANY,
+                            'SampleCount': 2,
+                            'Sum': mock.ANY
+                        },
+                        'Unit': 'Milliseconds'
+                    }
+                ],
+                Namespace='BinaryAlert'
+            )
+        ])
 
         # Verify that the downloaded file was removed from /tmp.
         self.assertEqual([], os.listdir('/tmp'))
-
-    def test_multiple_records(self):
-        """Verify that results are returned for multiple records."""
-        # Add two different files to mock S3.
-        self._mock_s3_client.buckets[MOCK_S3_BUCKET_NAME]['KEY2'] = ('Evilicious', {})
-        self._mock_s3_client.buckets[MOCK_S3_BUCKET_NAME]['KEY3'] = ('', {'observed_path': 'win32'})
-        self._test_event['S3Objects'] = ['KEY2', 'KEY3']
-
-        # Verify return value.
-        result = main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
-        expected = {
-            'S3:{}:KEY2'.format(MOCK_S3_BUCKET_NAME): {
-                'FileInfo': {
-                    'ComputedMD5': hashlib.md5('Evilicious'.encode('utf-8')).hexdigest(),
-                    'ComputedSHA256': hashlib.sha256('Evilicious'.encode('utf-8')).hexdigest(),
-                    'ReportedMD5': '',
-                    'S3Location': 'S3:{}:KEY2'.format(MOCK_S3_BUCKET_NAME),
-                    'SamplePath': ''
-                },
-                'NumMatchedRules': 1,
-                'MatchedRules': {
-                    'Rule1': {
-                        'MatchedStrings': ['$evil_string'],
-                        'Meta': {
-                            'author': 'Austin Byers',
-                            'description': ('A helpful description about why this rule matches '
-                                            'dastardly evil files.')
-                        },
-                        'RuleFile': 'evil_check.yar',
-                        'RuleName': 'contains_evil',
-                        'RuleTags': ['mock_rule', 'has_meta']
-                    }
-                }
-            },
-            'S3:{}:KEY3'.format(MOCK_S3_BUCKET_NAME): {
-                'FileInfo': {
-                    'ComputedMD5': hashlib.md5(''.encode('utf-8')).hexdigest(),
-                    'ComputedSHA256': hashlib.sha256(''.encode('utf-8')).hexdigest(),
-                    'ReportedMD5': '',
-                    'S3Location': 'S3:{}:KEY3'.format(MOCK_S3_BUCKET_NAME),
-                    'SamplePath': 'win32'
-                },
-                'NumMatchedRules': 1,
-                'MatchedRules': {
-                    'Rule1': {
-                        'MatchedStrings': [],
-                        'Meta': {},
-                        'RuleFile': 'externals.yar',
-                        'RuleName': 'filename_contains_win32',
-                        'RuleTags': ['mock_rule']
-                    }
-                }
-            }
-        }
-        self.assertEqual(expected, result)
-
-        # Verify that return value can be encoded as JSON.
-        json.dumps(result)
-
-        # Verify cloudwatch metrics.
-        expected_metrics = {
-            'AnalyzedBinaries': 2, 'MatchedBinaries': 2, 'YaraRules': 3, 'LambdaVersion': 1
-        }
-        for metric in self._mock_cloudwatch_client.metric_data['BinaryAlert']:
-            if metric['MetricName'] in expected_metrics:
-                self.assertEqual(expected_metrics[metric['MetricName']], metric['Value'])
 
 
 if __name__ == '__main__':
