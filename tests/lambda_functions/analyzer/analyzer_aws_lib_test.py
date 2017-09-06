@@ -127,12 +127,12 @@ class DynamoMatchTableTest(unittest.TestCase):
         mock_table.assert_has_calls([
             mock.call.Table().put_item(Item=mock.ANY),
             mock.call.Table().update_item(
-                ExpressionAttributeValues={':s3_string_set': ['S3_2']},
+                ExpressionAttributeValues={':s3_string_set': {'S3_2'}},
                 Key={'SHA256': 'Computed_SHA', 'AnalyzerVersion': 2},
                 UpdateExpression='ADD S3Objects :s3_string_set'
             ),
             mock.call.Table().update_item(
-                ExpressionAttributeValues={':s3_string_set': ['S3_3']},
+                ExpressionAttributeValues={':s3_string_set': {'S3_3'}},
                 Key={'SHA256': 'Computed_SHA', 'AnalyzerVersion': 2},
                 UpdateExpression='ADD S3Objects :s3_string_set'
             )
@@ -186,7 +186,7 @@ class DynamoMatchTableTest(unittest.TestCase):
         self.assertTrue(needs_alert)
         mock_table.assert_has_calls([
             mock.call.Table().update_item(
-                ExpressionAttributeValues={':s3_string_set': ['S3:test-bucket:NEW_KEY']},
+                ExpressionAttributeValues={':s3_string_set': {'S3:test-bucket:NEW_KEY'}},
                 Key={'SHA256': 'Computed_SHA', 'AnalyzerVersion': 1},
                 UpdateExpression='ADD S3Objects :s3_string_set'
             )

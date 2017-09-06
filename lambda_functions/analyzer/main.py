@@ -45,8 +45,8 @@ def analyze_lambda_handler(event_data: Dict[str, Any], lambda_context) -> Dict[s
         Example: {
             'S3:bucket:key': {
                 'FileInfo': { ... },
-                'NumMatchedRules': 1,
-                'MatchedRules': { ... }
+                'MatchedRules': { ... },
+                'NumMatchedRules': 1
             }
         }
     """

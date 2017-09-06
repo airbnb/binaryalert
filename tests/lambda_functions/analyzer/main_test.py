@@ -102,8 +102,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
         """Restore YARA calls to their original."""
         yara_mocks.disable_yara_mocks()
 
-    def test_new_matching_file_added(self):
-        """Verify return value, Dynamo update, and SNS alert when a new file matches a YARA rule."""
+    def test_analyze_lambda_handler(self):
+        """Verify return value, logging, and boto3 calls when multiple files match YARA rules."""
         with mock.patch.object(self.main, 'LOGGER') as mock_logger:
             result = self.main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
             # Verify logging statements.
@@ -135,7 +135,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'S3Metadata': GOOD_FILE_METADATA,
                     'SHA256': hashlib.sha256(GOOD_FILE_CONTENTS.encode('utf-8')).hexdigest()
                 },
-                'NumMatchedRules': 1,
                 'MatchedRules': {
                     'Rule1': {
                         'MatchedStrings': [],
@@ -144,7 +143,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
                         'RuleName': 'filename_contains_win32',
                         'RuleTags': ['mock_rule']
                     }
-                }
+                },
+                'NumMatchedRules': 1
             },
             evil_s3_id: {
                 'FileInfo': {
@@ -154,7 +154,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'S3Metadata': EVIL_FILE_METADATA,
                     'SHA256': hashlib.sha256(EVIL_FILE_CONTENTS.encode('utf-8')).hexdigest()
                 },
-                'NumMatchedRules': 2,
                 'MatchedRules': {
                     'Rule1': {
                         'MatchedStrings': ['$evil_string'],
@@ -174,7 +173,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
                         'RuleName': 'extension_is_exe',
                         'RuleTags': ['mock_rule']
                     }
-                }
+                },
+                'NumMatchedRules': 2
             }
         }
 

@@ -169,12 +169,12 @@ class DynamoMatchTable(object):
             sha: SHA256 to query.
 
         Returns:
-            3-tuple: (AnalyzerVersion, MatchedRules, S3Objects, PreviousS3Objects)
+            4-tuple: (AnalyzerVersion, MatchedRules, S3Objects, PreviousS3Objects)
             Returns None if there is no matching item.
         """
         most_recent_items = self._table.query(
             Select='SPECIFIC_ATTRIBUTES',
-            Limit=2,
+            Limit=2,  # We only need the most recent analyses.
             ConsistentRead=True,
             ScanIndexForward=False,  # Sort by AnalyzerVersion descending (e.g. newest first).
             ProjectionExpression='AnalyzerVersion,MatchedRules,S3Objects',
@@ -190,7 +190,7 @@ class DynamoMatchTable(object):
             # the previous Lambda version as well.
             previous_s3_objects = {}
             if len(most_recent_items) >= 2:
-                previous_s3_objects = s3_objects.union(most_recent_items[1]['S3Objects'])
+                previous_s3_objects = set(most_recent_items[1]['S3Objects'])
             return analyzer_version, matched_rules, s3_objects, previous_s3_objects
         else:
             return None
@@ -217,7 +217,7 @@ class DynamoMatchTable(object):
         self._table.update_item(
             Key={'SHA256': binary.computed_sha, 'AnalyzerVersion': analyzer_version},
             UpdateExpression='ADD S3Objects :s3_string_set',
-            ExpressionAttributeValues={':s3_string_set': [binary.s3_identifier]}
+            ExpressionAttributeValues={':s3_string_set': {binary.s3_identifier}}
         )
 
     def save_matches(self, binary: BinaryInfo, analyzer_version: int) -> bool:
@@ -258,7 +258,7 @@ class DynamoMatchTable(object):
                 # A new YARA rule matched this binary.
                 needs_alert = True
             elif binary.s3_identifier not in item_s3_objects.union(previous_objects):
-                # A new S3 object matched (which did not match in previous versions).
+                # A new S3 object matched (which did not match in the previous version).
                 needs_alert = True
         else:
             # This binary has never been matched before.

@@ -110,13 +110,13 @@ class BinaryInfo(object):
         result = {
             'FileInfo': {
                 'MD5': self.computed_md5,
-                'SHA256': self.computed_sha,
                 'S3LastModified': self.s3_last_modified,
                 'S3Location': self.s3_identifier,
-                'S3Metadata': self.s3_metadata
+                'S3Metadata': self.s3_metadata,
+                'SHA256': self.computed_sha
             },
-            'NumMatchedRules': len(self.yara_matches),
-            'MatchedRules': {}
+            'MatchedRules': {},
+            'NumMatchedRules': len(self.yara_matches)
         }
 
         for index, match in enumerate(self.yara_matches, start=1):
