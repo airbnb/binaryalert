@@ -216,7 +216,3 @@ class DynamoMatchTableTest(unittest.TestCase):
             )
         ])
         mock_table.assert_has_calls([mock.call.Table().put_item(Item=mock.ANY)])
-
-
-if __name__ == '__main__':
-    unittest.main()

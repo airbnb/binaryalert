@@ -1,6 +1,4 @@
 """Unit tests for yara_analyzer.py. Uses fake filesystem."""
-import unittest
-
 from pyfakefs import fake_filesystem_unittest
 
 from lambda_functions.analyzer import yara_analyzer
@@ -86,7 +84,3 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             ['evil_check.yar:contains_evil', 'externals.yar:extension_is_exe',
              'externals.yar:filename_contains_win32'],
             list(sorted(matched_rule_ids)))
-
-
-if __name__ == '__main__':
-    unittest.main()

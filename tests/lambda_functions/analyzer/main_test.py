@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import tempfile
-import unittest
 from unittest import mock
 import urllib
 
@@ -251,7 +250,3 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Verify that the downloaded file was removed from temp storage.
         self.assertEqual([], os.listdir(tempfile.gettempdir()))
-
-
-if __name__ == '__main__':
-    unittest.main()

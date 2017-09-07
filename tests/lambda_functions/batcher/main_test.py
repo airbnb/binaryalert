@@ -1,4 +1,5 @@
 """Unit tests for batcher main.py. Mocks out boto3 clients."""
+# pylint: disable=protected-access
 import json
 import os
 import unittest
@@ -124,15 +125,14 @@ class MainTest(unittest.TestCase):
                     ],
                     'IsTruncated': False
                 }
-            else:
-                return {
-                    'Contents': [
-                        {'Key': 'test-key-1'},
-                        {'Key': 'test-key-2'}
-                    ],
-                    'IsTruncated': True,
-                    'NextContinuationToken': 'test-continuation-token'
-                }
+            return {
+                'Contents': [
+                    {'Key': 'test-key-1'},
+                    {'Key': 'test-key-2'}
+                ],
+                'IsTruncated': True,
+                'NextContinuationToken': 'test-continuation-token'
+            }
 
         self.batcher_main.S3.list_objects_v2 = mock_list
 
@@ -177,7 +177,7 @@ class MainTest(unittest.TestCase):
         """If the batcher runs out of time, it has to re-invoke itself."""
         class MockEnumerator(object):
             """Simple mock for S3BucketEnumerator which never finishes."""
-            def __init__(self, *args):
+            def __init__(self, *args):  # pylint: disable=unused-argument
                 self.continuation_token = 'test-continuation-token'
                 self.finished = False
 
@@ -262,7 +262,3 @@ class MainTest(unittest.TestCase):
                 }]
             )
         ])
-
-
-if __name__ == '__main__':
-    unittest.main()

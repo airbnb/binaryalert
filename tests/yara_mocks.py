@@ -57,9 +57,6 @@ class YaraMatchMock(object):
 
 def enable_yara_mocks():
     """Redirect yara.load and yara.rules.match to use Python's file IO."""
-    if isinstance(yara.load, mock.MagicMock):
-        # yara.load has already been mocked out - nothing to do.
-        return
     yara.load = mock.MagicMock(
         side_effect=lambda rules_file: YaraRulesMock(REAL_YARA_LOAD(file=open(rules_file, 'rb'))))
 
