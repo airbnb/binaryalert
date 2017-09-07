@@ -2,29 +2,11 @@
 import json
 import os
 import unittest
+from unittest import mock
 
 import boto3
-import moto
 
 from tests import boto3_mocks
-
-
-class MockSQSErrorsClient(object):
-    """An SQS client which returns an error for each submitted message."""
-
-    def send_message_batch(self, **kwargs):  # pylint: disable=no-self-use
-        """Return an error for each submitted message."""
-        return {
-            'Failed': [
-                {
-                    'Id': msg['Id'],
-                    'SenderFault': False,
-                    'Code': 123,
-                    'Message': 'Test failure message'
-                }
-                for msg in kwargs['Entries']
-            ]
-        }
 
 
 class MainTest(unittest.TestCase):
@@ -36,85 +18,250 @@ class MainTest(unittest.TestCase):
         os.environ['BATCH_LAMBDA_QUALIFIER'] = 'Production'
         os.environ['OBJECTS_PER_MESSAGE'] = '2'
         os.environ['S3_BUCKET_NAME'] = 'test_s3_bucket'
-        os.environ['SQS_QUEUE_URL'] = 'https://sqs.us-east-1.amazonaws.com/1234/test_queue'
+        os.environ['SQS_QUEUE_URL'] = 'test_queue'
 
-        self._mocks = [moto.mock_cloudwatch(), moto.mock_lambda(), moto.mock_s3(), moto.mock_sqs()]
-        for mock in self._mocks:
-            mock.start()
-
-        # Import batch lambda handler _after_ the mocks have been initialized.
-        from lambda_functions.batcher import main
-        self.batcher_main = main
-
-        self._bucket = boto3.resource('s3').Bucket(os.environ['S3_BUCKET_NAME'])
-        self._bucket.create()
-
-        response = boto3.client('sqs').create_queue(QueueName='test_queue')
-        self._queue = boto3.resource('sqs').Queue(response['QueueUrl'])
-
-    def tearDown(self):
-        """Reset moto mocks."""
-        for mock in self._mocks:
-            mock.stop()
-
-    def _sqs_messages(self):
-        """Retrieve parsed form of all pending SQS messages."""
-        return [
-            json.loads(msg.body) for msg in self._queue.receive_messages(MaxNumberOfMessages=10)]
+        with mock.patch.object(boto3, 'client'), mock.patch.object(boto3, 'resource'):
+            from lambda_functions.batcher import main
+            self.batcher_main = main
 
     def test_batcher_empty_bucket(self):
         """Batcher does nothing for an empty bucket."""
-        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
-        self.assertEqual(0, result)
-        self.assertEqual([], self._sqs_messages())
+        self.batcher_main.S3.list_objects_v2 = lambda **kwargs: {}
+
+        with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            self.assertEqual(0, num_keys)
+
+            mock_logger.assert_has_calls([
+                mock.call.info('Invoked with event %s', {}),
+                mock.call.info('The S3 bucket is empty; nothing to do')
+            ])
 
     def test_batcher_one_object(self):
         """Batcher enqueues a single S3 object."""
-        self._bucket.put_object(Body=b'Object 1', Key='key1')
+        self.batcher_main.S3.list_objects_v2 = lambda **kwargs: {
+            'Contents': [
+                {'Key': 'test-key-1'}
+            ],
+            'IsTruncated': False
+        }
 
-        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
-        self.assertEqual(1, result)
+        with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            self.assertEqual(1, num_keys)
 
-        expected_sqs_msg = {'Records': [{'s3': {'object': {'key': 'key1'}}}]}
-        self.assertEqual([expected_sqs_msg], self._sqs_messages())
+            mock_logger.assert_has_calls([
+                mock.call.info('Invoked with event %s', {}),
+                mock.call.info('Finalize: sending last batch of keys'),
+                mock.call.info('Sending SQS batch of %d keys: %s ... %s',
+                               1, 'test-key-1', 'test-key-1')
+            ])
+
+        self.batcher_main.SQS.assert_has_calls([
+            mock.call.Queue('test_queue'),
+            mock.call.Queue().send_messages(Entries=[
+                {
+                    'Id': '0',
+                    'MessageBody': json.dumps({
+                        'Records': [
+                            {'s3': {'object': {'key': 'test-key-1'}}}
+                        ]
+                    })
+                }
+            ])
+        ])
+
+        self.batcher_main.CLOUDWATCH.assert_not_called()  # No error metrics to report.
+        self.batcher_main.LAMBDA.assert_not_called()  # Second batcher invocation not necessary.
 
     def test_batcher_one_full_batch(self):
         """Batcher enqueues the configured maximum number of objects in a single SQS message."""
-        self._bucket.put_object(Body=b'Object 1', Key='key1')
-        self._bucket.put_object(Body=b'Object 2', Key='key2')
+        self.batcher_main.S3.list_objects_v2 = lambda **kwargs: {
+            'Contents': [
+                {'Key': 'test-key-1'},
+                {'Key': 'test-key-2'}
+            ],
+            'IsTruncated': False
+        }
 
-        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
-        self.assertEqual(2, result)
+        with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            self.assertEqual(2, num_keys)
 
-        expected_sqs_msg = {'Records': [{'s3': {'object': {'key': 'key1'}}},
-                                        {'s3': {'object': {'key': 'key2'}}}]}
-        self.assertEqual([expected_sqs_msg], self._sqs_messages())
+            mock_logger.assert_has_calls([
+                mock.call.info('Invoked with event %s', {}),
+                mock.call.info('Finalize: sending last batch of keys'),
+                mock.call.info('Sending SQS batch of %d keys: %s ... %s',
+                               2, 'test-key-1', 'test-key-2')
+            ])
 
-    def test_batcher_one_batch_plus_one(self):
-        """Batcher enqueues more than 1 full batch; less than 2."""
-        self._bucket.put_object(Body=b'Object 1', Key='key1')
-        self._bucket.put_object(Body=b'Object 2', Key='key2')
-        self._bucket.put_object(Body=b'Object 3', Key='key3')
+        self.batcher_main.SQS.assert_has_calls([
+            mock.call.Queue('test_queue'),
+            mock.call.Queue().send_messages(Entries=[
+                {
+                    'Id': '0',
+                    'MessageBody': json.dumps({
+                        'Records': [
+                            {'s3': {'object': {'key': 'test-key-1'}}},
+                            {'s3': {'object': {'key': 'test-key-2'}}}
+                        ]
+                    })
+                }
+            ])
+        ])
 
-        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
-        self.assertEqual(3, result)
+        self.batcher_main.CLOUDWATCH.assert_not_called()
+        self.batcher_main.LAMBDA.assert_not_called()
 
-        expected_sqs_msgs = [
-            {'Records': [{'s3': {'object': {'key': 'key1'}}},
-                         {'s3': {'object': {'key': 'key2'}}}]},
-            {'Records': [{'s3': {'object': {'key': 'key3'}}}]}
-        ]
-        self.assertEqual(expected_sqs_msgs, self._sqs_messages())
+    def test_batcher_multiple_messages(self):
+        """Batcher enqueues 2 SQS messages."""
+        def mock_list(**kwargs):
+            """Mock for S3.list_objects_v2 which includes multiple pages of results."""
+            if 'ContinuationToken' in kwargs:
+                return {
+                    'Contents': [
+                        {'Key': 'test-key-3'}
+                    ],
+                    'IsTruncated': False
+                }
+            else:
+                return {
+                    'Contents': [
+                        {'Key': 'test-key-1'},
+                        {'Key': 'test-key-2'}
+                    ],
+                    'IsTruncated': True,
+                    'NextContinuationToken': 'test-continuation-token'
+                }
+
+        self.batcher_main.S3.list_objects_v2 = mock_list
+
+        with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            self.assertEqual(3, num_keys)
+
+            mock_logger.assert_has_calls([
+                mock.call.info('Invoked with event %s', {}),
+                mock.call.info('Finalize: sending last batch of keys'),
+                mock.call.info('Sending SQS batch of %d keys: %s ... %s',
+                               3, 'test-key-1', 'test-key-3')
+            ])
+
+        self.batcher_main.SQS.assert_has_calls([
+            mock.call.Queue('test_queue'),
+            mock.call.Queue().send_messages(Entries=[
+                {
+                    'Id': '0',
+                    'MessageBody': json.dumps({
+                        'Records': [
+                            {'s3': {'object': {'key': 'test-key-1'}}},
+                            {'s3': {'object': {'key': 'test-key-2'}}}
+                        ]
+                    })
+                },
+                {
+                    'Id': '1',
+                    'MessageBody': json.dumps({
+                        'Records': [
+                            {'s3': {'object': {'key': 'test-key-3'}}}
+                        ]
+                    })
+                }
+            ])
+        ])
+
+        self.batcher_main.CLOUDWATCH.assert_not_called()
+        self.batcher_main.LAMBDA.assert_not_called()
+
+    def test_batcher_re_invoke(self):
+        """If the batcher runs out of time, it has to re-invoke itself."""
+        class MockEnumerator(object):
+            """Simple mock for S3BucketEnumerator which never finishes."""
+            def __init__(self, *args):
+                self.continuation_token = 'test-continuation-token'
+                self.finished = False
+
+        with mock.patch.object(self.batcher_main, 'S3BucketEnumerator', MockEnumerator),\
+                mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            self.batcher_main.batch_lambda_handler(
+                {}, boto3_mocks.MockLambdaContext(time_limit_ms=1)
+            )
+            mock_logger.assert_has_calls([mock.call.info('Invoking another batcher')])
+
+        self.batcher_main.LAMBDA.assert_has_calls([
+            mock.call.invoke(
+                FunctionName='test_batch_lambda_name',
+                InvocationType='Event',
+                Payload='{"S3ContinuationToken": "test-continuation-token"}',
+                Qualifier='Production'
+            )
+        ])
+
+    def test_batcher_invoke_with_continuation(self):
+        """Invoke the batcher with a continuation token."""
+        self.batcher_main.S3.list_objects_v2 = lambda **kwargs: {
+            'Contents': [
+                {'Key': kwargs['ContinuationToken']}  # Make sure continuation token is included.
+            ],
+            'IsTruncated': False
+        }
+
+        with mock.patch.object(self.batcher_main, 'LOGGER'):
+            num_keys = self.batcher_main.batch_lambda_handler(
+                {'S3ContinuationToken': 'test-continuation-token'},
+                boto3_mocks.MockLambdaContext()
+            )
+            self.assertEqual(1, num_keys)
+
+        self.batcher_main.SQS.assert_has_calls([
+            mock.call.Queue().send_messages(Entries=[
+                {
+                    'Id': '0',
+                    'MessageBody': json.dumps({
+                        'Records': [
+                            {'s3': {'object': {'key': 'test-continuation-token'}}}
+                        ]
+                    })
+                }
+            ])
+        ])
 
     def test_batcher_sqs_errors(self):
         """Verify SQS errors are logged and reported to CloudWatch."""
-        self.batcher_main.SQS_CLIENT = MockSQSErrorsClient()
-        self._bucket.put_object(Body=b'Object 1', Key='key1')
-        self._bucket.put_object(Body=b'Object 2', Key='key2')
-        self._bucket.put_object(Body=b'Object 3', Key='key3')
+        sqs_batcher = self.batcher_main.SQSBatcher('test_queue', 1)
+        sqs_batcher._queue.send_messages.side_effect = lambda **kwargs: {
+            'Failed': [
+                {
+                    'Id': msg['Id'],
+                    'Message': 'msg',
+                    'SenderFault': False,
+                }
+                for msg in kwargs['Entries']
+            ]
+        }
+        sqs_batcher.add_key('test-key-1')
+        sqs_batcher.add_key('test-key-2')
 
-        result = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
-        self.assertEqual(3, result)
+        with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            sqs_batcher.finalize()
+
+            mock_logger.assert_has_calls([
+                mock.call.error(
+                    'Unable to enqueue SQS message: %s',
+                    {'Id': str(i), 'Message': 'msg', 'SenderFault': False}
+                ) for i in range(2)
+            ])
+
+        self.batcher_main.CLOUDWATCH.assert_has_calls([
+            mock.call.put_metric_data(
+                Namespace='BinaryAlert',
+                MetricData=[{
+                    'MetricName': 'BatchEnqueueFailures',
+                    'Value': 2,
+                    'Unit': 'Count'
+                }]
+            )
+        ])
 
 
 if __name__ == '__main__':
