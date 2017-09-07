@@ -7,9 +7,7 @@ import tempfile
 from unittest import mock
 
 import boto3
-# We have to import cbapi to make it available for mocking.
-import cbapi  # pylint: disable=unused-import
-import moto
+import cbapi
 from pyfakefs import fake_filesystem_unittest
 
 
@@ -35,19 +33,11 @@ class MockBinary(object):
 class MainTest(fake_filesystem_unittest.TestCase):
     """Test each function in downloader/main.py"""
 
-    @moto.mock_kms
     def setUp(self):
         """Mock out CarbonBlack and boto3 before importing the module."""
-        # Set environment variables (using boto3 mocks).
         os.environ['CARBON_BLACK_URL'] = 'test-carbon-black-url'
-
-        key_id = boto3.client('kms').create_key()['KeyMetadata']['KeyId']
-        ciphertext = boto3.client('kms').encrypt(
-            KeyId=key_id, Plaintext=b'test-api-token'
-        )['CiphertextBlob']
-        os.environ['ENCRYPTED_CARBON_BLACK_API_TOKEN'] = (
-            base64.b64encode(ciphertext).decode('ascii'))
-
+        os.environ['ENCRYPTED_CARBON_BLACK_API_TOKEN'] = base64.b64encode(
+            b'super-secret').decode('ascii')
         os.environ['TARGET_S3_BUCKET'] = 'test-s3-bucket'
 
         # Setup fake filesystem.
@@ -69,7 +59,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
         )
 
         # Mock out cbapi and import the file under test.
-        with mock.patch('boto3.resource'), mock.patch('cbapi.CbEnterpriseResponseAPI'):
+        with mock.patch.object(boto3, 'client'), mock.patch.object(boto3, 'resource'), \
+                mock.patch.object(cbapi, 'CbEnterpriseResponseAPI'):
             from lambda_functions.downloader import main
             self.download_main = main
 

@@ -6,8 +6,6 @@ import os
 import sys
 from unittest import mock, TestCase
 
-import boto3
-import moto
 from pyfakefs import fake_filesystem_unittest
 
 import manage
@@ -221,30 +219,29 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
 class BinaryAlertConfigTestRealFilesystem(TestCase):
     """Tests of the BinaryAlertConfig class that use a real filesystem."""
 
-    @moto.mock_kms
+    @mock.patch('boto3.client')
     @mock.patch('getpass.getpass', return_value='abcd' * 10)
     @mock.patch('manage.print')
     @mock.patch('subprocess.check_call')
     def test_encrypt_cb_api_token(
             self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock,
-            mock_getpass: mock.MagicMock):
+            mock_getpass: mock.MagicMock, mock_client: mock.MagicMock):
         """Verify that token encryption is done correctly."""
+        mock_client('kms').encrypt.return_value = {'CiphertextBlob': base64.b64encode(b'a'*50)}
         config = manage.BinaryAlertConfig()
         config._encrypt_cb_api_token()
 
         # Verify that the mocks were called as expected.
+        mock_client.assert_has_calls([
+            mock.call().encrypt(KeyId='alias/_binaryalert_carbonblack_credentials',
+                                Plaintext=mock_getpass.return_value)
+        ])
         mock_getpass.assert_called_once()
         mock_print.assert_has_calls([
             mock.call('Terraforming KMS key...'),
             mock.call('Encrypting API token...')
         ])
         mock_subprocess.assert_called_once()
-
-        # Decrypting the key should result in the original value.
-        plaintext_api_key = boto3.client('kms').decrypt(
-            CiphertextBlob=base64.b64decode(config.encrypted_carbon_black_api_token)
-        )['Plaintext'].decode('ascii')
-        self.assertEqual(mock_getpass.return_value, plaintext_api_key)
 
 
 class ManagerTest(FakeFilesystemBase):

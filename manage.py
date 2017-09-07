@@ -21,7 +21,6 @@ import hcl
 
 from lambda_functions.build import build as lambda_build
 from rules.update_rules import update_github_rules
-from tests import boto3_mocks
 from tests.rules.eicar_rule_test import EICAR_STRING
 
 # File locations.
@@ -469,7 +468,6 @@ class Manager(object):
             raise TestFailureError('\nLive test failed!')
 
     @staticmethod
-    @boto3_mocks.restore_http_adapter
     def unit_test() -> None:
         """Run unit tests (*_test.py).
 
