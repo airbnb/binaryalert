@@ -7,7 +7,7 @@
 # Expects a binary YARA rules file to be at './compiled_yara_rules.bin'
 import os
 from typing import Any, Dict
-import urllib
+import urllib.parse
 
 from botocore.exceptions import ClientError as BotoError
 
@@ -16,10 +16,11 @@ if __package__:
     from lambda_functions.analyzer import analyzer_aws_lib, binary_info, yara_analyzer
     from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH, LOGGER
 else:
-    import analyzer_aws_lib
-    import binary_info
-    from common import COMPILED_RULES_FILEPATH, LOGGER
-    import yara_analyzer
+    # mypy complains about duplicate definitions
+    import analyzer_aws_lib  # type: ignore
+    import binary_info  # type: ignore
+    from common import COMPILED_RULES_FILEPATH, LOGGER  # type: ignore
+    import yara_analyzer  # type: ignore
 
 # Build the YaraAnalyzer from the compiled rules file at import time (i.e. once per container).
 # This saves 50-100+ ms per Lambda invocation, depending on the size of the rules file.

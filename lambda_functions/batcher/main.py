@@ -8,7 +8,7 @@
 import json
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import boto3
 
@@ -25,14 +25,14 @@ SQS_MAX_MESSAGES_PER_BATCH = 10
 class SQSMessage(object):
     """Encapsulates a single SQS message (which will contain multiple S3 keys)."""
 
-    def __init__(self, msg_id: int):
+    def __init__(self, msg_id: int) -> None:
         """Create a new message structure, which will store a list of S3 keys.
 
         Args:
             msg_id: Message index in the global list.
         """
         self._id = msg_id
-        self._keys = []
+        self._keys: List[str] = []
 
     @property
     def num_keys(self) -> int:
@@ -64,7 +64,7 @@ class SQSMessage(object):
 class SQSBatcher(object):
     """Collect groups of S3 keys and batch them into as few SQS requests as possible."""
 
-    def __init__(self, queue_url: str, objects_per_message: int):
+    def __init__(self, queue_url: str, objects_per_message: int) -> None:
         """Create a new SQS batcher.
 
         Args:
@@ -82,8 +82,8 @@ class SQSBatcher(object):
         self._msg_index = 0  # The index of the SQS message where keys are currently being added.
 
         # The first and last keys added to this batch.
-        self._first_key = None
-        self._last_key = None
+        self._first_key: Optional[str] = None
+        self._last_key: Optional[str] = None
 
     def _send_batch(self) -> None:
         """Group keys into messages and make a single batch request."""
@@ -135,7 +135,7 @@ class SQSBatcher(object):
 class S3BucketEnumerator(object):
     """Enumerates all of the S3 objects in a given bucket."""
 
-    def __init__(self, bucket_name: str, continuation_token: str = None):
+    def __init__(self, bucket_name: str, continuation_token: str = None) -> None:
         """Instantiate with an optional continuation token.
 
         Args:

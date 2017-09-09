@@ -7,7 +7,7 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional
 
 import boto3
 
@@ -20,7 +20,7 @@ SQS_MAX_MESSAGES = 10  # Maximum number of messages to request (highest allowed 
 WAIT_TIME_SECONDS = 10  # Maximum amount of time to hold a receive_message connection open.
 
 
-def _build_payload(sqs_messages: Dict[str, Any]) -> Union[Dict[str, List[str]], None]:
+def _build_payload(sqs_messages: Dict[str, Any]) -> Optional[Dict[str, List[str]]]:
     """Convert a batch of SQS messages into an analysis Lambda payload.
 
     Args:
@@ -47,10 +47,10 @@ def _build_payload(sqs_messages: Dict[str, Any]) -> Union[Dict[str, List[str]], 
     """
     if 'Messages' not in sqs_messages:
         LOGGER.info('No SQS messages found')
-        return
+        return None
 
     # The payload consists of S3 object keys and SQS receipts (analyzers will delete the message).
-    payload = {'S3Objects': [], 'SQSReceipts': []}
+    payload: Dict[str, List[str]] = {'S3Objects': [], 'SQSReceipts': []}
     invalid_receipts = []  # List of invalid SQS message receipts to delete.
     for msg in sqs_messages['Messages']:
         try:
@@ -72,7 +72,7 @@ def _build_payload(sqs_messages: Dict[str, Any]) -> Union[Dict[str, List[str]], 
 
     # If there were no valid S3 objects, return None.
     if not payload['S3Objects']:
-        return
+        return None
 
     return payload
 

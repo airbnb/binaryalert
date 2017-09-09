@@ -2,7 +2,7 @@
 import os
 import tempfile
 import time
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Set, Union
 import uuid
 
 if __package__:
@@ -11,16 +11,17 @@ if __package__:
     from lambda_functions.analyzer.common import LOGGER
     from lambda_functions.analyzer.yara_analyzer import YaraAnalyzer
 else:
-    import analyzer_aws_lib
-    from common import LOGGER
-    import file_hash
-    from yara_analyzer import YaraAnalyzer
+    # mypy complains about duplicate definitions
+    import analyzer_aws_lib  # type: ignore
+    from common import LOGGER  # type: ignore
+    import file_hash  # type: ignore
+    from yara_analyzer import YaraAnalyzer  # type: ignore
 
 
 class BinaryInfo(object):
     """Organizes the analysis of a single binary blob in S3."""
 
-    def __init__(self, bucket_name: str, object_key: str, yara_analyzer: YaraAnalyzer):
+    def __init__(self, bucket_name: str, object_key: str, yara_analyzer: YaraAnalyzer) -> None:
         """Create a new BinaryInfo.
 
         Args:
@@ -37,18 +38,18 @@ class BinaryInfo(object):
         self.yara_analyzer = yara_analyzer
 
         # Computed after file download and analysis.
-        self.download_time_ms = 0
+        self.download_time_ms = 0.0
         self.s3_last_modified = ''
-        self.s3_metadata = {}
-        self.computed_md5 = None
-        self.computed_sha = None
-        self.yara_matches = []  # List of yara.Match objects.
+        self.s3_metadata: Dict[str, str] = dict()
+        self.computed_md5 = ''
+        self.computed_sha = ''
+        self.yara_matches: List[Any] = list()  # List of yara.Match objects (not an importable type)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Use the S3 identifier as the string representation of the binary."""
         return self.s3_identifier
 
-    def _download_from_s3(self):
+    def _download_from_s3(self) -> None:
         """Download binary from S3 and measure elapsed time."""
         LOGGER.debug('Downloading %s to %s', self.object_key, self.download_path)
 
@@ -107,20 +108,8 @@ class BinaryInfo(object):
 
     def summary(self) -> Dict[str, Any]:
         """Generate a summary dictionary of binary attributes."""
-        result = {
-            'FileInfo': {
-                'MD5': self.computed_md5,
-                'S3LastModified': self.s3_last_modified,
-                'S3Location': self.s3_identifier,
-                'S3Metadata': self.s3_metadata,
-                'SHA256': self.computed_sha
-            },
-            'MatchedRules': {},
-            'NumMatchedRules': len(self.yara_matches)
-        }
-
-        for index, match in enumerate(self.yara_matches, start=1):
-            result['MatchedRules']['Rule{}'.format(index)] = {
+        matched_rules = {
+            'Rule{}'.format(index): {
                 # YARA string IDs, e.g. "$string1"
                 'MatchedStrings': list(sorted(set(t[1] for t in match.strings))),
                 'Meta': match.meta,
@@ -128,4 +117,17 @@ class BinaryInfo(object):
                 'RuleName': match.rule,
                 'RuleTags': match.tags
             }
-        return result
+            for index, match in enumerate(self.yara_matches, start=1)
+        }
+
+        return {
+            'FileInfo': {
+                'MD5': self.computed_md5,
+                'S3LastModified': self.s3_last_modified,
+                'S3Location': self.s3_identifier,
+                'S3Metadata': self.s3_metadata,
+                'SHA256': self.computed_sha
+            },
+            'MatchedRules': matched_rules,
+            'NumMatchedRules': len(self.yara_matches)
+        }
