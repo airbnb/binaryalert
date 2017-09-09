@@ -27,6 +27,7 @@ def _mock_input(prompt: str) -> str:
         return 'https://new-example.com'
     elif prompt.startswith('Change the CarbonBlack API token'):
         return 'yes'
+    return 'UNKNOWN'
 
 
 class FakeFilesystemBase(fake_filesystem_unittest.TestCase):

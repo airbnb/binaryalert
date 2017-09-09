@@ -17,7 +17,7 @@ NUM_BINARIES = 100  # Number of binaries returned by the mock CarbonBlack.
 
 class MockBinary(object):
     """Mock CarbonBlack Binary instance."""
-    def __init__(self, index: int):
+    def __init__(self, index: int) -> None:
         self.md5 = 'test-md5-{}'.format(index)
 
 
@@ -36,20 +36,22 @@ class MockCarbonBlack(object):
 class MockMain(object):
     """Mock out the downloader Lambda main.py."""
     CARBON_BLACK = MockCarbonBlack()
+    # All of the type: ignores are because mypy's multiprocessing spec is out of date.
 
-    def __init__(self, inject_errors: bool = False):
+    def __init__(self, inject_errors: bool = False) -> None:
         self.inject_errors = inject_errors
         # Record all download invocations across all Consumer processes.
-        self.download_invocations = multiprocessing.Array('i', range(100))
-        self.index = multiprocessing.Value('i', 0)
+        self.download_invocations = multiprocessing.Array('i', range(100))  # type: ignore
+        self.index = multiprocessing.Value('i', 0)  # type: ignore
 
     def download_lambda_handler(self, event: Dict[str, Any], _):
         """Record requests to the downloader function."""
         if self.inject_errors:
             raise FileNotFoundError
-        with self.index.get_lock():
-            self.download_invocations[self.index.value] = int(event['md5'].split('-')[2])
-            self.index.value += 1
+        with self.index.get_lock():  # type: ignore
+            self.download_invocations[self.index.value] = int(  # type: ignore
+                event['md5'].split('-')[2])
+            self.index.value += 1  # type: ignore
 
 
 @mock.patch('boto3.client', mock.MagicMock())
@@ -80,7 +82,7 @@ class CopyAllTest(unittest.TestCase):
         copy_all.copy_all_binaries()
 
         # Verify that every binary "in CarbonBlack" was sent to a Consumer process.
-        self.assertEqual(NUM_BINARIES, mock_main.index.value)
+        self.assertEqual(NUM_BINARIES, mock_main.index.value)  # type: ignore
         md5s = [mock_main.download_invocations[i] for i in range(NUM_BINARIES)]
         self.assertEqual(list(range(NUM_BINARIES)), sorted(md5s))
 

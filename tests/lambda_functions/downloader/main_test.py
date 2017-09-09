@@ -17,10 +17,10 @@ class MockBinary(object):
     class MockVirusTotal(object):
         """Mock for cbapi.response.models.VirusTotal."""
 
-        def __init__(self, score=0):
+        def __init__(self, score: int = 0) -> None:
             self.score = score
 
-    def __init__(self, contents: str, **kwargs):
+    def __init__(self, contents: bytes, **kwargs) -> None:
         self.contents = contents
         self.properties = dict(kwargs)
 

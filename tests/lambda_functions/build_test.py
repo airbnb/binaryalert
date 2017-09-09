@@ -31,7 +31,7 @@ class BuildTest(unittest.TestCase):
                           subset: bool = False):
         """Verify the set of filenames in the zip archive matches the expected list."""
         with zipfile.ZipFile(archive_path, 'r') as archive:
-            filenames = set(zip_info.filename for zip_info in archive.filelist)
+            filenames = set(zip_info.filename for zip_info in archive.filelist)  # type: ignore
         if subset:
             self.assertTrue(expected_filenames.issubset(filenames))
         else:
