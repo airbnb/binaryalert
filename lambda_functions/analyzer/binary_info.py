@@ -2,7 +2,7 @@
 import os
 import tempfile
 import time
-from typing import Any, Dict, List, Set, Union
+from typing import Any, Dict, List, Set
 import uuid
 
 if __package__:

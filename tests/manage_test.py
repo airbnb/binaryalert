@@ -351,7 +351,10 @@ class ManagerTest(FakeFilesystemBase):
     @mock.patch.object(uuid, 'uuid4', return_value='test-uuid')
     def test_live_test(self, mock_uuid: mock.MagicMock, mock_print: mock.MagicMock,
                        mock_resource: mock.MagicMock):
+        """Verify execution order for boto3 and print mock calls."""
         self.manager.live_test()
+
+        mock_uuid.assert_called_once()
 
         mock_resource.assert_has_calls([
             mock.call('s3'),
@@ -396,6 +399,6 @@ class ManagerTest(FakeFilesystemBase):
             mock.call('\nRemoving DynamoDB EICAR entry...'),
             mock.call('Removing EICAR test file from S3...'),
             mock.call(
-                 '\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).'
+                '\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).'
             )
         ])

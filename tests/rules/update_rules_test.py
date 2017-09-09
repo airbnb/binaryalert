@@ -1,4 +1,5 @@
 """Tests for rule update/clone logic."""
+# pylint: disable=protected-access
 import os
 import tempfile
 from typing import List
@@ -10,7 +11,7 @@ from rules import compile_rules, update_rules
 
 
 class UpdateRulesTest(fake_filesystem_unittest.TestCase):
-
+    """Tests for the rule-cloning logic."""
     def setUp(self):
         """Setup the fake filesystem with the expected rules folder structure."""
         self.setUpPyfakefs()

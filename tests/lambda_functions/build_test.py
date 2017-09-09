@@ -1,11 +1,12 @@
 """Test lambda_functions/build.py."""
 import os
-import pip
 import tempfile
 from typing import List, Set
 import unittest
 from unittest import mock
 import zipfile
+
+import pip
 
 from lambda_functions import build
 
