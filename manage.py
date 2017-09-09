@@ -353,12 +353,13 @@ class Manager(object):
         """Terraform validate and apply any configuration/package changes."""
         # Validate and format the terraform files.
         os.chdir(TERRAFORM_DIR)
-        # TODO: In Terraform 0.10.3, the -var-file flag won't be necessary here
-        subprocess.check_call(['terraform', 'validate', '-var-file', CONFIG_FILE])
-        subprocess.check_call(['terraform', 'fmt'])
 
         # Setup the backend if needed and reload modules.
         subprocess.check_call(['terraform', 'init'])
+
+        # TODO: In Terraform 0.10.3, the -var-file flag won't be necessary here
+        subprocess.check_call(['terraform', 'validate', '-var-file', CONFIG_FILE])
+        subprocess.check_call(['terraform', 'fmt'])
 
         # Apply changes (requires interactive approval)
         subprocess.check_call(['terraform', 'apply', '-auto-approve=false'])

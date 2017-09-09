@@ -286,9 +286,9 @@ class ManagerTest(FakeFilesystemBase):
         """Validate order of Terraform operations."""
         self.manager.apply()
         mock_subprocess.assert_has_calls([
+            mock.call(['terraform', 'init']),
             mock.call(['terraform', 'validate', '-var-file', manage.CONFIG_FILE]),
             mock.call(['terraform', 'fmt']),
-            mock.call(['terraform', 'init']),
             mock.call(['terraform', 'apply', '-auto-approve=false']),
             mock.call([
                 'terraform', 'apply', '-auto-approve=true', '-refresh=false',
@@ -345,9 +345,10 @@ class ManagerTest(FakeFilesystemBase):
 
     @mock.patch.object(time, 'sleep', mock.MagicMock())
     @mock.patch.object(boto3, 'resource')
-    @mock.patch.object(sys, 'stdout')
+    @mock.patch.object(manage, 'print')
+    @mock.patch.object(manage, 'pprint', mock.MagicMock())
     @mock.patch.object(uuid, 'uuid4', return_value='test-uuid')
-    def test_live_test(self, mock_uuid: mock.MagicMock, mock_stdout: mock.MagicMock,
+    def test_live_test(self, mock_uuid: mock.MagicMock, mock_print: mock.MagicMock,
                        mock_resource: mock.MagicMock):
         self.manager.live_test()
 
@@ -378,31 +379,22 @@ class ManagerTest(FakeFilesystemBase):
             )
         ])
 
-        mock_stdout.assert_has_calls([
-            mock.call.write(
+        mock_print.assert_has_calls([
+            mock.call(
                 'Uploading EICAR test file '
                 'S3:test.prefix.binaryalert-binaries.us-test-1:eicar_test_test-uuid.txt...'
             ),
-            mock.call.write('\n'),
-            mock.call.write(
+            mock.call(
                 'EICAR test file uploaded! '
                 'Connecting to table DynamoDB:test_prefix_binaryalert_matches...'
             ),
-            mock.call.write('\n'),
-            mock.call.write(
+            mock.call(
                 '\t[1/10] Querying DynamoDB table for the expected YARA match entry...'
             ),
-            mock.call.write('\n'),
-            mock.call.write('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n'),
-            mock.call.write('\n'),
-            mock.call.write(mock.ANY),  # DynamoDB entry
-            mock.call.write('\n'),
-            mock.call.write('\nRemoving DynamoDB EICAR entry...'),
-            mock.call.write('\n'),
-            mock.call.write('Removing EICAR test file from S3...'),
-            mock.call.write('\n'),
-            mock.call.write(
+            mock.call('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n'),
+            mock.call('\nRemoving DynamoDB EICAR entry...'),
+            mock.call('Removing EICAR test file from S3...'),
+            mock.call(
                  '\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).'
-            ),
-            mock.call.write('\n')
+            )
         ])
