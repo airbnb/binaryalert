@@ -286,10 +286,16 @@ class BinaryAlertConfig(object):
             raw_config = config_file.read()
 
         for variable_name, value in self._config.items():
+            if isinstance(value, str):
+                formatted_value = '"{}"'.format(value)
+            elif isinstance(value, bool):
+                formatted_value = str(value).lower()
+            else:
+                formatted_value = value
+
             raw_config = re.sub(
                 r'{}\s*=\s*\S+'.format(variable_name),
-                '{} = {}'.format(variable_name,
-                                 value if isinstance(value, int) else '"' + value + '"'),
+                '{} = {}'.format(variable_name, formatted_value),
                 raw_config
             )
 

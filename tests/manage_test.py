@@ -46,6 +46,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
                 'enable_carbon_black_downloader = {}'.format(1 if enable_downloader else 0),
                 'carbon_black_url = "{}" //comment4'.format(cb_url),
                 'encrypted_carbon_black_api_token = "{}"'.format(encrypted_api_token),
+                'force_destroy = false',
                 '// comment5'
             ]))
 
@@ -197,6 +198,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
     def test_save(self):
         """New configuration is successfully written and comments are preserved."""
         config = manage.BinaryAlertConfig()
+        config._config['force_destroy'] = True
         config.aws_region = 'us-west-2'
         config.name_prefix = 'new_name_prefix'
         config.enable_carbon_black_downloader = 0
@@ -211,6 +213,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
                 self.assertIn('comment{}'.format(i), raw_data)
 
         new_config = manage.BinaryAlertConfig()
+        self.assertEqual(True, new_config._config['force_destroy'])
         self.assertEqual(config.aws_region, new_config.aws_region)
         self.assertEqual(config.name_prefix, new_config.name_prefix)
         self.assertEqual(
@@ -236,8 +239,7 @@ class BinaryAlertConfigTestRealFilesystem(TestCase):
 
         # Verify that the mocks were called as expected.
         mock_client.assert_has_calls([
-            mock.call().encrypt(KeyId='alias/_binaryalert_carbonblack_credentials',
-                                Plaintext=mock_getpass.return_value)
+            mock.call().encrypt(KeyId=mock.ANY, Plaintext=mock_getpass.return_value)
         ])
         mock_getpass.assert_called_once()
         mock_print.assert_has_calls([
