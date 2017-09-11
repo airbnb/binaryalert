@@ -6,7 +6,7 @@ from unittest import mock
 
 import boto3
 
-from tests import boto3_mocks
+from tests import common
 
 
 class MainTest(unittest.TestCase):
@@ -32,7 +32,7 @@ class MainTest(unittest.TestCase):
         with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
             invocations = self.dispatcher_main.dispatch_lambda_handler(
                 {},
-                boto3_mocks.MockLambdaContext(decrement_ms=10000)
+                common.MockLambdaContext(decrement_ms=10000)
             )
             self.assertEqual(0, invocations)
 
@@ -59,7 +59,7 @@ class MainTest(unittest.TestCase):
         with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
             invocations = self.dispatcher_main.dispatch_lambda_handler(
                 {},
-                boto3_mocks.MockLambdaContext(decrement_ms=10000)
+                common.MockLambdaContext(decrement_ms=10000)
             )
             self.assertEqual(0, invocations)
 
@@ -97,7 +97,7 @@ class MainTest(unittest.TestCase):
         with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
             invocations = self.dispatcher_main.dispatch_lambda_handler(
                 {},
-                boto3_mocks.MockLambdaContext(decrement_ms=10000)
+                common.MockLambdaContext(decrement_ms=10000)
             )
             self.assertEqual(1, invocations)
 

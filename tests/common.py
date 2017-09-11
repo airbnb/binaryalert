@@ -1,4 +1,4 @@
-"""Mock Lambda context."""
+"""Utilities common to several different unit tests."""
 
 
 class MockLambdaContext(object):

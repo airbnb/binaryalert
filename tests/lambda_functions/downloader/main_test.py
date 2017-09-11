@@ -79,9 +79,11 @@ class MainTest(fake_filesystem_unittest.TestCase):
             expected_metadata = {
                 'carbon_black_group': 'Production,Laptops',
                 'carbon_black_host_count': '2',
+                'carbon_black_last_seen': 'sometime-recently',
                 'carbon_black_md5': 'ABC123',
                 'carbon_black_os_type': 'Linux',
                 'carbon_black_virustotal_score': '0',
+                'carbon_black_webui_link': 'example.com',
                 'filepath': '/Users/name/file.txt'
             }
 

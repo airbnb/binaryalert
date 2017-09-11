@@ -7,7 +7,7 @@ from unittest import mock
 
 import boto3
 
-from tests import boto3_mocks
+from tests import common
 
 
 class MainTest(unittest.TestCase):
@@ -30,7 +30,7 @@ class MainTest(unittest.TestCase):
         self.batcher_main.S3.list_objects_v2 = lambda **kwargs: {}
 
         with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
-            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext())
             self.assertEqual(0, num_keys)
 
             mock_logger.assert_has_calls([
@@ -48,7 +48,7 @@ class MainTest(unittest.TestCase):
         }
 
         with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
-            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext())
             self.assertEqual(1, num_keys)
 
             mock_logger.assert_has_calls([
@@ -86,7 +86,7 @@ class MainTest(unittest.TestCase):
         }
 
         with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
-            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext())
             self.assertEqual(2, num_keys)
 
             mock_logger.assert_has_calls([
@@ -137,7 +137,7 @@ class MainTest(unittest.TestCase):
         self.batcher_main.S3.list_objects_v2 = mock_list
 
         with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
-            num_keys = self.batcher_main.batch_lambda_handler({}, boto3_mocks.MockLambdaContext())
+            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext())
             self.assertEqual(3, num_keys)
 
             mock_logger.assert_has_calls([
@@ -184,7 +184,7 @@ class MainTest(unittest.TestCase):
         with mock.patch.object(self.batcher_main, 'S3BucketEnumerator', MockEnumerator),\
                 mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
             self.batcher_main.batch_lambda_handler(
-                {}, boto3_mocks.MockLambdaContext(time_limit_ms=1)
+                {}, common.MockLambdaContext(time_limit_ms=1)
             )
             mock_logger.assert_has_calls([mock.call.info('Invoking another batcher')])
 
@@ -209,7 +209,7 @@ class MainTest(unittest.TestCase):
         with mock.patch.object(self.batcher_main, 'LOGGER'):
             num_keys = self.batcher_main.batch_lambda_handler(
                 {'S3ContinuationToken': 'test-continuation-token'},
-                boto3_mocks.MockLambdaContext()
+                common.MockLambdaContext()
             )
             self.assertEqual(1, num_keys)
 
