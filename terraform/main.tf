@@ -1,6 +1,6 @@
 terraform {
-  // 0.10.1 includes important bug fixes for remote backends
-  required_version = "~> 0.10.1"
+  // 0.10.4 is required for locals to work correctly across multiple files
+  required_version = "~> 0.10.4"
 }
 
 provider "aws" {

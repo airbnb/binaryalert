@@ -7,7 +7,7 @@
 #        export TARGET_S3_BUCKET='...' && \
 #        python3 copy_all.py 2>&1 | tee copy.log
 import logging
-import multiprocessing
+from multiprocessing import JoinableQueue, Process, Queue  # type: ignore
 import os
 import queue
 
@@ -16,7 +16,8 @@ import cbapi
 if __package__:
     from lambda_functions.downloader import main
 else:
-    import main
+    # mypy complains about duplicate definition
+    import main  # type: ignore
 
 logging.basicConfig(format='%(asctime)s %(levelname)-6s %(message)s')
 LOGGER = logging.getLogger('carbon_black_copy')
@@ -29,7 +30,7 @@ MAX_TASK_QUEUE_SIZE = NUM_CONSUMERS * 20  # Maximum number of tasks in the queue
 class CopyTask(object):
     """A Task to copy a single binary from CarbonBlack into the BinaryAlert S3 bucket."""
 
-    def __init__(self, index: int, md5: str):
+    def __init__(self, index: int, md5: str) -> None:
         """Initialize a Task with the binary's information.
 
         Args:
@@ -44,16 +45,15 @@ class CopyTask(object):
         """Execute the copy task."""
         main.download_lambda_handler({'md5': self.md5}, None)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Use the index and MD5 in the string representation."""
         return 'CopyTask [#{}] MD5:{}'.format(self.index, self.md5)
 
 
-class Consumer(multiprocessing.Process):
+class Consumer(Process):
     """A Consumer grabs Tasks from the shared queue and executes them asynchronously."""
 
-    def __init__(self, task_queue: multiprocessing.JoinableQueue,
-                 failed_queue: multiprocessing.Queue):
+    def __init__(self, task_queue: JoinableQueue, failed_queue: Queue) -> None:
         """Create a Consumer with shared communication queues.
 
         Args:
@@ -66,25 +66,28 @@ class Consumer(multiprocessing.Process):
         self.task_queue = task_queue
         self.failed_queue = failed_queue
 
-    def run(self):
+    def run(self) -> None:
         """Grab Tasks and execute them until an empty task signals a shutdown."""
         while True:
             # Grab the next task from the queue.
             copy_task = self.task_queue.get()
 
+            # mypy's multiprocessing stub is out of date
+            process_name: str = self.name  # type: ignore
+
             # Exit if we encounter an empty task.
             if copy_task is None:
-                LOGGER.info('[%s] Exiting', self.name)
+                LOGGER.info('[%s] Exiting', process_name)
                 self.task_queue.task_done()
                 return
 
             # Execute the copy task, logging any failure.
-            LOGGER.info('[%s] Executing %s', self.name, copy_task)
+            LOGGER.info('[%s] Executing %s', process_name, copy_task)
             try:
                 copy_task()
             except Exception:  # pylint: disable=broad-except
                 # This is a long-running job: catch any Exception, mark as failure, and continue.
-                LOGGER.exception('[%s] %s', self.name, copy_task)
+                LOGGER.exception('[%s] %s', process_name, copy_task)
                 self.failed_queue.put(copy_task.md5)
             finally:
                 # Mark the task as complete and move on to the next one.
@@ -98,13 +101,13 @@ def _validate_env() -> None:
             raise KeyError('Please define the {} environment variable'.format(key))
 
 
-def copy_all_binaries():
+def copy_all_binaries() -> None:
     """Copy every binary in CarbonBlack into the BinaryAlert input S3 bucket."""
     _validate_env()
 
     # Create process communication queues.
-    tasks = multiprocessing.JoinableQueue(MAX_TASK_QUEUE_SIZE)  # CopyTasks to execute.
-    failures = multiprocessing.Queue()  # A list of MD5s which failed to copy.
+    tasks = JoinableQueue(MAX_TASK_QUEUE_SIZE)  # CopyTasks to execute.
+    failures = Queue()  # A list of MD5s which failed to copy.
 
     # Start the consumer processes.
     LOGGER.info('Start %d consumers', NUM_CONSUMERS)

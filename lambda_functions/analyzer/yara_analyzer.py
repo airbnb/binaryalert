@@ -8,7 +8,7 @@ import yara
 class YaraAnalyzer(object):
     """Encapsulates YARA analysis and matching functions."""
 
-    def __init__(self, rules_file: str):
+    def __init__(self, rules_file: str) -> None:
         """Initialize the analyzer with a prebuilt binary YARA rules file.
 
         Args:

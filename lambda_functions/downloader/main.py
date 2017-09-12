@@ -61,9 +61,11 @@ def _build_metadata(binary: Binary) -> Dict[str, str]:
     return {
         'carbon_black_group': ','.join(binary.group),
         'carbon_black_host_count': str(binary.host_count),
+        'carbon_black_last_seen': binary.last_seen,
         'carbon_black_md5': binary.md5,
         'carbon_black_os_type': binary.os_type,
         'carbon_black_virustotal_score': str(binary.virustotal.score),
+        'carbon_black_webui_link': binary.webui_link,
         'filepath': (
             # Throw out any non-ascii characters (S3 metadata must be ascii).
             binary.observed_filenames[0].encode('ascii', 'ignore').decode('ascii')

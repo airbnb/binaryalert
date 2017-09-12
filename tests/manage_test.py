@@ -4,13 +4,15 @@ import base64
 import inspect
 import os
 import sys
+import time
+import uuid
 from unittest import mock, TestCase
 
 import boto3
-import moto
 from pyfakefs import fake_filesystem_unittest
 
 import manage
+from tests.rules.eicar_rule_test import EICAR_STRING
 
 
 def _mock_input(prompt: str) -> str:
@@ -25,8 +27,7 @@ def _mock_input(prompt: str) -> str:
         return 'https://new-example.com'
     elif prompt.startswith('Change the CarbonBlack API token'):
         return 'yes'
-    else:
-        raise NotImplementedError('Unexpected input prompt ' + prompt)
+    return 'UNKNOWN'
 
 
 class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
@@ -45,6 +46,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
                 'enable_carbon_black_downloader = {}'.format(1 if enable_downloader else 0),
                 'carbon_black_url = "{}" //comment4'.format(cb_url),
                 'encrypted_carbon_black_api_token = "{}"'.format(encrypted_api_token),
+                'force_destroy = false',
                 '// comment5'
             ]))
 
@@ -196,6 +198,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
     def test_save(self):
         """New configuration is successfully written and comments are preserved."""
         config = manage.BinaryAlertConfig()
+        config._config['force_destroy'] = True
         config.aws_region = 'us-west-2'
         config.name_prefix = 'new_name_prefix'
         config.enable_carbon_black_downloader = 0
@@ -210,6 +213,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
                 self.assertIn('comment{}'.format(i), raw_data)
 
         new_config = manage.BinaryAlertConfig()
+        self.assertEqual(True, new_config._config['force_destroy'])
         self.assertEqual(config.aws_region, new_config.aws_region)
         self.assertEqual(config.name_prefix, new_config.name_prefix)
         self.assertEqual(
@@ -221,30 +225,28 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
 class BinaryAlertConfigTestRealFilesystem(TestCase):
     """Tests of the BinaryAlertConfig class that use a real filesystem."""
 
-    @moto.mock_kms
+    @mock.patch('boto3.client')
     @mock.patch('getpass.getpass', return_value='abcd' * 10)
     @mock.patch('manage.print')
     @mock.patch('subprocess.check_call')
     def test_encrypt_cb_api_token(
             self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock,
-            mock_getpass: mock.MagicMock):
+            mock_getpass: mock.MagicMock, mock_client: mock.MagicMock):
         """Verify that token encryption is done correctly."""
+        mock_client('kms').encrypt.return_value = {'CiphertextBlob': base64.b64encode(b'a'*50)}
         config = manage.BinaryAlertConfig()
         config._encrypt_cb_api_token()
 
         # Verify that the mocks were called as expected.
+        mock_client.assert_has_calls([
+            mock.call().encrypt(KeyId=mock.ANY, Plaintext=mock_getpass.return_value)
+        ])
         mock_getpass.assert_called_once()
         mock_print.assert_has_calls([
             mock.call('Terraforming KMS key...'),
             mock.call('Encrypting API token...')
         ])
         mock_subprocess.assert_called_once()
-
-        # Decrypting the key should result in the original value.
-        plaintext_api_key = boto3.client('kms').decrypt(
-            CiphertextBlob=base64.b64decode(config.encrypted_carbon_black_api_token)
-        )['Plaintext'].decode('ascii')
-        self.assertEqual(mock_getpass.return_value, plaintext_api_key)
 
 
 class ManagerTest(FakeFilesystemBase):
@@ -287,9 +289,9 @@ class ManagerTest(FakeFilesystemBase):
         """Validate order of Terraform operations."""
         self.manager.apply()
         mock_subprocess.assert_has_calls([
-            mock.call(['terraform', 'validate', '-var-file', manage.CONFIG_FILE]),
-            mock.call(['terraform', 'fmt']),
             mock.call(['terraform', 'init']),
+            mock.call(['terraform', 'validate']),
+            mock.call(['terraform', 'fmt']),
             mock.call(['terraform', 'apply', '-auto-approve=false']),
             mock.call([
                 'terraform', 'apply', '-auto-approve=true', '-refresh=false',
@@ -343,3 +345,62 @@ class ManagerTest(FakeFilesystemBase):
         mock_build.assert_called_once()
         mock_apply.assert_called_once()
         mock_analyze.assert_called_once()
+
+    @mock.patch.object(time, 'sleep', mock.MagicMock())
+    @mock.patch.object(boto3, 'resource')
+    @mock.patch.object(manage, 'print')
+    @mock.patch.object(manage, 'pprint', mock.MagicMock())
+    @mock.patch.object(uuid, 'uuid4', return_value='test-uuid')
+    def test_live_test(self, mock_uuid: mock.MagicMock, mock_print: mock.MagicMock,
+                       mock_resource: mock.MagicMock):
+        """Verify execution order for boto3 and print mock calls."""
+        self.manager.live_test()
+
+        mock_uuid.assert_called_once()
+
+        mock_resource.assert_has_calls([
+            mock.call('s3'),
+            mock.call().Bucket('test.prefix.binaryalert-binaries.us-test-1'),
+            mock.call().Bucket().put_object(
+                Body=bytes('{}'.format(EICAR_STRING), 'utf-8'),
+                Key='eicar_test_test-uuid.txt',
+                Metadata={'filepath': 'eicar_test_test-uuid.txt'}
+            ),
+            mock.call('dynamodb'),
+            mock.call().Table('test_prefix_binaryalert_matches'),
+            mock.call().Table().query(
+                Select='ALL_ATTRIBUTES',
+                Limit=1,
+                ConsistentRead=True,
+                ScanIndexForward=False,
+                KeyConditionExpression=mock.ANY,
+                FilterExpression=mock.ANY
+            )
+        ])
+
+        mock_resource.assert_has_calls([
+            mock.call().Table().delete_item(Key=mock.ANY),
+            mock.call().Bucket().delete_objects(
+                Delete={'Objects': [{'Key': 'eicar_test_test-uuid.txt'}]}
+            )
+        ])
+
+        mock_print.assert_has_calls([
+            mock.call(
+                'Uploading EICAR test file '
+                'S3:test.prefix.binaryalert-binaries.us-test-1:eicar_test_test-uuid.txt...'
+            ),
+            mock.call(
+                'EICAR test file uploaded! '
+                'Connecting to table DynamoDB:test_prefix_binaryalert_matches...'
+            ),
+            mock.call(
+                '\t[1/10] Querying DynamoDB table for the expected YARA match entry...'
+            ),
+            mock.call('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n'),
+            mock.call('\nRemoving DynamoDB EICAR entry...'),
+            mock.call('Removing EICAR test file from S3...'),
+            mock.call(
+                '\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).'
+            )
+        ])

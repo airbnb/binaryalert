@@ -41,6 +41,8 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
   versioning {
     enabled = true
   }
+
+  force_destroy = "${var.force_destroy}"
 }
 
 // Source S3 bucket: binaries uploaded here will be automatically analyzed.
@@ -78,6 +80,8 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
   versioning {
     enabled = true
   }
+
+  force_destroy = "${var.force_destroy}"
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {

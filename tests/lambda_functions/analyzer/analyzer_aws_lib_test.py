@@ -1,12 +1,25 @@
 """Unit tests for analyzer_aws_lib.py. Uses mock boto3 clients."""
 # pylint: disable=protected-access
+from typing import Dict, List, Optional
 import unittest
 from unittest import mock
 
 from lambda_functions.analyzer import analyzer_aws_lib, binary_info
-from tests import yara_mocks
 
 MOCK_DYNAMO_TABLE_NAME = 'mock-dynamo-table'
+
+
+class YaraMatchMock(object):
+    """Fake yara.Match object."""
+    def __init__(self, file_name: str, rule_name: str,
+                 tags: Optional[List[str]] = None,
+                 strings: Optional[List[str]] = None,
+                 meta: Optional[Dict[str, str]] = None) -> None:
+        self.namespace = file_name
+        self.rule = rule_name
+        self.tags = tags or []
+        self.strings = strings or []
+        self.meta = meta or {}
 
 
 class AnalyzerAWSLibStandaloneTest(unittest.TestCase):
@@ -37,7 +50,7 @@ class DynamoMatchTableTest(unittest.TestCase):
         self._binary.s3_metadata = {'test-filename': 'test.txt'}
         self._binary.computed_md5 = 'Computed_MD5'
         self._binary.computed_sha = 'Computed_SHA'
-        self._binary.yara_matches = [yara_mocks.YaraMatchMock('file.yara', 'rule_name')]
+        self._binary.yara_matches = [YaraMatchMock('file.yara', 'rule_name')]
 
     def test_new_sha(self, mock_table: mock.MagicMock):
         """A binary matches YARA rules for the first time - create DB entry and alert."""
@@ -150,8 +163,7 @@ class DynamoMatchTableTest(unittest.TestCase):
                 }
             ]
         }
-        self._binary.yara_matches.append(
-            yara_mocks.YaraMatchMock('new_file.yara', 'different_rule_name'))
+        self._binary.yara_matches.append(YaraMatchMock('new_file.yara', 'different_rule_name'))
 
         needs_alert = match_table.save_matches(self._binary, 2)
 
@@ -205,8 +217,7 @@ class DynamoMatchTableTest(unittest.TestCase):
                 }
             ]
         }
-        self._binary.yara_matches.append(
-            yara_mocks.YaraMatchMock('new_file.yara', 'different_rule_name'))
+        self._binary.yara_matches.append(YaraMatchMock('new_file.yara', 'different_rule_name'))
         needs_alert = match_table.save_matches(self._binary, 0)
 
         self.assertFalse(needs_alert)  # Don't alert even if there was a change
@@ -216,7 +227,3 @@ class DynamoMatchTableTest(unittest.TestCase):
             )
         ])
         mock_table.assert_has_calls([mock.call.Table().put_item(Item=mock.ANY)])
-
-
-if __name__ == '__main__':
-    unittest.main()
