@@ -14,6 +14,10 @@ output "function_name" {
   value = "${aws_lambda_function.function.function_name}"
 }
 
+output "log_group_name" {
+  value = "${aws_cloudwatch_log_group.lambda_log_group.name}"
+}
+
 output "role_id" {
   value = "${aws_iam_role.role.id}"
 }
