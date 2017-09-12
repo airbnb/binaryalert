@@ -10,13 +10,13 @@ locals {
   "width": 12,
   "height": 3,
   "properties": {
-    "title": "S3: ${aws_s3_bucket.binaryalert_binaries.bucket}",
+    "title": "S3: ${aws_s3_bucket.binaryalert_binaries.id}",
     "region": "${var.aws_region}",
     "stat": "Average",
     "period": 86400,
     "view": "singleValue",
     "metrics": [
-      ["AWS/S3", "NumberOfObjects", "BucketName", "${aws_s3_bucket.binaryalert_binaries.bucket}"],
+      ["AWS/S3", "NumberOfObjects", "BucketName", "${aws_s3_bucket.binaryalert_binaries.id}"],
       [".", "BucketSizeBytes", ".", "."]
     ]
   }
