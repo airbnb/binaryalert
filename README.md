@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/airbnb/binaryalert/badge.svg?branch=master)](https://coveralls.io/github/airbnb/binaryalert?branch=master)
 
 
-![BinaryAlert Logo](img/logo.png)
+![BinaryAlert Logo](docs/images/logo.png)
 
 BinaryAlert is an open-source serverless AWS pipeline where any file uploaded to an S3 bucket is
 immediately scanned with a configurable set of [YARA](https://virustotal.github.io/yara/) rules.
@@ -76,7 +76,7 @@ information about adding and updating YARA rules.
 
 
 ## Architecture
-  ![BinaryAlert Architecture](img/architecture.png)
+  ![BinaryAlert Architecture](docs/images/architecture.png)
 
   1. The organization collects files and delivers them to their BinaryAlert S3 bucket.
   Files of interest could include executable binaries, email attachments, documents, etc.

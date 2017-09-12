@@ -8,7 +8,8 @@ install:
 script:
   - coverage run manage.py unit_test
   - coverage report  # Required coverage threshold specified in .coveragerc
-  - find . -name '*.py' -exec pylint '{}' +
+  - find . -name '*.py' -not -path './docs/source/*' -exec pylint '{}' +
   - mypy . --ignore-missing-imports
+  - sphinx-build -W docs/source docs/build
 after_success:
   - coveralls
