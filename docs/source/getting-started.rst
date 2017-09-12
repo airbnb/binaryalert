@@ -1,6 +1,5 @@
 Getting Started
 ===============
-
 All you need is a computer and an AWS account to get BinaryAlert up and running in just a few minutes!
 
 
