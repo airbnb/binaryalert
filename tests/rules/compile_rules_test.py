@@ -51,12 +51,11 @@ class CompileRulesTest(TestCase):
 
     def tearDown(self):
         """Remove compiled rules file."""
-        # TODO: Add support for rules.save in yara_mocks so we don't have to write to disk.
         if os.path.isfile('compiled_yara_rules.bin'):
             os.remove('compiled_yara_rules.bin')
 
     def test_compilation(self):
-        """Ensure all YARA rules compile correctly."""
+        """Ensure all real YARA rules compile correctly."""
         compile_rules.compile_rules('compiled_yara_rules.bin')
         rules = yara.load('compiled_yara_rules.bin')
         num_rules_files = sum(1 for _ in compile_rules._find_yara_files())

@@ -1,6 +1,6 @@
 """Collection of boto3 calls to AWS resources for the analyzer function."""
 import json
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -9,8 +9,9 @@ if __package__:
     from lambda_functions.analyzer.binary_info import BinaryInfo
     from lambda_functions.analyzer.common import LOGGER
 else:
-    from binary_info import BinaryInfo
-    from common import LOGGER
+    # mypy complains about duplicate definitions
+    from binary_info import BinaryInfo  # type: ignore
+    from common import LOGGER  # type: ignore
 
 SNS_PUBLISH_SUBJECT_MAX_SIZE = 99
 
@@ -153,7 +154,7 @@ class DynamoMatchTable(object):
         S3Objects (Set[str]): A set of S3 keys containing the corresponding binary.
             Duplicate uploads (multiple binaries with the same SHA) are allowed.
     """
-    def __init__(self, table_name: str):
+    def __init__(self, table_name: str) -> None:
         """Establish connection to Dynamo.
 
         Args:
@@ -161,8 +162,7 @@ class DynamoMatchTable(object):
         """
         self._table = DYNAMODB.Table(table_name)
 
-    def _most_recent_item(self, sha: str) -> Union[
-            Tuple[int, Set[str], Set[str], Set[str]], None]:
+    def _most_recent_item(self, sha: str) -> Optional[Tuple[int, Set[str], Set[str], Set[str]]]:
         """Query the table for the most recent entry with the given SHA.
 
         Args:
@@ -188,7 +188,7 @@ class DynamoMatchTable(object):
             # When re-analyzing all binaries, only one S3 object will be added to the DB at a time.
             # In order to prevent spurious alerts about new S3 objects, we report S3 objects from
             # the previous Lambda version as well.
-            previous_s3_objects = {}
+            previous_s3_objects: Set[str] = set()
             if len(most_recent_items) >= 2:
                 previous_s3_objects = set(most_recent_items[1]['S3Objects'])
             return analyzer_version, matched_rules, s3_objects, previous_s3_objects

@@ -1,7 +1,6 @@
 """Unit tests for file_hash.py (uses fake filesystem)."""
 import hashlib
 import math
-import unittest
 
 from pyfakefs import fake_filesystem_unittest
 
@@ -47,7 +46,3 @@ class FileUtilsTest(fake_filesystem_unittest.TestCase):
         sha, md5 = file_hash.compute_hashes('/empty_file')
         self.assertEqual(hashlib.sha256().hexdigest(), sha)
         self.assertEqual(hashlib.md5().hexdigest(), md5)
-
-
-if __name__ == '__main__':
-    unittest.main()

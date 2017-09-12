@@ -1,12 +1,11 @@
 """Memory-efficient file hashing."""
 import hashlib
-import io
-from typing import Tuple
+from typing import Generator, IO, Tuple
 
 MB = 2 ** 20  # ~ 1 million bytes
 
 
-def _read_in_chunks(file_object: io.FileIO, chunk_size: int = 2*MB) -> str:
+def _read_in_chunks(file_object: IO[bytes], chunk_size: int = 2*MB) -> Generator[bytes, None, None]:
     """Read a file in fixed-size chunks (to minimize memory usage for large files).
 
     Args:

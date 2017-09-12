@@ -9,5 +9,6 @@ script:
   - coverage run manage.py unit_test
   - coverage report  # Required coverage threshold specified in .coveragerc
   - find . -name '*.py' -exec pylint '{}' +
+  - mypy . --ignore-missing-imports
 after_success:
   - coveralls

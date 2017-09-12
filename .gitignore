@@ -20,6 +20,9 @@ compiled_yara_rules.bin
 # Coverage
 .coverage
 
+# Mypy
+.mypy_cache/
+
 # MacOS artifacts
 Thumbs.db
 .DS_Store

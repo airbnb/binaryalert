@@ -8,43 +8,46 @@
 import json
 import logging
 import os
+from typing import Dict, List, Optional
 
 import boto3
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
-LAMBDA_CLIENT = boto3.client('lambda')
-S3_CLIENT = boto3.client('s3')
-SQS_CLIENT = boto3.client('sqs')
+CLOUDWATCH = boto3.client('cloudwatch')
+LAMBDA = boto3.client('lambda')
+S3 = boto3.client('s3')
+SQS = boto3.resource('sqs')
+SQS_MAX_MESSAGES_PER_BATCH = 10
 
 
 class SQSMessage(object):
     """Encapsulates a single SQS message (which will contain multiple S3 keys)."""
 
-    def __init__(self, msg_id):
+    def __init__(self, msg_id: int) -> None:
         """Create a new message structure, which will store a list of S3 keys.
 
         Args:
-            msg_id: [int] Message index in the global list.
+            msg_id: Message index in the global list.
         """
         self._id = msg_id
-        self._keys = []
+        self._keys: List[str] = []
 
     @property
-    def num_keys(self):
-        """Returns [int] the number of keys stored in the SQS message so far."""
+    def num_keys(self) -> int:
+        """Returns the number of keys stored in the SQS message so far."""
         return len(self._keys)
 
-    def add_key(self, key):
-        """Add another S3 key (string) to the message."""
+    def add_key(self, key: str) -> None:
+        """Add another S3 key to the message."""
         self._keys.append(key)
 
-    def sqs_entry(self):
-        """Returns a message entry [dict], as required by sqs_client.send_message_batch().
+    def sqs_entry(self) -> Dict[str, str]:
+        """Returns a message entry in the format expected by sqs_client.send_message_batch().
 
         Moreover, the message body matches the structure of an S3 added event. This gives all
-        messages in the SQS the same format and enables the dispatcher to parse them consistently.
+        messages in the queue the same format and enables the dispatcher to parse them consistently.
         """
         return {
             'Id': str(self._id),
@@ -53,7 +56,7 @@ class SQSMessage(object):
             })
         }
 
-    def reset(self):
+    def reset(self) -> None:
         """Remove the stored list of S3 keys."""
         self._keys = []
 
@@ -61,36 +64,32 @@ class SQSMessage(object):
 class SQSBatcher(object):
     """Collect groups of S3 keys and batch them into as few SQS requests as possible."""
 
-    def __init__(self, queue_url, objects_per_message, messages_per_batch=10):
+    def __init__(self, queue_url: str, objects_per_message: int) -> None:
         """Create a new SQS batcher.
 
         Args:
-            queue_url: [string] URL of the queue to send messages to.
-            objects_per_message: [int] The maximum number of S3 keys to put in each SQS message.
-            messages_per_batch: [int] The maximum number of SQS messages to batch together.
-                SQS caps this value at 10.
+            queue_url: Destination SQS queue URL.
+            objects_per_message: The maximum number of S3 keys to put in each SQS message.
 
         Note that the downstream analyzer Lambdas will each process at most
         (objects_per_message * messages_per_batch) binaries. The analyzer runtime limit is the
         ultimate constraint on the size of each batch.
         """
-        self._queue_url = queue_url
+        self._queue = SQS.Queue(queue_url)
         self._objects_per_message = objects_per_message
-        self._messages_per_batch = messages_per_batch
 
-        self._messages = [SQSMessage(i) for i in range(messages_per_batch)]
+        self._messages = [SQSMessage(i) for i in range(SQS_MAX_MESSAGES_PER_BATCH)]
         self._msg_index = 0  # The index of the SQS message where keys are currently being added.
 
         # The first and last keys added to this batch.
-        self._first_key = None
-        self._last_key = None
+        self._first_key: Optional[str] = None
+        self._last_key: Optional[str] = None
 
-    def _send_batch(self):
+    def _send_batch(self) -> None:
         """Group keys into messages and make a single batch request."""
         LOGGER.info('Sending SQS batch of %d keys: %s ... %s',
                     sum(msg.num_keys for msg in self._messages), self._first_key, self._last_key)
-        response = SQS_CLIENT.send_message_batch(
-            QueueUrl=self._queue_url,
+        response = self._queue.send_messages(
             Entries=[msg.sqs_entry() for msg in self._messages if msg.num_keys > 0]
         )
 
@@ -98,7 +97,7 @@ class SQSBatcher(object):
         if failures:
             for failure in failures:
                 LOGGER.error('Unable to enqueue SQS message: %s', failure)
-            boto3.client('cloudwatch').put_metric_data(Namespace='BinaryAlert', MetricData=[{
+            CLOUDWATCH.put_metric_data(Namespace='BinaryAlert', MetricData=[{
                 'MetricName': 'BatchEnqueueFailures',
                 'Value': len(failures),
                 'Unit': 'Count'
@@ -108,8 +107,8 @@ class SQSBatcher(object):
             msg.reset()
         self._first_key = None
 
-    def add_key(self, key):
-        """Add a new S3 key [string] to the message batch and send to SQS if necessary."""
+    def add_key(self, key: str) -> None:
+        """Add a new S3 key to the message batch and send to SQS if necessary."""
         if not self._first_key:
             self._first_key = key
         self._last_key = key
@@ -122,11 +121,11 @@ class SQSBatcher(object):
             self._msg_index += 1
 
             # If all of the messages are full, fire off to SQS.
-            if self._msg_index == self._messages_per_batch:
+            if self._msg_index == SQS_MAX_MESSAGES_PER_BATCH:
                 self._send_batch()
                 self._msg_index = 0
 
-    def finalize(self):
+    def finalize(self) -> None:
         """After all messages have been added, send the remaining as a last batch to SQS."""
         if self._first_key:
             LOGGER.info('Finalize: sending last batch of keys')
@@ -136,28 +135,29 @@ class SQSBatcher(object):
 class S3BucketEnumerator(object):
     """Enumerates all of the S3 objects in a given bucket."""
 
-    def __init__(self, bucket_name, continuation_token=None):
+    def __init__(self, bucket_name: str, continuation_token: Optional[str] = None) -> None:
         """Instantiate with an optional continuation token.
 
         Args:
-            bucket_name: [string] Name of the S3 bucket to enumerate.
-            continuation_token: [string] Continuation token returned from S3 list objects.
+            bucket_name: Name of the S3 bucket to enumerate.
+            continuation_token: Continuation token returned from S3 list objects.
         """
         self.bucket_name = bucket_name
         self.continuation_token = continuation_token
         self.finished = False  # Have we finished enumerating all of the S3 bucket?
 
-    def next_page(self):
-        """Get the next page of S3 objects.
+    def next_page(self) -> List[str]:
+        """Get the next page of S3 objects and sets self.finished = True if this is the last page.
 
         Returns:
-            List of string S3 object keys. Also sets self.finished = True if this is the last page.
+            List of S3 object keys.
         """
         if self.continuation_token:
-            response = S3_CLIENT.list_objects_v2(
+            # We have to use the lower-level client to explicitly keep track of the pagination.
+            response = S3.list_objects_v2(
                 Bucket=self.bucket_name, ContinuationToken=self.continuation_token)
         else:
-            response = S3_CLIENT.list_objects_v2(Bucket=self.bucket_name)
+            response = S3.list_objects_v2(Bucket=self.bucket_name)
 
         if 'Contents' not in response:
             LOGGER.info('The S3 bucket is empty; nothing to do')
@@ -171,18 +171,18 @@ class S3BucketEnumerator(object):
         return [obj['Key'] for obj in response['Contents']]
 
 
-def batch_lambda_handler(event, lambda_context):
+def batch_lambda_handler(event: Dict[str, str], lambda_context) -> int:
     """Entry point for the batch Lambda function.
 
     Args:
-        event: [dict] Invocation event. If 'S3ContinuationToken' is one of the keys, the S3 bucket
+        event: Invocation event. If 'S3ContinuationToken' is one of the keys, the S3 bucket
             will be enumerated beginning with that continuation token.
-        lambda_context: [LambdaContext] object with .get_remaining_time_in_millis().
+        lambda_context: LambdaContext object with .get_remaining_time_in_millis().
 
     Returns:
-        [int] The number of enumerated S3 keys.
+        The number of enumerated S3 keys.
     """
-    LOGGER.info('Invoked with event %s', json.dumps(event))
+    LOGGER.info('Invoked with event %s', event)
 
     s3_enumerator = S3BucketEnumerator(
         os.environ['S3_BUCKET_NAME'], event.get('S3ContinuationToken'))
@@ -202,7 +202,7 @@ def batch_lambda_handler(event, lambda_context):
     # If the enumerator has not yet finished but we're low on time, invoke this function again.
     if not s3_enumerator.finished:
         LOGGER.info('Invoking another batcher')
-        LAMBDA_CLIENT.invoke(
+        LAMBDA.invoke(
             FunctionName=os.environ['BATCH_LAMBDA_NAME'],
             InvocationType='Event',  # Asynchronous invocation.
             Payload=json.dumps({'S3ContinuationToken': s3_enumerator.continuation_token}),

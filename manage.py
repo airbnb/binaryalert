@@ -21,7 +21,6 @@ import hcl
 
 from lambda_functions.build import build as lambda_build
 from rules.update_rules import update_github_rules
-from tests import boto3_mocks
 from tests.rules.eicar_rule_test import EICAR_STRING
 
 # File locations.
@@ -287,10 +286,16 @@ class BinaryAlertConfig(object):
             raw_config = config_file.read()
 
         for variable_name, value in self._config.items():
+            if isinstance(value, str):
+                formatted_value = '"{}"'.format(value)
+            elif isinstance(value, bool):
+                formatted_value = str(value).lower()
+            else:
+                formatted_value = value
+
             raw_config = re.sub(
                 r'{}\s*=\s*\S+'.format(variable_name),
-                '{} = {}'.format(variable_name,
-                                 value if isinstance(value, int) else '"' + value + '"'),
+                '{} = {}'.format(variable_name, formatted_value),
                 raw_config
             )
 
@@ -354,12 +359,12 @@ class Manager(object):
         """Terraform validate and apply any configuration/package changes."""
         # Validate and format the terraform files.
         os.chdir(TERRAFORM_DIR)
-        # TODO: In Terraform 0.10.3, the -var-file flag won't be necessary here
-        subprocess.check_call(['terraform', 'validate', '-var-file', CONFIG_FILE])
-        subprocess.check_call(['terraform', 'fmt'])
 
         # Setup the backend if needed and reload modules.
         subprocess.check_call(['terraform', 'init'])
+
+        subprocess.check_call(['terraform', 'validate'])
+        subprocess.check_call(['terraform', 'fmt'])
 
         # Apply changes (requires interactive approval)
         subprocess.check_call(['terraform', 'apply', '-auto-approve=false'])
@@ -469,7 +474,6 @@ class Manager(object):
             raise TestFailureError('\nLive test failed!')
 
     @staticmethod
-    @boto3_mocks.restore_http_adapter
     def unit_test() -> None:
         """Run unit tests (*_test.py).
 
