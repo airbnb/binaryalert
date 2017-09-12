@@ -7,4 +7,5 @@ moto
 pyfakefs
 pyhcl
 pylint
+sphinx
 yara-python==3.6.3
