@@ -30,7 +30,3 @@ class EicarRuleTest(unittest.TestCase):
     def test_no_match_if_eicar_is_not_end(self):
         """No match if non-whitespace comes after the EICAR string."""
         self.assertEqual(0, len(self.eicar_rule.match(data='{} other-text'.format(EICAR_STRING))))
-
-
-if __name__ == '__main__':
-    unittest.main()

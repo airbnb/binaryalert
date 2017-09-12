@@ -3,14 +3,15 @@ import hashlib
 import json
 import os
 import tempfile
-import unittest
 from unittest import mock
-import urllib
+import urllib.parse
 
 from pyfakefs import fake_filesystem_unittest
 
+from lambda_functions.analyzer import yara_analyzer
 from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH
-from tests import boto3_mocks, yara_mocks
+from tests import common
+from tests.lambda_functions.analyzer import yara_mocks
 
 # Mock S3 bucket and objects.
 MOCK_S3_BUCKET_NAME = 'mock-bucket'
@@ -29,7 +30,7 @@ MOCK_SQS_RECEIPTS = ['sqs_receipt1', 'sqs_receipt2']
 
 # Mimics minimal parts of S3:ObjectAdded event that triggers the lambda function.
 LAMBDA_VERSION = 1
-TEST_CONTEXT = boto3_mocks.MockLambdaContext(LAMBDA_VERSION)
+TEST_CONTEXT = common.MockLambdaContext(LAMBDA_VERSION)
 
 
 class MockS3Object(object):
@@ -53,20 +54,19 @@ class MockS3Object(object):
 
 class MainTest(fake_filesystem_unittest.TestCase):
     """Test end-to-end functionality of the analyzer."""
-    @classmethod
-    def setUpClass(cls):
-        """Compile test YARA rules and mock yara.load for all tests."""
-        yara_mocks.enable_yara_mocks()
-
     def setUp(self):
         """Before each test, create the mock environment."""
         # Show all differences on assertion failures, even for large dictionaries.
         self.maxDiff = None  # pylint: disable=invalid-name
 
         # Set up the fake filesystem.
+        real_tempdir = tempfile.gettempdir()
         self.setUpPyfakefs()
         os.makedirs(os.path.dirname(COMPILED_RULES_FILEPATH))
-        os.makedirs(tempfile.gettempdir())
+        os.makedirs(real_tempdir)
+        if not os.path.exists(tempfile.gettempdir()):
+            # Temp directory in pyfakefs may look different than in the real fs.
+            os.makedirs(tempfile.gettempdir())
         yara_mocks.save_test_yara_rules(COMPILED_RULES_FILEPATH)
 
         # Set environment variables.
@@ -83,7 +83,9 @@ class MainTest(fake_filesystem_unittest.TestCase):
         }
 
         # Import the module under test (now that YARA is mocked out).
-        with mock.patch('boto3.client'), mock.patch('boto3.resource'):
+        with mock.patch('boto3.client'), mock.patch('boto3.resource'), \
+                mock.patch.object(yara_analyzer.yara, 'load',
+                                  side_effect=yara_mocks.mock_yara_load):
             from lambda_functions.analyzer import main
             self.main = main
 
@@ -96,11 +98,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Mock S3 Object
         self.main.analyzer_aws_lib.S3.Object = MockS3Object
-
-    @classmethod
-    def tearDownClass(cls):
-        """Restore YARA calls to their original."""
-        yara_mocks.disable_yara_mocks()
 
     def test_analyze_lambda_handler(self):
         """Verify return value, logging, and boto3 calls when multiple files match YARA rules."""
@@ -247,7 +244,3 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Verify that the downloaded file was removed from temp storage.
         self.assertEqual([], os.listdir(tempfile.gettempdir()))
-
-
-if __name__ == '__main__':
-    unittest.main()

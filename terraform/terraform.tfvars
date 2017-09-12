@@ -47,6 +47,10 @@ lambda_log_retention_days = 60
 //               /                           \
 //  Batch Lambda                               Analyzer Lambda
 
+// WARNING: If force destroy is enabled, all objects in the S3 bucket(s) will be deleted during
+// `terraform destroy`
+force_destroy = false
+
 // How long messages should be retained in SQS before being dropped.
 // Messages will continue to be dispatched to analyzers until they timeout.
 sqs_retention_minutes = 60
@@ -66,7 +70,7 @@ lambda_dispatch_frequency_minutes = 1
 // Maximum number of analyzers that can be asynchronously invoked during one dispatcher run.
 // Higher values allow for more throughtput, but if too many analyzers are invoked too quickly,
 // Lambda invocations may be throttled.
-lambda_dispatch_limit = 50
+lambda_dispatch_limit = 100
 
 // Memory and time limits for the dispatching function.
 lambda_dispatch_memory_mb = 128

@@ -1,31 +1,22 @@
 """Unit tests for yara_analyzer.py. Uses fake filesystem."""
-import unittest
+from unittest import mock
 
 from pyfakefs import fake_filesystem_unittest
 
 from lambda_functions.analyzer import yara_analyzer
-from tests import yara_mocks
+from tests.lambda_functions.analyzer import yara_mocks
 
 
 class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     """Uses the real YARA library to parse the test rules."""
     # pylint: disable=protected-access
 
-    @classmethod
-    def setUpClass(cls):
-        """Redirect yara.load and yara.Rules.match for all tests."""
-        yara_mocks.enable_yara_mocks()
-
-    @classmethod
-    def tearDownClass(cls):
-        """Restore yara.load operations."""
-        yara_mocks.disable_yara_mocks()
-
     def setUp(self):
         """For each test, build a new YaraAnalyzer."""
         self.setUpPyfakefs()
         yara_mocks.save_test_yara_rules('./all.yara.rules')
-        self._analyzer = yara_analyzer.YaraAnalyzer('./all.yara.rules')
+        with mock.patch.object(yara_analyzer.yara, 'load', side_effect=yara_mocks.mock_yara_load):
+            self._analyzer = yara_analyzer.YaraAnalyzer('./all.yara.rules')
 
         # Write target file.
         self.fs.CreateFile('./target.exe', contents='This is definitely not an evil file. ^_^\n')
@@ -72,7 +63,8 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         """Analyze returns empty list if no matches."""
         # Setup a different YaraAnalyzer with an empty ruleset.
         yara_mocks.save_test_yara_rules('./empty.yara.rules', empty_rules_file=True)
-        empty_analyzer = yara_analyzer.YaraAnalyzer('./empty.yara.rules')
+        with mock.patch.object(yara_analyzer.yara, 'load', side_effect=yara_mocks.mock_yara_load):
+            empty_analyzer = yara_analyzer.YaraAnalyzer('./empty.yara.rules')
 
         self.assertEqual([], empty_analyzer.analyze('/target.exe'))
 
@@ -86,7 +78,3 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             ['evil_check.yar:contains_evil', 'externals.yar:extension_is_exe',
              'externals.yar:filename_contains_win32'],
             list(sorted(matched_rule_ids)))
-
-
-if __name__ == '__main__':
-    unittest.main()

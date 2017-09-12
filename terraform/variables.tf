@@ -12,6 +12,7 @@ variable "s3_log_prefix" {}
 variable "s3_log_expiration_days" {}
 variable "lambda_log_retention_days" {}
 
+variable "force_destroy" {}
 variable "sqs_retention_minutes" {}
 variable "lambda_batch_objects_per_message" {}
 variable "lambda_batch_memory_mb" {}
