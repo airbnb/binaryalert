@@ -1,6 +1,6 @@
 terraform {
-  // 0.10.3 required for locals
-  required_version = "~> 0.10.3"
+  // 0.10.4 is required for locals to work correctly across multiple files
+  required_version = "~> 0.10.4"
 }
 
 provider "aws" {
