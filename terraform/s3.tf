@@ -60,7 +60,6 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
 
   // Note: STANDARD_IA is not worth it because of the need to periodically re-analyze all binaries
   // in the bucket.
-
   lifecycle_rule {
     id      = "delete_old_versions"
     prefix  = ""
@@ -71,9 +70,11 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
       days = 1
     }
   }
+
   tags {
     Name = "BinaryAlert"
   }
+
   versioning {
     enabled = true
   }

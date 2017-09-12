@@ -18,11 +18,14 @@ class BuildTest(unittest.TestCase):
         self.maxDiff = None  # pylint: disable=invalid-name
         self._tempdir = tempfile.gettempdir()
 
-    def _verify_filenames(self, archive_path, expected_filenames):
+    def _verify_filenames(self, archive_path, expected_filenames, subset=False):
         """Verify the set of filenames in the zip archive matches the expected list."""
         with zipfile.ZipFile(archive_path, 'r') as archive:
             filenames = set(zip_info.filename for zip_info in archive.filelist)
-        self.assertEqual(expected_filenames, filenames)
+        if subset:
+            self.assertTrue(expected_filenames.issubset(filenames))
+        else:
+            self.assertEqual(expected_filenames, filenames)
 
     def test_build_analyzer(self, mock_print):
         """Verify that a valid zipfile is generated for analyzer Lambda function."""
@@ -34,6 +37,7 @@ class BuildTest(unittest.TestCase):
                 '__init__.py',
                 'analyzer_aws_lib.py',
                 'binary_info.py',
+                'common.py',
                 'compiled_yara_rules.bin',
                 'file_hash.py',
                 'libpython3.5m.so.1.0',
@@ -66,7 +70,17 @@ class BuildTest(unittest.TestCase):
         )
         mock_print.assert_called_once()
 
+    def test_build_downloader(self, mock_print):
+        """Verify list of bundled files for the downloader."""
+        build._build_downloader(self._tempdir)
+        self._verify_filenames(
+            os.path.join(self._tempdir, build.DOWNLOAD_ZIPFILE + '.zip'),
+            {'backoff/', 'cbapi/', 'main.py'},
+            subset=True
+        )
+        mock_print.assert_called_once()
+
     def test_build_all(self, mock_print):
         """Verify that the top-level build function executes without error."""
-        build.build(self._tempdir)
-        self.assertEqual(3, mock_print.call_count)
+        build.build(self._tempdir, downloader=True)
+        self.assertEqual(4, mock_print.call_count)

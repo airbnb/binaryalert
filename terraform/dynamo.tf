@@ -2,7 +2,7 @@
 resource "aws_dynamodb_table" "binaryalert_yara_matches" {
   name           = "${var.name_prefix}_binaryalert_matches"
   hash_key       = "SHA256"
-  range_key      = "LambdaVersion"
+  range_key      = "AnalyzerVersion"
   read_capacity  = "${var.dynamo_read_capacity}"
   write_capacity = "${var.dynamo_write_capacity}"
 
@@ -13,7 +13,7 @@ resource "aws_dynamodb_table" "binaryalert_yara_matches" {
   }
 
   attribute {
-    name = "LambdaVersion"
+    name = "AnalyzerVersion"
     type = "N"
   }
 

@@ -5,7 +5,9 @@ import shutil
 import tempfile
 import zipfile
 
-from lambda_functions.analyzer.main import COMPILED_RULES_FILENAME
+import pip
+
+from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
 from rules.compile_rules import compile_rules
 
 LAMBDA_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -19,6 +21,10 @@ BATCH_ZIPFILE = 'lambda_batcher'
 
 DISPATCH_SOURCE = os.path.join(LAMBDA_DIR, 'dispatcher', 'main.py')
 DISPATCH_ZIPFILE = 'lambda_dispatcher'
+
+DOWNLOAD_SOURCE = os.path.join(LAMBDA_DIR, 'downloader', 'main.py')
+DOWNLOAD_DEPENDENCIES = os.path.join(LAMBDA_DIR, 'downloader', 'cbapi_1.3.2.zip')
+DOWNLOAD_ZIPFILE = 'lambda_downloader'
 
 
 def _build_analyzer(target_directory):
@@ -59,12 +65,37 @@ def _build_dispatcher(target_directory):
         pkg.write(DISPATCH_SOURCE, os.path.basename(DISPATCH_SOURCE))
 
 
-def build(target_directory):
+def _build_downloader(target_directory):
+    """Build the downloader Lambda deployment package."""
+    print('Creating downloader deploy package...')
+    temp_package_dir = os.path.join(tempfile.gettempdir(), 'tmp_yara_downloader.pkg')
+    if os.path.exists(temp_package_dir):
+        shutil.rmtree(temp_package_dir)
+
+    # Extract cbapi library.
+    with zipfile.ZipFile(DOWNLOAD_DEPENDENCIES, 'r') as deps:
+        deps.extractall(temp_package_dir)
+
+    # Pip install backoff library (has no native dependencies).
+    pip.main(['install', '--quiet', '--target', temp_package_dir, 'backoff'])
+
+    # Copy Lambda code into the package.
+    shutil.copy(DOWNLOAD_SOURCE, temp_package_dir)
+
+    # Zip up the package and remove temporary directory.
+    shutil.make_archive(os.path.join(target_directory, DOWNLOAD_ZIPFILE), 'zip', temp_package_dir)
+    shutil.rmtree(temp_package_dir)
+
+
+def build(target_directory, downloader=False):
     """Build Lambda deployment packages.
 
     Args:
         target_directory: [String] Path to folder which will store generated zipfiles.
+        downloader: [bool] Whether the downloader should be built.
     """
     _build_analyzer(target_directory)
     _build_batcher(target_directory)
     _build_dispatcher(target_directory)
+    if downloader:
+        _build_downloader(target_directory)
