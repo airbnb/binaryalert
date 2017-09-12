@@ -290,7 +290,7 @@ class ManagerTest(FakeFilesystemBase):
         self.manager.apply()
         mock_subprocess.assert_has_calls([
             mock.call(['terraform', 'init']),
-            mock.call(['terraform', 'validate', '-var-file', manage.CONFIG_FILE]),
+            mock.call(['terraform', 'validate']),
             mock.call(['terraform', 'fmt']),
             mock.call(['terraform', 'apply', '-auto-approve=false']),
             mock.call([

@@ -363,8 +363,7 @@ class Manager(object):
         # Setup the backend if needed and reload modules.
         subprocess.check_call(['terraform', 'init'])
 
-        # TODO: In Terraform 0.10.3, the -var-file flag won't be necessary here
-        subprocess.check_call(['terraform', 'validate', '-var-file', CONFIG_FILE])
+        subprocess.check_call(['terraform', 'validate'])
         subprocess.check_call(['terraform', 'fmt'])
 
         # Apply changes (requires interactive approval)

@@ -135,7 +135,7 @@ class SQSBatcher(object):
 class S3BucketEnumerator(object):
     """Enumerates all of the S3 objects in a given bucket."""
 
-    def __init__(self, bucket_name: str, continuation_token: str = None) -> None:
+    def __init__(self, bucket_name: str, continuation_token: Optional[str] = None) -> None:
         """Instantiate with an optional continuation token.
 
         Args:

@@ -1,4 +1,5 @@
 """Unit tests for batcher main.py. Mocks out boto3 clients."""
+import collections
 import json
 import os
 import unittest
@@ -7,6 +8,8 @@ from unittest import mock
 import boto3
 
 from tests import common
+
+MockSQSMessage = collections.namedtuple('MockSQSMessage', ['body', 'receipt_handle'])
 
 
 class MainTest(unittest.TestCase):
@@ -29,6 +32,8 @@ class MainTest(unittest.TestCase):
 
     def test_dispatcher_no_messages(self):
         """Dispatcher doesn't do anything if there are no SQS messages."""
+        self.dispatcher_main.SQS_QUEUE.receive_messages.return_value = []
+
         with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
             invocations = self.dispatcher_main.dispatch_lambda_handler(
                 {},
@@ -43,18 +48,10 @@ class MainTest(unittest.TestCase):
 
     def test_dispatcher_invalid_message(self):
         """Dispatcher discards invalid SQS messages."""
-        self.dispatcher_main.SQS_QUEUE.receive_message.return_value = {
-            'Messages': [
-                {
-                    'Body': json.dumps({'InvalidKey': 'Value'}),
-                    'ReceiptHandle': 'receipt1'
-                },
-                {
-                    'Body': '{}',
-                    'ReceiptHandle': 'receipt'
-                }
-            ]
-        }
+        self.dispatcher_main.SQS_QUEUE.receive_messages.return_value = [
+            MockSQSMessage(body=json.dumps({'InvalidKey': 'Value'}), receipt_handle='receipt1'),
+            MockSQSMessage(body=json.dumps({}), receipt_handle='receipt2'),
+        ]
 
         with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
             invocations = self.dispatcher_main.dispatch_lambda_handler(
@@ -72,27 +69,21 @@ class MainTest(unittest.TestCase):
 
     def test_dispatcher_invokes_analyzer(self):
         """Dispatcher flattens multiple messages and invokes an analyzer."""
-        self.dispatcher_main.SQS_QUEUE.receive_message.return_value = {
-            'Messages': [
-                {
-                    'Body': json.dumps({
-                        'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}},
-                            {'s3': {'object': {'key': 'test-key-2'}}}
-                        ]
-                    }),
-                    'ReceiptHandle': 'receipt1'
-                },
-                {
-                    'Body': json.dumps({
-                        'Records': [
-                            {'s3': {'object': {'key': 'test-key-3'}}}
-                        ]
-                    }),
-                    'ReceiptHandle': 'receipt2'
-                }
-            ]
-        }
+        self.dispatcher_main.SQS_QUEUE.receive_messages.return_value = [
+            MockSQSMessage(
+                body=json.dumps({
+                    'Records': [
+                        {'s3': {'object': {'key': 'test-key-1'}}},
+                        {'s3': {'object': {'key': 'test-key-2'}}}
+                    ]
+                }),
+                receipt_handle='receipt1'
+            ),
+            MockSQSMessage(
+                body=json.dumps({'Records': [{'s3': {'object': {'key': 'test-key-3'}}}]}),
+                receipt_handle='receipt2'
+            )
+        ]
 
         with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
             invocations = self.dispatcher_main.dispatch_lambda_handler(

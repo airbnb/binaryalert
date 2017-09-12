@@ -20,22 +20,13 @@ SQS_MAX_MESSAGES = 10  # Maximum number of messages to request (highest allowed 
 WAIT_TIME_SECONDS = 10  # Maximum amount of time to hold a receive_message connection open.
 
 
-def _build_payload(sqs_messages: Dict[str, Any]) -> Optional[Dict[str, List[str]]]:
+def _build_payload(sqs_messages: List[Any]) -> Optional[Dict[str, List[str]]]:
     """Convert a batch of SQS messages into an analysis Lambda payload.
 
     Args:
-        sqs_messages: Response from SQS.receive_message. Expected format:
-            {
-                'Messages': [
-                    {
-                        'Body': '{"Records": [{"s3": {"object": {"key": "..."}}}, ...]}',
-                        'ReceiptHandle': '...'
-                    },
-                    ...
-                ]
-            }
-            There may be multiple SQS messages, each of which may contain multiple S3 keys.
-            Each message body is a JSON string, in the format of an S3 object added event.
+        sqs_messages: List of SQS.messages from SQS.receive_message. The body of each
+            message is a JSON-encoded dictionary in the format of an S3 object added event:
+            '{"Records": [{"s3": {"object": {"key": "..."}}}, ...]}'
 
     Returns:
         Non-empty payload for the analysis Lambda function in the following format:
@@ -45,21 +36,21 @@ def _build_payload(sqs_messages: Dict[str, Any]) -> Optional[Dict[str, List[str]
             }
         Returns None if the SQS message was empty or invalid.
     """
-    if 'Messages' not in sqs_messages:
+    if not sqs_messages:
         LOGGER.info('No SQS messages found')
         return None
 
     # The payload consists of S3 object keys and SQS receipts (analyzers will delete the message).
     payload: Dict[str, List[str]] = {'S3Objects': [], 'SQSReceipts': []}
     invalid_receipts = []  # List of invalid SQS message receipts to delete.
-    for msg in sqs_messages['Messages']:
+    for msg in sqs_messages:
         try:
             payload['S3Objects'].extend(
-                record['s3']['object']['key'] for record in json.loads(msg['Body'])['Records'])
-            payload['SQSReceipts'].append(msg['ReceiptHandle'])
+                record['s3']['object']['key'] for record in json.loads(msg.body)['Records'])
+            payload['SQSReceipts'].append(msg.receipt_handle)
         except (KeyError, ValueError):
-            LOGGER.warning('Invalid SQS message body: %s', msg['Body'])
-            invalid_receipts.append(msg['ReceiptHandle'])
+            LOGGER.warning('Invalid SQS message body: %s', msg.body)
+            invalid_receipts.append(msg.receipt_handle)
             continue
 
     # Remove invalid messages from the SQS queue (happens when queue is first created).
@@ -97,7 +88,7 @@ def dispatch_lambda_handler(_, lambda_context) -> int:
     while (invocations < int(os.environ['MAX_DISPATCHES']) and
            lambda_context.get_remaining_time_in_millis() > loop_execution_time_ms):
         # Long-polling of SQS: Wait up to 10 seconds and receive up to 10 messages.
-        sqs_messages = SQS_QUEUE.receive_message(
+        sqs_messages = SQS_QUEUE.receive_messages(
             MaxNumberOfMessages=SQS_MAX_MESSAGES,
             WaitTimeSeconds=WAIT_TIME_SECONDS
         )
