@@ -1,6 +1,7 @@
 # BinaryAlert: Serverless, Real-time & Retroactive Malware Detection
 [![Build Status](https://travis-ci.org/airbnb/binaryalert.svg?branch=master)](https://travis-ci.org/airbnb/binaryalert)
 [![Coverage Status](https://coveralls.io/repos/github/airbnb/binaryalert/badge.svg?branch=master)](https://coveralls.io/github/airbnb/binaryalert?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/binaryalert/badge/?version=latest)](http://www.binaryalert.io/?badge=latest)
 
 
 ![BinaryAlert Logo](docs/images/logo.png)

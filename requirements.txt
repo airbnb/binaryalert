@@ -43,6 +43,7 @@ s3transfer==0.1.11
 six==1.10.0
 snowballstemmer==1.2.1
 Sphinx==1.6.3
+sphinx-rtd-theme==0.2.4
 sphinxcontrib-websupport==1.0.1
 typed-ast==1.0.4
 urllib3==1.22

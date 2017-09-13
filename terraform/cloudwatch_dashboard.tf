@@ -16,8 +16,12 @@ locals {
     "period": 86400,
     "view": "singleValue",
     "metrics": [
-      ["AWS/S3", "NumberOfObjects", "BucketName", "${aws_s3_bucket.binaryalert_binaries.id}"],
-      [".", "BucketSizeBytes", ".", "."]
+      [
+        "AWS/S3", "NumberOfObjects",
+        "BucketName", "${aws_s3_bucket.binaryalert_binaries.id}",
+        "StorageType", "AllStorageTypes"
+      ],
+      [".", "BucketSizeBytes", ".", ".", ".", "StandardStorage"]
     ]
   }
 }
