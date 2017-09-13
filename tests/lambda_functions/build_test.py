@@ -93,9 +93,17 @@ class BuildTest(unittest.TestCase):
         mock_pip.assert_called_once()
         mock_print.assert_called_once()
 
-    @mock.patch.object(pip, 'main', side_effect=_mock_pip_main)
-    def test_build_all(self, mock_pip: mock.MagicMock, mock_print: mock.MagicMock):
-        """Verify that the top-level build function executes without error."""
+    @mock.patch.object(build, '_build_analyzer')
+    @mock.patch.object(build, '_build_batcher')
+    @mock.patch.object(build, '_build_dispatcher')
+    @mock.patch.object(build, '_build_downloader')
+    def test_build_all(self, build_downloader: mock.MagicMock, build_dispatcher: mock.MagicMock,
+                       build_batcher: mock.MagicMock, build_analyzer: mock.MagicMock,
+                       mock_print: mock.MagicMock):
+        """Verify that the top-level build function executes each individual builder."""
         build.build(self._tempdir, downloader=True)
-        mock_pip.assert_called_once()
-        self.assertEqual(4, mock_print.call_count)
+        build_analyzer.assert_called_once()
+        build_batcher.assert_called_once()
+        build_dispatcher.assert_called_once()
+        build_downloader.assert_called_once()
+        mock_print.assert_not_called()

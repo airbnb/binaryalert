@@ -1,8 +1,10 @@
 """Unit tests for the manage.py CLI script."""
 # pylint: disable=no-self-use,protected-access
 import base64
+import getpass
 import inspect
 import os
+import subprocess
 import sys
 import time
 import uuid
@@ -75,7 +77,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
         self._write_config()
 
 
-@mock.patch('sys.stderr', mock.MagicMock())  # pyhcl complains about unused tokens to stderr.
+@mock.patch.object(sys, 'stderr', mock.MagicMock())  # pyhcl complains about unused tokens
 class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
     """Tests of the BinaryAlertConfig class that use a fake filesystem."""
 
@@ -130,7 +132,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         with self.assertRaises(manage.InvalidConfigError):
             config.encrypted_carbon_black_api_token = 'ABCD'
 
-    @mock.patch('manage.input', side_effect=_mock_input)
+    @mock.patch.object(manage, 'input', side_effect=_mock_input)
     @mock.patch.object(manage.BinaryAlertConfig, '_encrypt_cb_api_token')
     def test_configure_with_defaults(
             self, mock_encrypt: mock.MagicMock, mock_input: mock.MagicMock):
@@ -153,7 +155,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         self.assertEqual('new_name_prefix', config.name_prefix)
         self.assertEqual(1, config.enable_carbon_black_downloader)
 
-    @mock.patch('manage.input', side_effect=_mock_input)
+    @mock.patch.object(manage, 'input', side_effect=_mock_input)
     @mock.patch.object(manage.BinaryAlertConfig, '_encrypt_cb_api_token')
     def test_configure_with_no_defaults(
             self, mock_encrypt: mock.MagicMock, mock_input: mock.MagicMock):
@@ -225,10 +227,10 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
 class BinaryAlertConfigTestRealFilesystem(TestCase):
     """Tests of the BinaryAlertConfig class that use a real filesystem."""
 
-    @mock.patch('boto3.client')
-    @mock.patch('getpass.getpass', return_value='abcd' * 10)
-    @mock.patch('manage.print')
-    @mock.patch('subprocess.check_call')
+    @mock.patch.object(boto3, 'client')
+    @mock.patch.object(getpass, 'getpass', return_value='abcd' * 10)
+    @mock.patch.object(manage, 'print')
+    @mock.patch.object(subprocess, 'check_call')
     def test_encrypt_cb_api_token(
             self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock,
             mock_getpass: mock.MagicMock, mock_client: mock.MagicMock):
@@ -266,8 +268,8 @@ class ManagerTest(FakeFilesystemBase):
         """Help string should contain as many lines as there are commands."""
         self.assertEqual(len(self.manager.commands), len(self.manager.help.split('\n')))
 
-    @mock.patch('boto3.client')
-    @mock.patch('manage.print')
+    @mock.patch.object(boto3, 'client')
+    @mock.patch.object(manage, 'print')
     def test_analyze_all(self, mock_print: mock.MagicMock, mock_client: mock.MagicMock):
         """Batch analysis invocation."""
         self.manager.analyze_all()
@@ -283,8 +285,8 @@ class ManagerTest(FakeFilesystemBase):
             )
         ])
 
-    @mock.patch('manage.print')
-    @mock.patch('subprocess.check_call')
+    @mock.patch.object(manage, 'print')
+    @mock.patch.object(subprocess, 'check_call')
     def test_apply(self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock):
         """Validate order of Terraform operations."""
         self.manager.apply()
@@ -303,7 +305,7 @@ class ManagerTest(FakeFilesystemBase):
         ])
         mock_print.assert_called_once()
 
-    @mock.patch('manage.lambda_build')
+    @mock.patch.object(manage, 'lambda_build')
     def test_build(self, mock_build: mock.MagicMock):
         """Calls lambda_build function (tested elsewhere)."""
         self.manager.build()
@@ -316,14 +318,22 @@ class ManagerTest(FakeFilesystemBase):
         with self.assertRaises(manage.InvalidConfigError):
             self.manager.cb_copy_all()
 
-    @mock.patch('manage.update_github_rules')
-    def test_clone_rules(self, mock_update: mock.MagicMock):
-        """Calls update_github_rules (tested elsewhere)."""
+    @mock.patch.object(manage.clone_rules, 'clone_rules_from_github')
+    def test_clone_rules(self, mock_clone: mock.MagicMock):
+        """Calls clone_rules_from_github (tested elsewhere)."""
         self.manager.clone_rules()
-        mock_update.assert_called_once()
+        mock_clone.assert_called_once()
+
+    @mock.patch.object(manage.compile_rules, 'compile_rules')
+    @mock.patch.object(manage, 'print')
+    def test_compile_rules(self, mock_print: mock.MagicMock, mock_compile: mock.MagicMock):
+        """Calls compile_rules (tested elsewhere)."""
+        self.manager.compile_rules()
+        mock_compile.assert_called_once()
+        mock_print.assert_called_once()
 
     @mock.patch.object(manage.BinaryAlertConfig, 'configure')
-    @mock.patch('manage.print')
+    @mock.patch.object(manage, 'print')
     def test_configure(self, mock_print: mock.MagicMock, mock_configure: mock.MagicMock):
         """Calls BinaryAlertConfig:configure() (tested elsewhere)."""
         self.manager.configure()

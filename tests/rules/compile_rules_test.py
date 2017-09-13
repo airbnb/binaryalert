@@ -42,7 +42,7 @@ class FindYaraFilesTest(fake_filesystem_unittest.TestCase):
         self.fs.CreateFile('/rules/compile_rules.py')
         self.fs.CreateFile('/rules/eicar.yar')
         self.fs.CreateFile('/rules/README.md')
-        self.fs.CreateFile('/rules/update_rules.py')
+        self.fs.CreateFile('/rules/clone_rules.py')
         self.assertEqual(['eicar.yar'], self._sorted_find())
 
 
