@@ -8,4 +8,5 @@ pyfakefs
 pyhcl
 pylint
 sphinx
+sphinx-rtd-theme
 yara-python==3.6.3
