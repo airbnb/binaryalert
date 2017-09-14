@@ -222,7 +222,7 @@ class BinaryAlertConfig(object):
 
         while True:  # Enable downloader?
             enable_downloader = self._get_input(
-                'Enable the CarbonBlack downloader [yes/no]?',
+                'Enable the CarbonBlack downloader?',
                 'yes' if self.enable_carbon_black_downloader else 'no'
             )
             if enable_downloader in {'yes', 'no'}:

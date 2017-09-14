@@ -6,7 +6,7 @@ BinaryAlert
   :alt: BinaryAlert
 
 
-BinaryAlert is a serverless, real-time framework for detecting malicious files. BinaryAlert can efficiently analyze millions of files a day with a configurable set of YARA rulesand will trigger an alert as soon as anything malicious is discovered! Organizations can deploy BinaryAlert to their private AWS account in a matter of minutes, allowing them to analyze internal files and documents within the confines of their own environment.
+BinaryAlert is a serverless, real-time framework for detecting malicious files. BinaryAlert can efficiently analyze millions of files a day with a configurable set of `YARA <http://virustotal.github.io/yara/>`_ rules and will trigger an alert as soon as anything malicious is discovered! Organizations can deploy BinaryAlert to their private AWS account in a matter of minutes, allowing them to analyze internal files and documents within the confines of their own environment.
 
 
 Features
@@ -37,3 +37,4 @@ Table of Contents
    :maxdepth: 2
 
    getting-started
+   adding-yara-rules
