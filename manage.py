@@ -246,7 +246,7 @@ class BinaryAlertConfig(object):
                 # API token already exists - ask if they want to update it.
                 while True:
                     update_api_token = self._get_input(
-                        'Change the CarbonBlack API token [yes/no]?', 'no'
+                        'Change the CarbonBlack API token?', 'no'
                     )
                     if update_api_token in {'yes', 'no'}:
                         break

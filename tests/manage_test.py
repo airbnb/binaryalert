@@ -145,9 +145,9 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         mock_input.assert_has_calls([
             mock.call('AWS Region (us-test-1): '),
             mock.call('Unique name prefix, e.g. "company_team" (test_prefix): '),
-            mock.call('Enable the CarbonBlack downloader [yes/no]? (yes): '),
+            mock.call('Enable the CarbonBlack downloader? (yes): '),
             mock.call('CarbonBlack URL (https://cb-example.com): '),
-            mock.call('Change the CarbonBlack API token [yes/no]? (no): ')
+            mock.call('Change the CarbonBlack API token? (no): ')
         ])
 
         # Verify that the configuration has changed.
@@ -171,7 +171,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         mock_input.assert_has_calls([
             mock.call('AWS Region: '),
             mock.call('Unique name prefix, e.g. "company_team": '),
-            mock.call('Enable the CarbonBlack downloader [yes/no]? (no): '),
+            mock.call('Enable the CarbonBlack downloader? (no): '),
             mock.call('CarbonBlack URL: '),
         ])
 
