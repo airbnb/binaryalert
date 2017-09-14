@@ -11,7 +11,7 @@ REMOTE_RULE_SOURCES = {
 }
 
 
-def update_github_rules() -> None:
+def clone_rules_from_github() -> None:
     """Update YARA rules cloned from GitHub."""
     for url, folders in REMOTE_RULE_SOURCES.items():
         # Clone repo into a temporary directory.
@@ -32,7 +32,3 @@ def update_github_rules() -> None:
             shutil.copytree(source, destination)
 
         shutil.rmtree(cloned_repo_root)  # Remove temporary cloned repo.
-
-
-if __name__ == '__main__':
-    update_github_rules()

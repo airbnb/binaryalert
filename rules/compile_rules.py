@@ -35,7 +35,3 @@ def compile_rules(target_path):
         filepaths=yara_filepaths,
         externals={'extension': '', 'filename': '', 'filepath': '', 'filetype': ''})
     rules.save(target_path)
-
-
-if __name__ == '__main__':
-    compile_rules('compiled_yara_rules.bin')

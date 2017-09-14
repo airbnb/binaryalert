@@ -7,7 +7,7 @@ from unittest import mock
 
 from pyfakefs import fake_filesystem_unittest
 
-from rules import compile_rules, update_rules
+from rules import compile_rules, clone_rules
 
 
 class UpdateRulesTest(fake_filesystem_unittest.TestCase):
@@ -15,17 +15,17 @@ class UpdateRulesTest(fake_filesystem_unittest.TestCase):
     def setUp(self):
         """Setup the fake filesystem with the expected rules folder structure."""
         self.setUpPyfakefs()
-        os.makedirs(update_rules.RULES_DIR)
+        os.makedirs(clone_rules.RULES_DIR)
         os.makedirs(tempfile.gettempdir())
 
         # Add extra rules (which should be deleted).
         self.fs.CreateFile(os.path.join(
-            update_rules.RULES_DIR,
+            clone_rules.RULES_DIR,
             'github.com', 'YARA-Rules', 'rules.git', 'CVE_Rules', 'delete-me.yara'
         ))
 
         # Add some other rules (which should be preserved).
-        self.fs.CreateFile(os.path.join(update_rules.RULES_DIR, 'private', 'private.yara'))
+        self.fs.CreateFile(os.path.join(clone_rules.RULES_DIR, 'private', 'private.yara'))
 
     def _mock_git_clone(self, args: List[str]) -> None:
         """Mock out git clone by creating the "cloned" directory."""
@@ -37,14 +37,14 @@ class UpdateRulesTest(fake_filesystem_unittest.TestCase):
         else:
             self.fs.CreateFile(os.path.join(cloned_repo_root, 'CVE_Rules', 'cloned.yara'))
 
-    @mock.patch.object(update_rules, 'print')
+    @mock.patch.object(clone_rules, 'print')
     def test_update_rules(self, mock_print: mock.MagicMock):
         """Verify which rules files were saved and deleted."""
         with mock.patch('subprocess.check_call', side_effect=self._mock_git_clone):
-            update_rules.update_github_rules()
+            clone_rules.clone_rules_from_github()
 
         # There should be one print statement for each repo.
-        mock_print.assert_has_calls([mock.ANY] * len(update_rules.REMOTE_RULE_SOURCES))
+        mock_print.assert_has_calls([mock.ANY] * len(clone_rules.REMOTE_RULE_SOURCES))
 
         expected_files = {
             'github.com/Neo23x0/signature-base.git/yara/cloned.yara',

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Command-line tool for easily managing BinaryAlert."""
 # Usage: python3 manage.py [--help] [command]
 import argparse
@@ -19,8 +20,9 @@ import boto3
 from boto3.dynamodb.conditions import Attr, Key
 import hcl
 
+from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
 from lambda_functions.build import build as lambda_build
-from rules.update_rules import update_github_rules
+from rules import compile_rules, clone_rules
 from tests.rules.eicar_rule_test import EICAR_STRING
 
 # File locations.
@@ -220,7 +222,7 @@ class BinaryAlertConfig(object):
 
         while True:  # Enable downloader?
             enable_downloader = self._get_input(
-                'Enable the CarbonBlack downloader [yes/no]?',
+                'Enable the CarbonBlack downloader?',
                 'yes' if self.enable_carbon_black_downloader else 'no'
             )
             if enable_downloader in {'yes', 'no'}:
@@ -244,7 +246,7 @@ class BinaryAlertConfig(object):
                 # API token already exists - ask if they want to update it.
                 while True:
                     update_api_token = self._get_input(
-                        'Change the CarbonBlack API token [yes/no]?', 'no'
+                        'Change the CarbonBlack API token?', 'no'
                     )
                     if update_api_token in {'yes', 'no'}:
                         break
@@ -313,8 +315,8 @@ class Manager(object):
     @property
     def commands(self) -> Set[str]:
         """Return set of available management commands."""
-        return {'analyze_all', 'apply', 'build', 'cb_copy_all', 'clone_rules', 'configure',
-                'deploy', 'live_test', 'unit_test'}
+        return {'analyze_all', 'apply', 'build', 'cb_copy_all', 'clone_rules', 'compile_rules',
+                'configure', 'deploy', 'live_test', 'unit_test'}
 
     @property
     def help(self) -> str:
@@ -335,7 +337,7 @@ class Manager(object):
 
         # Validate the configuration.
         try:
-            if command not in {'configure', 'unit_test'}:
+            if command not in {'compile_rules', 'configure', 'unit_test'}:
                 self._config.validate()
             getattr(self, command)()  # Command validation already happened in the ArgumentParser.
         except InvalidConfigError as error:
@@ -401,7 +403,13 @@ class Manager(object):
     @staticmethod
     def clone_rules() -> None:
         """Clone YARA rules from other open-source projects."""
-        update_github_rules()
+        clone_rules.clone_rules_from_github()
+
+    @staticmethod
+    def compile_rules() -> None:
+        """Compile all of the YARA rules into a single binary file."""
+        compile_rules.compile_rules(COMPILED_RULES_FILENAME)
+        print('Compiled rules saved to {}'.format(COMPILED_RULES_FILENAME))
 
     def configure(self) -> None:
         """Update basic configuration, including region, prefix, and downloader settings."""
@@ -491,7 +499,8 @@ def main() -> None:
     manager = Manager()
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('command', choices=sorted(manager.commands), help=manager.help)
+    parser.add_argument(
+        'command', choices=sorted(manager.commands), help=manager.help, metavar='command')
     args = parser.parse_args()
 
     manager.run(args.command)

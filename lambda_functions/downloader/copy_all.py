@@ -145,7 +145,3 @@ def copy_all_binaries() -> None:
         LOGGER.error(
             '%d %s failed to copy: \n%s', len(failed_md5s),
             'binary' if len(failed_md5s) == 1 else 'binaries', '\n'.join(sorted(failed_md5s)))
-
-
-if __name__ == '__main__':
-    copy_all_binaries()

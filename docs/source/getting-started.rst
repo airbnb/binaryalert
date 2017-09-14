@@ -80,7 +80,7 @@ Download BinaryAlert
 
 .. code-block:: bash
 
-  $ python3 manage.py unit_test
+  $ ./manage.py unit_test
 
 
 Deploy!
@@ -89,20 +89,20 @@ Deploy!
 
 .. code-block:: bash
 
-  $ python3 manage.py configure
-  AWS Region (us-east-1): us-east-1
+  $ ./manage.py configure
+  AWS Region (us-east-1):
   Unique name prefix, e.g. "company_team": your_unique_prefix
-  Enable the CarbonBlack downloader [yes/no]? (no): no
+  Enable the CarbonBlack downloader? (no):
 
 2. Deploy!
 
 .. code-block:: bash
 
-  $ python3 manage.py deploy
-  # Terraform will generate a plan and request approval
+  $ ./manage.py deploy
+  # Terraform will generate a plan and request approval before applying
 
 3. BinaryAlert is live! Test it by uploading a harmless `EICAR test string <http://www.eicar.org/86-0-Intended-use.html>`_:
 
 .. code-block:: bash
 
-  $ python3 manage.py live_test
+  $ ./manage.py live_test
