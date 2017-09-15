@@ -15,7 +15,7 @@ A ``deploy`` is equivalent to the following 4 operations executed in sequence:
   $ ./manage.py apply        # Runs "terraform apply" to update the infrastructure
   $ ./manage.py analyze_all  # Starts a batch analysis of the entire S3 bucket
 
-.. warning:: To ensure new YARA rules are applied ASAP, *every* ``deploy`` starts a batch analysis. If this is undesired behavior, you can execute any of the aforementioned commands individually (e.g. only ``apply`` the changes).
+.. warning:: To ensure new YARA rules are applied ASAP, **every** ``deploy`` starts a batch analysis. If a batch analysis is already running or if you are not updating any YARA rules, you can just ``build`` and ``apply`` your changes.
 
 
 Terraform State
