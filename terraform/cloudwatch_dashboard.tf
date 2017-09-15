@@ -95,11 +95,11 @@ EOF
     "annotations": {
       "horizontal": [
         {
-          "label": "Maximum Age",
+          "label": "Max",
           "value": ${aws_sqs_queue.s3_object_queue.message_retention_seconds}
         },
         {
-          "label": "High Age Alarm",
+          "label": "Alarm",
           "value": ${aws_cloudwatch_metric_alarm.sqs_age.threshold}
         }
       ]
@@ -163,7 +163,7 @@ EOF
     "annotations": {
       "horizontal": [
         {
-          "label": "Maximum",
+          "label": "Max",
           "value": 300000
         }
       ]

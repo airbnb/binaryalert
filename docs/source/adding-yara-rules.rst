@@ -28,6 +28,11 @@ Write Your Own Rules
 --------------------
 You can add your own ``.yar`` or ``.yara`` files anywhere in the ``rules/`` directory tree. Refer to the `writing YARA rules <http://yara.readthedocs.io/en/latest/writingrules.html>`_ documentation for guidance and examples. Note that when BinaryAlert finds a file which matches a YARA rule, the rule name, `metadata <http://yara.readthedocs.io/en/latest/writingrules.html#metadata>`_, `tags <http://yara.readthedocs.io/en/latest/writingrules.html#rule-tags>`_, and matched `string <http://yara.readthedocs.io/en/latest/writingrules.html#strings>`_ names will be included in the alert for your convenience.
 
+
+.. _external-variables:
+
+External Variables
+------------------
 In order to support the rule repositories listed above, BinaryAlert provides the following `external variables <http://yara.readthedocs.io/en/latest/writingrules.html#external-variables>`_:
 
 * ``extension`` - File extension (".docx", ".exe", ".pdf", etc)
@@ -35,7 +40,7 @@ In order to support the rule repositories listed above, BinaryAlert provides the
 * ``filepath`` - Full file path ("/path/to/file.exe")
 * ``filetype`` - Uppercase ``extension`` without leading period ("DOCX", "EXE", "PDF"), etc
 
-You can use these variables in your own rules to match or exclude certain filepaths. For example, this is a YARA rule which matches only files containing the string "evil" in the ``/home/`` directory:
+You can use these variables in your own rules to match or exclude certain filepaths. (Note that the variables will default to empty strings if they are not available.) For example, this is a YARA rule which matches only files containing the string "evil" in the ``/home/`` directory:
 
 .. code-block:: none
 
