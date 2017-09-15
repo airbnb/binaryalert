@@ -77,6 +77,6 @@ To ensure real-time file analysis, we recommend invoking the downloader every ti
         outputs=['aws-lambda:binaryalert'])
   def cb_binarystore_file_added(rec):
       """
-      description:  CarbonBlack found a new binary: forward to BinaryAlert for YARA analysis.
+      description: CarbonBlack found a new binary: forward to BinaryAlert for YARA analysis.
       """
       return True
