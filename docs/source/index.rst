@@ -3,6 +3,7 @@ BinaryAlert
 
 .. image:: ../images/logo.png
   :align: center
+  :scale: 75%
   :alt: BinaryAlert
 
 
@@ -28,13 +29,14 @@ Resources
 * `GitHub Repo <https://github.com/airbnb/binaryalert>`_
 * `Blog Post <https://medium.com/airbnb-engineering/binaryalert-real-time-serverless-malware-detection-ca44370c1b90>`_
 * `Slack <https://binaryalert.herokuapp.com/>`_
-* `Twitter <https://twitter.com/binaryalert_io>`_ (unofficial)
+* `Twitter <https://twitter.com/binaryalert_io>`_
 
 
 Table of Contents
 =================
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    getting-started
    adding-yara-rules
+   uploading-files
