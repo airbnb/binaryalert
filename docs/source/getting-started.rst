@@ -106,3 +106,5 @@ Deploy!
 .. code-block:: bash
 
   $ ./manage.py live_test
+
+.. note:: You must :ref:`add_sns_subscriptions` in order to receive YARA match alerts.
