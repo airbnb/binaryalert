@@ -6,14 +6,16 @@ To upload files for analysis, you need only upload them to the BinaryAlert S3 bu
 
   YOUR.NAME.PREFIX.binaryalert-binaries.REGION
 
-When uploading to S3, any object metadata you set will be included in all match alerts. In addition, if there is a ``filepath`` metadata key, BinaryAlert will make the filepath :ref:`external-variables` available to the YARA rules.
+When uploading to S3, any object metadata you set will be included in all match alerts. In addition, if there is a ``filepath`` metadata key, BinaryAlert will make the filepath :ref:`external variables <external-variables>` available to the YARA rules.
 
 Uploaded files are persisted indefinitely so that BinaryAlert can retroactively analyze all files with every rule update. The S3 bucket has both `access logging <http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerLogs.html>`_ and `object versioning <http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectVersioning.html>`_ enabled.
 
 
+.. _cb_downloader:
+
 CarbonBlack Downloader
 ----------------------
-If you use CarbonBlack Enterprise Response, you can enable BinaryAlert's optional downloader Lambda function. The downloader copies files from CarbonBlack into BinaryAlert's S3 bucket (including the appropriate metadata). To enable it:
+If you use CarbonBlack Enterprise Response, you can enable BinaryAlert's optional downloader Lambda function. The downloader copies files (and some metadata) from CarbonBlack into BinaryAlert's S3 bucket. To enable it:
 
 .. code-block:: none
 
@@ -24,7 +26,7 @@ If you use CarbonBlack Enterprise Response, you can enable BinaryAlert's optiona
   CarbonBlack URL: https://your.carbonblack.url
   CarbonBlack API token (only needs binary read access):
 
-.. warning:: The API token only needs access to read binaries; do not use a token with admin privileges, do not allow other users to share the same token, and be sure to regularly rotate the token.
+.. warning:: The API token only needs access to read binaries. Do not use a token with admin privileges, do not allow other users to share the same token, and be sure to regularly rotate the token.
 
 .. note:: The API token will not be shown on screen and BinaryAlert will create a new KMS key to encrypt the credentials before saving them to the ``terraform.tfvars`` configuration file. The downloader (and no other component) is authorized to decrypt the credentials with the generated key.
 
@@ -43,7 +45,7 @@ Binaries downloaded from CarbonBlack are saved to the BinaryAlert S3 bucket with
       'filepath'  # from the "observed_filenames" CarbonBlack metadata
   ]
 
-Once the downloader is enabled, you can either copy everything from CarbonBlack in one go, or you can `deploy <deploying.rst>`_ the downloader components and setup real-time invocations for every new binary.
+Once the downloader is enabled, you can either copy everything from CarbonBlack in one go, or you can `deploy <deploying.html>`_ the downloader components and setup real-time invocations for every new binary.
 
 
 Copy All Files

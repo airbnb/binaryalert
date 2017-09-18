@@ -31,6 +31,8 @@ Add SNS Subscriptions
 ---------------------
 BinaryAlert sends YARA match alerts to an `SNS <https://aws.amazon.com/sns/>`_ topic. In order to receive these alerts, you must manually `add a subscription <http://docs.aws.amazon.com/sns/latest/dg/SubscribeTopic.html>`_ to the generated ``NAME_PREFIX_binaryalert_yara_match_alerts`` topic. SNS supports a variety of subscription endpoints, including email, SMS, and other Lambda functions. Email/SMS subscriptions must be confirmed by the destination, which is why this step can't be automated with Terraform.
 
+For example, since `StreamAlert <https://streamalert.io>`_ supports `SNS datasources <https://streamalert.io/datasources.html#aws-sns>`_, you could use StreamAlert to forward the YARA match alert to PagerDuty, Slack, etc.
+
 
 Terraform State
 ---------------
@@ -48,6 +50,8 @@ We recommend using the ``manage.py`` wrapper script for most BinaryAlert managem
   $ terraform show  # Print the current state of the infrastructure
 
 
+.. _terraform_destroy:
+
 Terraform Destroy
 .................
 To teardown all of the BinaryAlert infrastructure:
@@ -57,4 +61,4 @@ To teardown all of the BinaryAlert infrastructure:
   $ cd terraform/
   $ terraform destroy
 
-.. note:: By default, S3 objects will not be deleted by ``terraform destroy``. To do so, you have to enable the ``force_destroy`` option in the ``terraform/terraform.tfvars`` configuration file.
+.. note:: By default, S3 objects will not be deleted by ``terraform destroy``. To do so, you must first enable the ``force_destroy`` option in the ``terraform/terraform.tfvars`` configuration file and ``apply`` the change.

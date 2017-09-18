@@ -43,3 +43,5 @@ Table of Contents
    deploying
    uploading-files
    yara-matches
+   metrics-and-monitoring
+   troubleshooting-faq

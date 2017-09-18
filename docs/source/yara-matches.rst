@@ -5,7 +5,7 @@ When BinaryAlert finds a file that matches at least one YARA rule, it will save 
 
 DynamoDB Records
 ----------------
-All YARA matches are saved to a DynamoDB table. The table has two primary keys, ``AnalyzerVersion`` and ``SHA256``. This makes it easy to find every match ever associated with a given file or, conversely, to find all matches from a specific :ref:`version <lambda_versioning>` of your BinaryAlert deployment.
+All YARA matches are saved to a DynamoDB table. The table has two primary keys, ``AnalyzerVersion`` and ``SHA256``. This makes it easy to find every match associated with a given file or, conversely, to find all matches from a specific :ref:`version <lambda_versioning>` of your BinaryAlert deployment.
 
 A ``manage.py live_test`` will show you an example of the match record stored in the DynamoDB table:
 
@@ -24,8 +24,12 @@ A ``manage.py live_test`` will show you an example of the match record stored in
 
 SNS Match Alerts
 ----------------
-An alert is sent to the ``NAME_PREFIX_binaryalert_yara_matches`` SNS topic when one of the following conditions apply:
+In addition to saving the DynamoDB record, an alert is sent to the ``NAME_PREFIX_binaryalert_yara_matches`` SNS topic when one of the following conditions apply:
 
 1. The file matches a YARA rule that was not matched in the previous version of the BinaryAlert analyzers, OR
-2. A new S3 object appears which is identical to an already matched binary
+2. A new S3 object appears which is identical to an already matched binary.
+
+Without these conditions, an alert would trigger for every match in every retroactive analysis. Instead, an alert triggers only when there is a **new** match.
+
+.. note:: You must :ref:`add an SNS subscription <add_sns_subscriptions>` in order to receive YARA match alerts.
 
