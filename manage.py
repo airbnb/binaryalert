@@ -478,8 +478,8 @@ class Manager(object):
         if dynamo_record_found:
             print('\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).')
         else:
-            # TODO: Link to troubleshooting documentation
-            raise TestFailureError('\nLive test failed!')
+            raise TestFailureError(
+                '\nLive test failed! See https://binaryalert.io/troubleshooting-faq.html')
 
     @staticmethod
     def unit_test() -> None:
