@@ -18,6 +18,22 @@ A ``deploy`` is equivalent to the following 4 operations executed in sequence:
 .. warning:: To ensure new YARA rules are applied ASAP, **every** ``deploy`` starts a batch analysis. If a batch analysis is already running or if you are not updating any YARA rules, you can just ``build`` and ``apply`` your changes.
 
 
+.. _lambda_versioning:
+
+Lambda Versions and Aliases
+---------------------------
+Each BinaryAlert Lambda function has a ``Production`` alias which points to the most recent version of that function. Every time a deploy changes one of the Lambda deployment packages, a new version is published and the ``Production`` alias is updated accordingly. For more information, see `AWS Lambda Function Versioning and Aliases <http://docs.aws.amazon.com/lambda/latest/dg/versioning-aliases.html>`_.
+
+
+.. _add_sns_subscriptions:
+
+Add SNS Subscriptions
+---------------------
+BinaryAlert sends YARA match alerts to an `SNS <https://aws.amazon.com/sns/>`_ topic. In order to receive these alerts, you must manually `add a subscription <http://docs.aws.amazon.com/sns/latest/dg/SubscribeTopic.html>`_ to the generated ``NAME_PREFIX_binaryalert_yara_match_alerts`` topic. SNS supports a variety of subscription endpoints, including email, SMS, and other Lambda functions. Email/SMS subscriptions must be confirmed by the destination, which is why this step can't be automated with Terraform.
+
+For example, since `StreamAlert <https://streamalert.io>`_ supports `SNS datasources <https://streamalert.io/datasources.html#aws-sns>`_, you could use StreamAlert to forward the YARA match alert to PagerDuty, Slack, etc.
+
+
 Terraform State
 ---------------
 By default, Terraform will save the state of the infrastructure locally in ``terraform/terraform.tfstate``. If you are deploying BinaryAlert in an enterprise environment, we recommend configuring `Terraform remote state <https://www.terraform.io/docs/state/remote.html>`_. For example, you can store the Terraform state in a versioned `S3 bucket <https://www.terraform.io/docs/backends/types/s3.html>`_.
@@ -34,6 +50,8 @@ We recommend using the ``manage.py`` wrapper script for most BinaryAlert managem
   $ terraform show  # Print the current state of the infrastructure
 
 
+.. _terraform_destroy:
+
 Terraform Destroy
 .................
 To teardown all of the BinaryAlert infrastructure:
@@ -43,4 +61,4 @@ To teardown all of the BinaryAlert infrastructure:
   $ cd terraform/
   $ terraform destroy
 
-.. note:: By default, S3 objects will not be deleted by ``terraform destroy``. To do so, you have to enable the ``force_destroy`` option in the ``terraform/terraform.tfvars`` configuration file.
+.. note:: By default, S3 objects will not be deleted by ``terraform destroy``. To do so, you must first enable the ``force_destroy`` option in the ``terraform/terraform.tfvars`` configuration file and ``apply`` the change.

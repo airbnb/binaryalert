@@ -42,3 +42,6 @@ Table of Contents
    adding-yara-rules
    deploying
    uploading-files
+   yara-matches
+   metrics-and-monitoring
+   troubleshooting-faq

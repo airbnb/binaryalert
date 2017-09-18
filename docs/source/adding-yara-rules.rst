@@ -54,10 +54,14 @@ You can use these variables in your own rules to match or exclude certain filepa
   }
 
 
+.. _supported_yara_modules:
+
 Supported Modules
 -----------------
 BinaryAlert supports all of the default `YARA modules <http://yara.readthedocs.io/en/latest/modules.html>`_, including ELF, Math, Hash, and PE.
 
+
+.. _testing_yara_rules:
 
 Testing Your Rules
 ------------------

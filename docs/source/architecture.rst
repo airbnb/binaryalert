@@ -15,6 +15,6 @@ Analysis Lifecycle
 2. Every file uploaded to the S3 bucket is immediately queued for analysis (using `S3 event notifications <http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html>`_).
 3. A dispatching Lambda function runs every minute, grouping files into batches and invoking up to dozens of analyzers in parallel.
 4. Each analyzer scans its files using a list of pre-compiled `YARA rules <adding-yara-rules.html>`_.
-5. YARA matches are saved to DynamoDB and an alert is sent to an SNS topic. You can subscribe to these alerts via `StreamAlert <https://streamalert.io>`_, email, or any other supported `SNS subscription <http://docs.aws.amazon.com/sns/latest/api/API_Subscribe.html>`_.
+5. `YARA matches <yara-matches.html>`_ are saved to DynamoDB and an alert is sent to an SNS topic. You can subscribe to these alerts via `StreamAlert <https://streamalert.io>`_, email, or any other supported `SNS subscription <http://docs.aws.amazon.com/sns/latest/api/API_Subscribe.html>`_.
 6. For retroactive analysis, a batching Lambda function enqueues the entire S3 bucket to be re-analyzed.
-7. Configurable CloudWatch alarms will trigger if any BinaryAlert component is behaving abnormally. This will notify a different SNS topic than the one used for YARA match alerts.
+7. Configurable :ref:`CloudWatch alarms <metric_alarms>` will trigger if any BinaryAlert component is behaving abnormally. This will notify a different SNS topic than the one used for YARA match alerts.

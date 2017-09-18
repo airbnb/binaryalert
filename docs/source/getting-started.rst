@@ -1,11 +1,11 @@
 Getting Started
 ===============
-All you need is a computer and an AWS account to get BinaryAlert up and running in just a few minutes!
+All you need is an AWS account to get BinaryAlert up and running in just a few minutes!
 
 
 Install Dependencies
 --------------------
-BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows as well).
+BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows as well, though we haven't tried).
 
 1. Install `Python 3.6 <https://www.python.org/downloads/release/python-362>`_:
 
@@ -58,7 +58,7 @@ Download BinaryAlert
 
 .. code-block:: bash
 
-  $ git clone --branch 0.10 --depth 1 https://github.com/airbnb/binaryalert
+  $ git clone --branch v1.0.0 --depth 1 https://github.com/airbnb/binaryalert
 
 2. Create and activate a virtual environment:
 
@@ -106,3 +106,5 @@ Deploy!
 .. code-block:: bash
 
   $ ./manage.py live_test
+
+.. note:: You must :ref:`add an SNS subscription <add_sns_subscriptions>` in order to receive YARA match alerts.
