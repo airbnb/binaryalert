@@ -12,6 +12,10 @@ BinaryAlert: Serverless, Real-Time & Retroactive Malware Detection
   :target: http://www.binaryalert.io/?badge=latest
   :alt: Documentation Status
 
+.. image:: https://binaryalert.herokuapp.com/badge.svg
+  :target: http://binaryalert.herokuapp.com
+  :alt: Slack Channel
+
 |
 
 .. image:: docs/images/logo.png
