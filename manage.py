@@ -143,7 +143,7 @@ class BinaryAlertConfig(object):
     def encrypted_carbon_black_api_token(self, value: str):
         if not re.fullmatch(self.VALID_CB_ENCRYPTED_TOKEN_FORMAT, value, re.ASCII):
             raise InvalidConfigError(
-                'encrypted_carbon_black_url "{}" does not match format {}'.format(
+                'encrypted_carbon_black_api_token "{}" does not match format {}'.format(
                     value, self.VALID_CB_ENCRYPTED_TOKEN_FORMAT
                 )
             )
