@@ -4,38 +4,61 @@ This Lambda function is the core of BinaryAlert. Each invocation downloads one o
 S3, scans them against all available YARA rules, and forwards any matches to Dynamo and SNS.
 
 
-Updating YARA-Python
---------------------
-The `yara-python <https://github.com/VirusTotal/yara-python>`_ library is natively compiled.
-It must therefore be pre-built on an Amazon Linux AMI in order to run in Lambda.
-This has already been done for you: ``yara_python_3.6.3.zip`` contains the
-pre-built ``yara_python`` library (v3.6.3) for the Lambda environment and is automatically bundled
-on every deploy.
+Updating YARA Binaries
+----------------------
+The YARA libaries used by BinaryAlert are natively compiled, and must therefore be pre-built on an
+Amazon Linux AMI in order to run in Lambda. This has already been done for you:
+``yara3.7.0_yextend1.5.zip`` contains the pre-built
+`yara_python <https://github.com/VirusTotal/yara-python>`_ (v3.7.0) and
+`yextend <https://github.com/BayshoreNetworks/yextend>`_ (v1.5) libraries for the Lambda environment
+and is automatically bundled with every deploy.
 
 If, however, you need to update or re-create the zipfile, SSH to an EC2 instance running the
 `AWS Lambda AMI <http://docs.aws.amazon.com/lambda/latest/dg/current-supported-versions.html>`_
-and install ``yara-python``:
+and install ``yara-python`` and ``yextend`` as follows:
 
 .. code-block:: bash
 
-    $ sudo su
-    # yum update
-    # yum install gcc openssl-devel.x86_64 python35-devel.x86_64 python35-pip.noarch
-    # python3
-        >>> import pip
-        >>> pip.main(['install', '--upgrade', 'pip'])
-        >>> exit()
-    # python3
-        >>> import pip
-        >>> pip.main(['install', 'yara-python', '--target', '.'])
-        >>> exit()
-    # mv yara.cpython-35m-x86_64-linux-gnu.so yara.so
-    # cp /usr/lib64/libpython3.5m.so.1.0 .
-    # zip -r yara_python_VERSION.zip *
+    # Install requirements
+    sudo yum update
+    sudo yum install autconf automake gcc gcc-c++ libarchive-devel libtool libuuid-devel \
+        openssl-devel pcre-devel poppler-utils python36 python36-devel zlib-devel
+    sudo pip install nose
 
-Then replace ``yara_python_3.6.3.zip`` in the repo.
+    # Install YARA
+    wget https://github.com/VirusTotal/yara/archive/v3.7.0.tar.gz
+    tar -xvzf v3.7.0.tar.gz
+    cd yara-3.7.0
+    ./bootstrap.sh
+    ./configure
+    make
+    make check  # Run unit tests
+    sudo make install
 
-Some notes:
+    # Install yara-python
+    cd ~
+    mkdir pip
+    pip-3.6 install yara-python -t pip
 
-- Python3.6 is not currently available in the public Lambda AMI. You can either manually install Python3.6 from source or (what's done here) include the required Python3.5 bytecode in the zipfile.
-- The openssl development libraries are required to support the "hash" module.
+    # Compile yextend
+    cd ~
+    wget https://github.com/BayshoreNetworks/yextend/archive/1.5.tar.gz
+    tar -xvzf 1.5.tar.gz
+    cd yextend-1.5
+    # Modify main.cpp, line 177 to hardcode the yara version to 3.7
+    ./build.sh
+    make unittests  # Run unit tests
+
+    # Gather binaries and build zipfile
+    cd ~
+    mkdir lambda
+    cp pip/yara.cpython-36m-x86_64-linux-gnu.so lambda/yara.so
+    cp yextend-1.5/yextend lambda
+    cp /usr/lib64/libarchive.so.13 lambda
+    cp /usr/lib64/liblzo2.so.2 lambda
+    cp /usr/local/lib/libyara.so.3 lambda
+    cd lambda
+    zip yara3.7.0_yextend1.5.zip *
+
+
+Then ``scp`` the newzipfile to replace the one in the repo.
