@@ -44,23 +44,24 @@ class BuildTest(unittest.TestCase):
         self._verify_filenames(
             os.path.join(self._tempdir, build.ANALYZE_ZIPFILE + '.zip'),
             {
-                'yara_python-3.6.3.egg-info/',
+                # Python source files
                 '__init__.py',
                 'analyzer_aws_lib.py',
                 'binary_info.py',
                 'common.py',
-                'compiled_yara_rules.bin',
                 'file_hash.py',
-                'libpython3.5m.so.1.0',
                 'main.py',
-                'yara.so',
                 'yara_analyzer.py',
-                'yara_python-3.6.3.egg-info/dependency_links.txt',
-                'yara_python-3.6.3.egg-info/installed-files.txt',
-                'yara_python-3.6.3.egg-info/not-zip-safe',
-                'yara_python-3.6.3.egg-info/PKG-INFO',
-                'yara_python-3.6.3.egg-info/SOURCES.txt',
-                'yara_python-3.6.3.egg-info/top_level.txt'
+
+                # Compiled rules file
+                'compiled_yara_rules.bin',
+
+                # Natively compiled binaries
+                'libarchive.so.13',
+                'liblzo2.so.2',
+                'libyara.so.3',
+                'yara.so',
+                'yextend'
             }
         )
         mock_print.assert_called_once()
