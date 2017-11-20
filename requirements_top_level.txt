@@ -1,12 +1,12 @@
 backoff
 boto3
-cbapi==1.3.2
+cbapi==1.3.4
 coverage
 coveralls
-mypy==0.521
+mypy==0.550
 pyfakefs
 pyhcl
 pylint
 sphinx
 sphinx-rtd-theme
-yara-python==3.6.3
+yara-python==3.7.0
