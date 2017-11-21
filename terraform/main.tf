@@ -1,10 +1,8 @@
 terraform {
-  // 0.10.4 is required for locals to work correctly across multiple files
-  required_version = "~> 0.10.4"
+  required_version = "~> 0.11.0"
 }
 
 provider "aws" {
-  // 0.1.4 required for aws_cloudwatch_dashboard
-  version = "~> 0.1.4"
+  version = "~> 1.3.1"
   region  = "${var.aws_region}"
 }
