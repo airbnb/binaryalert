@@ -3,7 +3,6 @@
 import base64
 import io
 import os
-import tempfile
 from unittest import mock
 
 import boto3

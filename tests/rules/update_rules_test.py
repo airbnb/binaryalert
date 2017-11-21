@@ -1,7 +1,6 @@
 """Tests for rule update/clone logic."""
 # pylint: disable=protected-access
 import os
-import tempfile
 from typing import List
 from unittest import mock
 
