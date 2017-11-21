@@ -15,12 +15,12 @@ BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows
   $ sudo apt-get install python3.6  # Ubuntu 16+
   $ python3 --version  # Should show 3.6.x
 
-2. Install the latest version of `Terraform <https://www.terraform.io/downloads.html>`_:
+2. Install `Terraform <https://www.terraform.io/downloads.html>`_ v0.11.X:
 
 .. code-block:: bash
 
   $ brew install terraform  # MacOS Homebrew
-  $ terraform --version  # Must be v0.10.4+
+  $ terraform --version  # Must be v0.11.X
 
 3. Install `virtualenv <https://virtualenv.pypa.io/en/stable/installation>`_:
 

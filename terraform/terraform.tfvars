@@ -65,16 +65,16 @@ lambda_batch_memory_mb = 128
 
 // How often the Lambda dispatcher will be invoked.
 // To ensure only one dispatcher is running, this rate should be > the lambda dispatch timeout.
-lambda_dispatch_frequency_minutes = 1
+lambda_dispatch_frequency_minutes = 2
 
 // Maximum number of analyzers that can be asynchronously invoked during one dispatcher run.
 // Higher values allow for more throughtput, but if too many analyzers are invoked too quickly,
 // Lambda invocations may be throttled.
-lambda_dispatch_limit = 100
+lambda_dispatch_limit = 500
 
 // Memory and time limits for the dispatching function.
 lambda_dispatch_memory_mb = 128
-lambda_dispatch_timeout_sec = 40
+lambda_dispatch_timeout_sec = 115
 
 // Memory and time limits for the analyzer functions.
 lambda_analyze_memory_mb = 1024

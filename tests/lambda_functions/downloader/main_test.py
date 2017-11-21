@@ -3,7 +3,6 @@
 import base64
 import io
 import os
-import tempfile
 from unittest import mock
 
 import boto3
@@ -41,9 +40,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
         os.environ['TARGET_S3_BUCKET'] = 'test-s3-bucket'
 
         # Setup fake filesystem.
-        temp_dir = tempfile.gettempdir()  # Get real temp directory before starting fake filesystem.
         self.setUpPyfakefs()
-        os.makedirs(temp_dir)
 
         # Create a mock binary.
         self._binary = MockBinary(

@@ -13,7 +13,7 @@ from rules.compile_rules import compile_rules
 LAMBDA_DIR = os.path.dirname(os.path.realpath(__file__))
 
 ANALYZE_SOURCE = os.path.join(LAMBDA_DIR, 'analyzer')
-ANALYZE_DEPENDENCIES = os.path.join(ANALYZE_SOURCE, 'yara_python_3.6.3.zip')
+ANALYZE_DEPENDENCIES = os.path.join(ANALYZE_SOURCE, 'yara3.7.0_yextend1.5.zip')
 ANALYZE_ZIPFILE = 'lambda_analyzer'
 
 BATCH_SOURCE = os.path.join(LAMBDA_DIR, 'batcher', 'main.py')
@@ -23,7 +23,7 @@ DISPATCH_SOURCE = os.path.join(LAMBDA_DIR, 'dispatcher', 'main.py')
 DISPATCH_ZIPFILE = 'lambda_dispatcher'
 
 DOWNLOAD_SOURCE = os.path.join(LAMBDA_DIR, 'downloader', 'main.py')
-DOWNLOAD_DEPENDENCIES = os.path.join(LAMBDA_DIR, 'downloader', 'cbapi_1.3.2.zip')
+DOWNLOAD_DEPENDENCIES = os.path.join(LAMBDA_DIR, 'downloader', 'cbapi_1.3.4.zip')
 DOWNLOAD_ZIPFILE = 'lambda_downloader'
 
 

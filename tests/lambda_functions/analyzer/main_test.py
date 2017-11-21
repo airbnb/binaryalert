@@ -60,13 +60,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
         self.maxDiff = None  # pylint: disable=invalid-name
 
         # Set up the fake filesystem.
-        real_tempdir = tempfile.gettempdir()
         self.setUpPyfakefs()
         os.makedirs(os.path.dirname(COMPILED_RULES_FILEPATH))
-        os.makedirs(real_tempdir)
-        if not os.path.exists(tempfile.gettempdir()):
-            # Temp directory in pyfakefs may look different than in the real fs.
-            os.makedirs(tempfile.gettempdir())
         yara_mocks.save_test_yara_rules(COMPILED_RULES_FILEPATH)
 
         # Set environment variables.

@@ -107,7 +107,7 @@ def copy_all_binaries() -> None:
 
     # Create process communication queues.
     tasks = JoinableQueue(MAX_TASK_QUEUE_SIZE)  # CopyTasks to execute.
-    failures = Queue()  # A list of MD5s which failed to copy.
+    failures: Queue = Queue()  # A list of MD5s which failed to copy.
 
     # Start the consumer processes.
     LOGGER.info('Start %d consumers', NUM_CONSUMERS)

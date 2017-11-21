@@ -188,6 +188,7 @@ class BinaryAlertConfig(object):
         # The same key will be used by the downloader to decrypt the API token at runtime.
         print('Terraforming KMS key...')
         os.chdir(TERRAFORM_DIR)
+        subprocess.check_call(['terraform', 'get'])
         subprocess.check_call(
             ['terraform', 'apply', '-target={}'.format(CB_KMS_ALIAS_TERRAFORM_ID)]
         )

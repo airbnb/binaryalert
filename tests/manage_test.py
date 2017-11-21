@@ -248,7 +248,10 @@ class BinaryAlertConfigTestRealFilesystem(TestCase):
             mock.call('Terraforming KMS key...'),
             mock.call('Encrypting API token...')
         ])
-        mock_subprocess.assert_called_once()
+        mock_subprocess.assert_has_calls([
+            mock.call(['terraform', 'get']),
+            mock.call(['terraform', 'apply', '-target={}'.format(manage.CB_KMS_ALIAS_TERRAFORM_ID)])
+        ])
 
 
 class ManagerTest(FakeFilesystemBase):
