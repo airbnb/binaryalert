@@ -16,7 +16,6 @@ class UpdateRulesTest(fake_filesystem_unittest.TestCase):
         """Setup the fake filesystem with the expected rules folder structure."""
         self.setUpPyfakefs()
         os.makedirs(clone_rules.RULES_DIR)
-        os.makedirs(tempfile.gettempdir())
 
         # Add extra rules (which should be deleted).
         self.fs.CreateFile(os.path.join(
