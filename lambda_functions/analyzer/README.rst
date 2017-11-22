@@ -21,8 +21,8 @@ and install ``yara-python`` and ``yextend`` as follows:
 
     # Install requirements
     sudo yum update
-    sudo yum install autconf automake gcc gcc-c++ libarchive-devel libtool libuuid-devel \
-        openssl-devel pcre-devel poppler-utils python36 python36-devel zlib-devel
+    sudo yum install autoconf automake bzip2-devel gcc gcc-c++ libarchive-devel libtool \
+        libuuid-devel openssl-devel pcre-devel poppler-utils python36 python36-devel zlib-devel
     sudo pip install nose
 
     # Install YARA
