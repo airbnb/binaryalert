@@ -9,13 +9,13 @@ if __package__:
     # Imported by unit tests or other external code.
     from lambda_functions.analyzer import analyzer_aws_lib, file_hash
     from lambda_functions.analyzer.common import LOGGER
-    from lambda_functions.analyzer.yara_analyzer import YaraAnalyzer
+    from lambda_functions.analyzer.yara_analyzer import YaraAnalyzer, YaraMatch
 else:
     # mypy complains about duplicate definitions
     import analyzer_aws_lib  # type: ignore
     from common import LOGGER  # type: ignore
     import file_hash  # type: ignore
-    from yara_analyzer import YaraAnalyzer  # type: ignore
+    from yara_analyzer import YaraAnalyzer, YaraMatch  # type: ignore
 
 
 class BinaryInfo(object):
@@ -43,7 +43,7 @@ class BinaryInfo(object):
         self.s3_metadata: Dict[str, str] = dict()
         self.computed_md5 = ''
         self.computed_sha = ''
-        self.yara_matches: List[Any] = list()  # List of yara.Match objects (not an importable type)
+        self.yara_matches: List[YaraMatch] = list()
 
     def __str__(self) -> str:
         """Use the S3 identifier as the string representation of the binary."""
@@ -82,7 +82,8 @@ class BinaryInfo(object):
     @property
     def matched_rule_ids(self) -> Set[str]:
         """A list of 'yara_file:rule_name' for each YARA match."""
-        return set('{}:{}'.format(match.namespace, match.rule) for match in self.yara_matches)
+        return set('{}:{}'.format(match.rule_namespace, match.rule_name)
+                   for match in self.yara_matches)
 
     @property
     def filepath(self) -> str:
@@ -111,17 +112,17 @@ class BinaryInfo(object):
         matched_rules = {
             'Rule{}'.format(index): {
                 # YARA string IDs, e.g. "$string1"
-                'MatchedStrings': list(sorted(set(t[1] for t in match.strings))),
-                'Meta': match.meta,
-                'RuleFile': match.namespace,
-                'RuleName': match.rule,
-                'RuleTags': match.tags
+                'MatchedStrings': list(sorted(match.matched_strings)),
+                'Meta': match.rule_metadata,
+                'RuleFile': match.rule_namespace,
+                'RuleName': match.rule_name
             }
             for index, match in enumerate(self.yara_matches, start=1)
         }
 
         return {
             'FileInfo': {
+                # TODO: Include archive structure from yextend
                 'MD5': self.computed_md5,
                 'S3LastModified': self.s3_last_modified,
                 'S3Location': self.s3_identifier,
