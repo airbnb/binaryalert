@@ -1,4 +1,6 @@
 """Unit tests for yara_analyzer.py. Uses fake filesystem."""
+import os
+import subprocess
 from unittest import mock
 
 from pyfakefs import fake_filesystem_unittest
@@ -7,6 +9,7 @@ from lambda_functions.analyzer import yara_analyzer
 from tests.lambda_functions.analyzer import yara_mocks
 
 
+@mock.patch.dict(os.environ, {'LAMBDA_TASK_ROOT': '/var/task'})
 class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     """Uses the real YARA library to parse the test rules."""
     # pylint: disable=protected-access
@@ -24,7 +27,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     @staticmethod
     def _rule_id(match):
         """Convert a YARA match into a string rule ID (file_name:rule_name)."""
-        return '{}:{}'.format(match.namespace, match.rule)
+        return '{}:{}'.format(match.rule_namespace, match.rule_name)
 
     def test_yara_variables(self):
         """Verify path variables are extracted correctly."""
@@ -49,17 +52,19 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         self.assertEqual(
             {'extension': '', 'filename': '', 'filepath': '', 'filetype': ''}, variables)
 
-    def test_analyze(self):
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
+    def test_analyze(self, mock_subprocess: mock.MagicMock):
         """Analyze returns the expected list of rule matches."""
         yara_matches = self._analyzer.analyze('/target.exe')
+        mock_subprocess.assert_called_once()
         self.assertIsInstance(yara_matches, list)
 
         match = yara_matches[0]
-        self.assertEqual('evil_check.yar', match.namespace)
-        self.assertEqual('contains_evil', match.rule)
-        self.assertEqual(['mock_rule', 'has_meta'], match.tags)
+        self.assertEqual('evil_check.yar', match.rule_namespace)
+        self.assertEqual('contains_evil', match.rule_name)
 
-    def test_analyze_no_matches(self):
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
+    def test_analyze_no_matches(self, mock_subprocess: mock.MagicMock):
         """Analyze returns empty list if no matches."""
         # Setup a different YaraAnalyzer with an empty ruleset.
         yara_mocks.save_test_yara_rules('./empty.yara.rules', empty_rules_file=True)
@@ -67,12 +72,15 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             empty_analyzer = yara_analyzer.YaraAnalyzer('./empty.yara.rules')
 
         self.assertEqual([], empty_analyzer.analyze('/target.exe'))
+        mock_subprocess.assert_called_once()
 
-    def test_analyze_match_with_target_path(self):
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
+    def test_analyze_match_with_target_path(self, mock_subprocess: mock.MagicMock):
         """Match additional rules if the target path is provided."""
         matched_rule_ids = [
             self._rule_id(match) for match in self._analyzer.analyze(
                 '/target.exe', original_target_path='/usr/bin/win32.exe')]
+        mock_subprocess.assert_called_once()
 
         self.assertEqual(
             ['evil_check.yar:contains_evil', 'externals.yar:extension_is_exe',
