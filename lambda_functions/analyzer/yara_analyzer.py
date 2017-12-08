@@ -3,7 +3,7 @@ import collections
 import json
 import os
 import subprocess
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import yara
 
@@ -18,6 +18,13 @@ YaraMatch = collections.namedtuple(
         'matched_strings'  # Set: Set of string string names matched (e.g. "{$a, $b}")
     ]
 )
+
+# Yextend includes rule metadata at the same level as all other match information, so we need to
+# distinguish keys from yextend vs. keys from rule metadata.
+_YEXTEND_RESULT_KEYS = {
+    'child_file_name', 'detected offsets', 'file_name', 'file_signature_MD5', 'file_size',
+    'hit_count', 'parent_file_name', 'yara_matches_found', 'yara_rule_id'
+}
 
 
 class YaraAnalyzer(object):
@@ -56,6 +63,30 @@ class YaraAnalyzer(object):
             'filetype': file_suffix.upper()  # Used in only one rule (checking for "GIF").
         }
 
+    @staticmethod
+    def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMatch]:
+        """Convert Yextend archive analysis results (JSON) into a list of YaraMatch tuples."""
+        if not yextend_json['yara_matches_found']:
+            return []
+
+        matches = []
+        for result in yextend_json['scan_results']:
+            if not result['yara_matches_found']:
+                continue
+
+            rule_name = result['yara_rule_id']
+            rule_namespace = 'yextend'  # TODO: Yextend does not yet report namespaces
+            matched_strings = set(x.split(':')[1] for x in result.get('detected offsets', []))
+
+            rule_metadata = {}
+            for key, value in result.items():
+                if key not in _YEXTEND_RESULT_KEYS:
+                    rule_metadata[key] = value
+
+            matches.append(YaraMatch(rule_name, rule_namespace, rule_metadata, matched_strings))
+
+        return matches
+
     def analyze(self, target_file: str, original_target_path: str = '') -> List[YaraMatch]:
         """Run YARA analysis on a file.
 
@@ -66,17 +97,21 @@ class YaraAnalyzer(object):
         Returns:
             List of YaraMatch tuples.
         """
-        os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
-        yextend_output = subprocess.check_output(
-            ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
-        yextend_results = json.loads(yextend_output.decode('utf-8'))
-        print(yextend_results)
-
+        # Raw YARA matches (yara-python)
         # TODO: Once yextend is more robust, we may eventually not need yara-python anymore.
         raw_yara_matches = self._rules.match(
             target_file, externals=self._yara_variables(original_target_path)
         )
-        return [
+        yara_python_matches = [
             YaraMatch(m.rule, m.namespace, m.meta, set(t[1] for t in m.strings))
             for m in raw_yara_matches
         ]
+
+        # Yextend matches
+        os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
+        yextend_output = subprocess.check_output(
+            ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
+        yextend_list = json.loads(yextend_output.decode('utf-8'))
+        yextend_matches = self._convert_yextend_to_yara_match(yextend_list[0])
+
+        return yara_python_matches + yextend_matches
