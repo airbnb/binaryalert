@@ -1,6 +1,8 @@
 """Unit tests for yara_analyzer.py. Uses fake filesystem."""
+# pylint: disable=protected-access
 import os
 import subprocess
+import unittest
 from unittest import mock
 
 from pyfakefs import fake_filesystem_unittest
@@ -12,7 +14,6 @@ from tests.lambda_functions.analyzer import yara_mocks
 @mock.patch.dict(os.environ, {'LAMBDA_TASK_ROOT': '/var/task'})
 class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     """Uses the real YARA library to parse the test rules."""
-    # pylint: disable=protected-access
 
     def setUp(self):
         """For each test, build a new YaraAnalyzer."""
@@ -86,3 +87,68 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             ['evil_check.yar:contains_evil', 'externals.yar:extension_is_exe',
              'externals.yar:filename_contains_win32'],
             list(sorted(matched_rule_ids)))
+
+
+class YextendConversionTest(unittest.TestCase):
+    """Test Yextend output conversion logic."""
+
+    def setUp(self):
+        self._converter = yara_analyzer._convert_yextend_to_yara_match
+
+    def test_convert_no_matches(self):
+        """No YaraMatch tuples are returned if there were no yextend YARA matches."""
+        self.assertEqual([], self._converter({'yara_matches_found': False}))
+
+    def test_convert_one_match(self):
+        """One simple Yextend YARA match is converted into a YaraMatch tuple."""
+        yextend = {
+            'scan_results': [
+                {
+                    "child_file_name": "child/file/path.txt",
+                    "parent_file_name": "archive.tar.gz",
+                    "scan_type": "ScanType1",
+                    "yara_matches_found": True,
+                    "yara_rule_id": "Rule1"
+                }
+            ],
+            'yara_matches_found': True
+        }
+        expected = [yara_analyzer.YaraMatch('Rule1', 'yextend', {'scan_type': 'ScanType1'}, set())]
+
+        self.assertEqual(expected, yara_analyzer._convert_yextend_to_yara_match(yextend))
+
+    def test_convert_complex_matches(self):
+        """Multiple rule matches, with offsets and more rule metadata."""
+        yextend = {
+            'scan_results': [
+                {
+                    "detected offsets": ["0x30:$a", "0x59:$a", "0x12b3:$b", "0x7078:$c"],
+                    "scan_type": "Scan1",
+                    "yara_matches_found": True,
+                    "yara_rule_id": "Rule1"
+                },
+                {
+                    "scan_type": "Scan2",
+                    "yara_matches_found": False,
+                },
+                {
+                    "author": "Airbnb",
+                    "detected offsets": ["0x0:$longer_string_name"],
+                    "description": "Hello, YARA world",
+                    "scan_type": "Scan3",
+                    "yara_matches_found": True,
+                    "yara_rule_id": "Rule3"
+                }
+            ],
+            'yara_matches_found': True
+        }
+        expected = [
+            yara_analyzer.YaraMatch('Rule1', 'yextend', {'scan_type': 'Scan1'}, {'$a', '$b', '$c'}),
+            yara_analyzer.YaraMatch(
+                'Rule3', 'yextend',
+                {'author': 'Airbnb', 'description': 'Hello, YARA world', 'scan_type': 'Scan3'},
+                {'$longer_string_name'}
+            )
+        ]
+
+        self.assertEqual(expected, yara_analyzer._convert_yextend_to_yara_match(yextend))
