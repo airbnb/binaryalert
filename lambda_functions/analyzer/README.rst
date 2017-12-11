@@ -8,9 +8,9 @@ Updating YARA Binaries
 ----------------------
 The YARA libaries used by BinaryAlert are natively compiled, and must therefore be pre-built on an
 Amazon Linux AMI in order to run in Lambda. This has already been done for you:
-``yara3.7.0_yextend1.5.zip`` contains the pre-built
+``yara3.7.0_yextend1.6.zip`` contains the pre-built
 `yara_python <https://github.com/VirusTotal/yara-python>`_ (v3.7.0) and
-`yextend <https://github.com/BayshoreNetworks/yextend>`_ (v1.5) libraries for the Lambda environment
+`yextend <https://github.com/BayshoreNetworks/yextend>`_ (v1.6) libraries for the Lambda environment
 and is automatically bundled with every deploy.
 
 If, however, you need to update or re-create the zipfile, SSH to an EC2 instance running the
@@ -21,7 +21,7 @@ and install ``yara-python`` and ``yextend`` as follows:
 
     # Install requirements
     sudo yum update
-    sudo yum install autoconf automake bzip2-devel gcc gcc-c++ libarchive-devel libtool \
+    sudo yum install autoconf automake bzip2-devel gcc64 gcc64-c++ libarchive-devel libtool \
         libuuid-devel openssl-devel pcre-devel poppler-utils python36 python36-devel zlib-devel
     sudo pip install nose
 
@@ -42,23 +42,34 @@ and install ``yara-python`` and ``yextend`` as follows:
 
     # Compile yextend
     cd ~
-    wget https://github.com/BayshoreNetworks/yextend/archive/1.5.tar.gz
-    tar -xvzf 1.5.tar.gz
-    cd yextend-1.5
-    # Modify main.cpp, line 177 to hardcode the yara version to 3.7
+    wget https://github.com/BayshoreNetworks/yextend/archive/1.6.tar.gz
+    tar -xvzf 1.6.tar.gz
+    cd yextend-1.6
+    # Manually: modify main.cpp, line 473 to hardcode the yara version to 3.7
     ./build.sh
     make unittests  # Run unit tests
 
-    # Gather binaries and build zipfile
+    # Gather YARA files
     cd ~
     mkdir lambda
     cp pip/yara.cpython-36m-x86_64-linux-gnu.so lambda/yara.so
-    cp yextend-1.5/yextend lambda
+    wget https://raw.githubusercontent.com/VirusTotal/yara/master/COPYING -O lambda/YARA_LICENSE
+    wget https://raw.githubusercontent.com/VirusTotal/yara-python/master/LICENSE -O lambda/YARA_PYTHON_LICENSE
+
+    # Gather Yextend files
+    cp yextend-1.6/yextend lambda
+    cp yextend-1.6/LICENSE lambda/YEXTEND_LICENSE
+    mkdir lambda/libs
+    cp yextend-1.6/libs/*.o lambda/libs
+    cp yextend-1.6/libs/*.yara lambda/libs
+
+    # Gather compiled libraries
     cp /usr/lib64/libarchive.so.13 lambda
     cp /usr/lib64/liblzo2.so.2 lambda
+    cp /usr/lib64/libstdc++.so.6 lambda
     cp /usr/local/lib/libyara.so.3 lambda
     cd lambda
-    zip yara3.7.0_yextend1.5.zip *
+    zip -r yara3.7.0_yextend1.6.zip *
 
 
 Then ``scp`` the newzipfile to replace the one in the repo.

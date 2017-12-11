@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 from unittest import mock
 import urllib.parse
@@ -52,6 +53,7 @@ class MockS3Object(object):
         return GOOD_FILE_METADATA if self.key == GOOD_S3_OBJECT_KEY else EVIL_FILE_METADATA
 
 
+@mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
 class MainTest(fake_filesystem_unittest.TestCase):
     """Test end-to-end functionality of the analyzer."""
     def setUp(self):
@@ -65,6 +67,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
         yara_mocks.save_test_yara_rules(COMPILED_RULES_FILEPATH)
 
         # Set environment variables.
+        os.environ['LAMBDA_TASK_ROOT'] = '/var/task'
         os.environ['S3_BUCKET_NAME'] = MOCK_S3_BUCKET_NAME
         os.environ['SQS_QUEUE_URL'] = MOCK_SQS_URL
         os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'] = MOCK_DYNAMO_TABLE_NAME
@@ -94,7 +97,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
         # Mock S3 Object
         self.main.analyzer_aws_lib.S3.Object = MockS3Object
 
-    def test_analyze_lambda_handler(self):
+    def test_analyze_lambda_handler(self, mock_suprocess: mock.MagicMock):
         """Verify return value, logging, and boto3 calls when multiple files match YARA rules."""
         with mock.patch.object(self.main, 'LOGGER') as mock_logger:
             result = self.main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
@@ -115,6 +118,12 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 )
             ])
 
+            # Verify 2 subprocess calls (yextend over each binary)
+            mock_suprocess.assert_has_calls([
+                mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j']),
+                mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j'])
+            ])
+
         # Verify return value.
         good_s3_id = 'S3:{}:{}'.format(MOCK_S3_BUCKET_NAME, GOOD_S3_OBJECT_KEY)
         evil_s3_id = 'S3:{}:{}'.format(MOCK_S3_BUCKET_NAME, EVIL_S3_OBJECT_KEY)
@@ -133,7 +142,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
                         'Meta': {},
                         'RuleFile': 'externals.yar',
                         'RuleName': 'filename_contains_win32',
-                        'RuleTags': ['mock_rule']
                     }
                 },
                 'NumMatchedRules': 1
@@ -156,14 +164,12 @@ class MainTest(fake_filesystem_unittest.TestCase):
                         },
                         'RuleFile': 'evil_check.yar',
                         'RuleName': 'contains_evil',
-                        'RuleTags': ['mock_rule', 'has_meta']
                     },
                     'Rule2': {
                         'MatchedStrings': [],
                         'Meta': {},
                         'RuleFile': 'externals.yar',
                         'RuleName': 'extension_is_exe',
-                        'RuleTags': ['mock_rule']
                     }
                 },
                 'NumMatchedRules': 2

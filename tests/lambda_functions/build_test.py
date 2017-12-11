@@ -58,10 +58,23 @@ class BuildTest(unittest.TestCase):
 
                 # Natively compiled binaries
                 'libarchive.so.13',
+                'libs/',
+                'libs/bayshore_file_type_detect.o',
+                'libs/bayshore_file_type_detect.yara',
+                'libs/bayshore_yara_wrapper.o',
+                'libs/bzl.o',
+                'libs/pdf_parser.o',
+                'libs/zl.o',
                 'liblzo2.so.2',
+                'libstdc++.so.6',
                 'libyara.so.3',
                 'yara.so',
-                'yextend'
+                'yextend',
+
+                # Licenses
+                'YARA_LICENSE',
+                'YARA_PYTHON_LICENSE',
+                'YEXTEND_LICENSE'
             }
         )
         mock_print.assert_called_once()

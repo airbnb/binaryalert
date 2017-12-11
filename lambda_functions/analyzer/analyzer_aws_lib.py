@@ -80,6 +80,8 @@ def delete_sqs_messages(queue_url: str, receipts: List[str]) -> None:
         queue_url: The URL of the SQS queue containing the messages.
         receipts: List of SQS receipt handles.
     """
+    if not receipts:
+        return
     LOGGER.info('Deleting %d SQS receipt(s) from %s', len(receipts), queue_url)
     SQS.Queue(queue_url).delete_messages(
         Entries=[

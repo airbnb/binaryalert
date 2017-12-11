@@ -1,4 +1,8 @@
 """Unit tests for yara_analyzer.py. Uses fake filesystem."""
+# pylint: disable=protected-access
+import os
+import subprocess
+import unittest
 from unittest import mock
 
 from pyfakefs import fake_filesystem_unittest
@@ -7,9 +11,9 @@ from lambda_functions.analyzer import yara_analyzer
 from tests.lambda_functions.analyzer import yara_mocks
 
 
+@mock.patch.dict(os.environ, {'LAMBDA_TASK_ROOT': '/var/task'})
 class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     """Uses the real YARA library to parse the test rules."""
-    # pylint: disable=protected-access
 
     def setUp(self):
         """For each test, build a new YaraAnalyzer."""
@@ -24,7 +28,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     @staticmethod
     def _rule_id(match):
         """Convert a YARA match into a string rule ID (file_name:rule_name)."""
-        return '{}:{}'.format(match.namespace, match.rule)
+        return '{}:{}'.format(match.rule_namespace, match.rule_name)
 
     def test_yara_variables(self):
         """Verify path variables are extracted correctly."""
@@ -49,17 +53,19 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         self.assertEqual(
             {'extension': '', 'filename': '', 'filepath': '', 'filetype': ''}, variables)
 
-    def test_analyze(self):
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
+    def test_analyze(self, mock_subprocess: mock.MagicMock):
         """Analyze returns the expected list of rule matches."""
         yara_matches = self._analyzer.analyze('/target.exe')
+        mock_subprocess.assert_called_once()
         self.assertIsInstance(yara_matches, list)
 
         match = yara_matches[0]
-        self.assertEqual('evil_check.yar', match.namespace)
-        self.assertEqual('contains_evil', match.rule)
-        self.assertEqual(['mock_rule', 'has_meta'], match.tags)
+        self.assertEqual('evil_check.yar', match.rule_namespace)
+        self.assertEqual('contains_evil', match.rule_name)
 
-    def test_analyze_no_matches(self):
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
+    def test_analyze_no_matches(self, mock_subprocess: mock.MagicMock):
         """Analyze returns empty list if no matches."""
         # Setup a different YaraAnalyzer with an empty ruleset.
         yara_mocks.save_test_yara_rules('./empty.yara.rules', empty_rules_file=True)
@@ -67,14 +73,82 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             empty_analyzer = yara_analyzer.YaraAnalyzer('./empty.yara.rules')
 
         self.assertEqual([], empty_analyzer.analyze('/target.exe'))
+        mock_subprocess.assert_called_once()
 
-    def test_analyze_match_with_target_path(self):
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
+    def test_analyze_match_with_target_path(self, mock_subprocess: mock.MagicMock):
         """Match additional rules if the target path is provided."""
         matched_rule_ids = [
             self._rule_id(match) for match in self._analyzer.analyze(
                 '/target.exe', original_target_path='/usr/bin/win32.exe')]
+        mock_subprocess.assert_called_once()
 
         self.assertEqual(
             ['evil_check.yar:contains_evil', 'externals.yar:extension_is_exe',
              'externals.yar:filename_contains_win32'],
             list(sorted(matched_rule_ids)))
+
+
+class YextendConversionTest(unittest.TestCase):
+    """Test Yextend output conversion logic."""
+
+    def setUp(self):
+        self._converter = yara_analyzer._convert_yextend_to_yara_match
+
+    def test_convert_no_matches(self):
+        """No YaraMatch tuples are returned if there were no yextend YARA matches."""
+        self.assertEqual([], self._converter({'yara_matches_found': False}))
+
+    def test_convert_one_match(self):
+        """One simple Yextend YARA match is converted into a YaraMatch tuple."""
+        yextend = {
+            'scan_results': [
+                {
+                    "child_file_name": "child/file/path.txt",
+                    "parent_file_name": "archive.tar.gz",
+                    "scan_type": "ScanType1",
+                    "yara_matches_found": True,
+                    "yara_rule_id": "Rule1"
+                }
+            ],
+            'yara_matches_found': True
+        }
+        expected = [yara_analyzer.YaraMatch('Rule1', 'yextend', {'scan_type': 'ScanType1'}, set())]
+
+        self.assertEqual(expected, yara_analyzer._convert_yextend_to_yara_match(yextend))
+
+    def test_convert_complex_matches(self):
+        """Multiple rule matches, with offsets and more rule metadata."""
+        yextend = {
+            'scan_results': [
+                {
+                    "detected offsets": ["0x30:$a", "0x59:$a", "0x12b3:$b", "0x7078:$c"],
+                    "scan_type": "Scan1",
+                    "yara_matches_found": True,
+                    "yara_rule_id": "Rule1"
+                },
+                {
+                    "scan_type": "Scan2",
+                    "yara_matches_found": False,
+                },
+                {
+                    "author": "Airbnb",
+                    "detected offsets": ["0x0:$longer_string_name"],
+                    "description": "Hello, YARA world",
+                    "scan_type": "Scan3",
+                    "yara_matches_found": True,
+                    "yara_rule_id": "Rule3"
+                }
+            ],
+            'yara_matches_found': True
+        }
+        expected = [
+            yara_analyzer.YaraMatch('Rule1', 'yextend', {'scan_type': 'Scan1'}, {'$a', '$b', '$c'}),
+            yara_analyzer.YaraMatch(
+                'Rule3', 'yextend',
+                {'author': 'Airbnb', 'description': 'Hello, YARA world', 'scan_type': 'Scan3'},
+                {'$longer_string_name'}
+            )
+        ]
+
+        self.assertEqual(expected, yara_analyzer._convert_yextend_to_yara_match(yextend))

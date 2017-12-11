@@ -2,6 +2,7 @@
 import glob
 import os
 import shutil
+import stat
 import tempfile
 import zipfile
 
@@ -13,7 +14,7 @@ from rules.compile_rules import compile_rules
 LAMBDA_DIR = os.path.dirname(os.path.realpath(__file__))
 
 ANALYZE_SOURCE = os.path.join(LAMBDA_DIR, 'analyzer')
-ANALYZE_DEPENDENCIES = os.path.join(ANALYZE_SOURCE, 'yara3.7.0_yextend1.5.zip')
+ANALYZE_DEPENDENCIES = os.path.join(ANALYZE_SOURCE, 'yara3.7.0_yextend1.6.zip')
 ANALYZE_ZIPFILE = 'lambda_analyzer'
 
 BATCH_SOURCE = os.path.join(LAMBDA_DIR, 'batcher', 'main.py')
@@ -45,6 +46,10 @@ def _build_analyzer(target_directory):
     # Extract the AWS-native Python deps into the package.
     with zipfile.ZipFile(ANALYZE_DEPENDENCIES, 'r') as deps:
         deps.extractall(temp_package_dir)
+
+    # Make yextend executable for everyone.
+    yextend = os.path.join(temp_package_dir, 'yextend')
+    os.chmod(yextend, os.stat(yextend).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
     # Zip up the package and remove temporary directory.
     shutil.make_archive(os.path.join(target_directory, ANALYZE_ZIPFILE), 'zip', temp_package_dir)
