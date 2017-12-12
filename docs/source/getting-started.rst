@@ -43,6 +43,8 @@ Set AWS Credentials
   * SNS
   * SQS
 
+.. note:: See `Creating an IAM group <iam-group.html>`_ for a least-privilege policy that allows users to deploy BinaryAlert.
+
 2. Set your AWS credentials using `any method supported by Terraform <https://www.terraform.io/docs/providers/aws/#authentication>`_.
 For example, using the AWS CLI:
 
