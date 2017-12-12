@@ -29,6 +29,14 @@ BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows
   $ pip3 install virtualenv
   $ virtualenv --version
 
+4. Install the OpenSSL development library if it isn't already (OS X should have it).
+This is required for YARA's `hash module <http://yara.readthedocs.io/en/stable/modules/hash.html>`_
+and must be installed *before* installing the BinaryAlert requirements.
+
+.. code-block:: bash
+
+  $ sudo apt-get install libssl-dev  # Ubuntu
+  $ sudo yum install openssl-devel   # Amazon Linux
 
 Set AWS Credentials
 -------------------
@@ -42,6 +50,8 @@ Set AWS Credentials
   * S3
   * SNS
   * SQS
+
+.. note:: See `Creating an IAM group <iam-group.html>`_ for a least-privilege policy that allows users to deploy BinaryAlert.
 
 2. Set your AWS credentials using `any method supported by Terraform <https://www.terraform.io/docs/providers/aws/#authentication>`_.
 For example, using the AWS CLI:

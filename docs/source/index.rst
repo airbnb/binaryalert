@@ -38,6 +38,7 @@ Table of Contents
    :maxdepth: 3
 
    getting-started
+   iam-group
    architecture
    adding-yara-rules
    deploying
