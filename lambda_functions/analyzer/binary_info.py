@@ -74,7 +74,7 @@ class BinaryInfo(object):
     def __exit__(self, exception_type, exception_value, traceback):
         """Shred the downloaded binary and delete it from disk."""
         # Note: This runs even during exception handling (it is the "with" context).
-        subprocess.check_call(['shred', '-u', self.download_path])
+        subprocess.check_call(['shred', '--remove', self.download_path])
 
     @property
     def matched_rule_ids(self) -> Set[str]:

@@ -126,8 +126,8 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
             # Verify 2 shred calls
             mock_call.assert_has_calls([
-                mock.call(['shred', '-u', mock.ANY]),
-                mock.call(['shred', '-u', mock.ANY])
+                mock.call(['shred', '--remove', mock.ANY]),
+                mock.call(['shred', '--remove', mock.ANY])
             ])
 
         # Verify return value.
