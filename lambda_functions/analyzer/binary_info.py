@@ -1,5 +1,6 @@
 """Keeps track of all information associated with and computed about a binary."""
 import os
+import subprocess
 import tempfile
 import time
 from typing import Any, Dict, List, Set
@@ -71,13 +72,9 @@ class BinaryInfo(object):
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        """Remove the downloaded binary from local disk."""
-        # In Lambda, "os.remove" does not actually remove the file as expected.
-        # Thus, we first truncate the file to set its size to 0 before removing it.
-        if os.path.isfile(self.download_path):
-            with open(self.download_path, 'wb') as file:
-                file.truncate()
-            os.remove(self.download_path)
+        """Shred the downloaded binary and delete it from disk."""
+        # Note: This runs even during exception handling (it is the "with" context).
+        subprocess.check_call(['shred', '-u', self.download_path])
 
     @property
     def matched_rule_ids(self) -> Set[str]:

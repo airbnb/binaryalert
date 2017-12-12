@@ -53,6 +53,7 @@ class MockS3Object(object):
         return GOOD_FILE_METADATA if self.key == GOOD_S3_OBJECT_KEY else EVIL_FILE_METADATA
 
 
+@mock.patch.object(subprocess, 'check_call')
 @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
 class MainTest(fake_filesystem_unittest.TestCase):
     """Test end-to-end functionality of the analyzer."""
@@ -97,7 +98,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
         # Mock S3 Object
         self.main.analyzer_aws_lib.S3.Object = MockS3Object
 
-    def test_analyze_lambda_handler(self, mock_suprocess: mock.MagicMock):
+    def test_analyze_lambda_handler(self, mock_output: mock.MagicMock, mock_call: mock.MagicMock):
         """Verify return value, logging, and boto3 calls when multiple files match YARA rules."""
         with mock.patch.object(self.main, 'LOGGER') as mock_logger:
             result = self.main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
@@ -119,9 +120,15 @@ class MainTest(fake_filesystem_unittest.TestCase):
             ])
 
             # Verify 2 subprocess calls (yextend over each binary)
-            mock_suprocess.assert_has_calls([
+            mock_output.assert_has_calls([
                 mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j']),
                 mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j'])
+            ])
+
+            # Verify 2 shred calls
+            mock_call.assert_has_calls([
+                mock.call(['shred', '-u', mock.ANY]),
+                mock.call(['shred', '-u', mock.ANY])
             ])
 
         # Verify return value.
@@ -242,6 +249,3 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 Namespace='BinaryAlert'
             )
         ])
-
-        # Verify that the downloaded file was removed from temp storage.
-        self.assertEqual([], os.listdir(tempfile.gettempdir()))
