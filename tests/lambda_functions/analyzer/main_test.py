@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import subprocess
-import tempfile
 from unittest import mock
 import urllib.parse
 
