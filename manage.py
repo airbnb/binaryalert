@@ -25,6 +25,9 @@ from lambda_functions.build import build as lambda_build
 from rules import compile_rules, clone_rules
 from tests.rules.eicar_rule_test import EICAR_STRING
 
+# BinaryAlert version.
+VERSION = '1.1.0.beta'
+
 # File locations.
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))  # Directory containing this file.
 TERRAFORM_DIR = os.path.join(PROJECT_DIR, 'terraform')
@@ -502,6 +505,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         'command', choices=sorted(manager.commands), help=manager.help, metavar='command')
+    parser.add_argument('--version', action='version', version='BinaryAlert v{}'.format(VERSION))
     args = parser.parse_args()
 
     manager.run(args.command)
