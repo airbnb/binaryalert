@@ -19,6 +19,7 @@ from tests.rules.eicar_rule_test import EICAR_STRING
 
 def _mock_input(prompt: str) -> str:
     """Mock for the user input() function to automatically respond with valid answers."""
+    # pylint: disable=too-many-return-statements
     if prompt.startswith('AWS Region'):
         return 'us-west-2'
     elif prompt.startswith('Unique name prefix'):
