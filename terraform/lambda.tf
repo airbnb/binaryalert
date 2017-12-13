@@ -98,7 +98,6 @@ module "binaryalert_analyzer" {
   filename        = "lambda_analyzer.zip"
 
   environment_variables = {
-    S3_BUCKET_NAME                 = "${aws_s3_bucket.binaryalert_binaries.id}"
     SQS_QUEUE_URL                  = "${aws_sqs_queue.s3_object_queue.id}"
     YARA_MATCHES_DYNAMO_TABLE_NAME = "${aws_dynamodb_table.binaryalert_yara_matches.name}"
     YARA_ALERTS_SNS_TOPIC_ARN      = "${aws_sns_topic.yara_match_alerts.arn}"
