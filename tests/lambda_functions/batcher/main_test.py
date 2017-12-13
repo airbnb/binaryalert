@@ -10,6 +10,7 @@ import boto3
 from tests import common
 
 
+# TODO: mock.patch
 class MainTest(unittest.TestCase):
     """Test the batcher enqueuing everything from S3 into SQS."""
 
@@ -65,7 +66,12 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-1'}
+                                }
+                            }
                         ]
                     })
                 }
@@ -103,8 +109,18 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}},
-                            {'s3': {'object': {'key': 'test-key-2'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-1'}
+                                }
+                            },
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-2'}
+                                }
+                            }
                         ]
                     })
                 }
@@ -154,8 +170,18 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}},
-                            {'s3': {'object': {'key': 'test-key-2'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-1'}
+                                }
+                            },
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-2'}
+                                }
+                            }
                         ]
                     })
                 },
@@ -163,7 +189,12 @@ class MainTest(unittest.TestCase):
                     'Id': '1',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-3'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-3'}
+                                }
+                            }
                         ]
                     })
                 }
@@ -219,7 +250,12 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-continuation-token'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-continuation-token'}
+                                }
+                            }
                         ]
                     })
                 }
