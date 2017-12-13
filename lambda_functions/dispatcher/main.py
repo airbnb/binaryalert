@@ -20,7 +20,7 @@ SQS_MAX_MESSAGES = 10  # Maximum number of messages to request (highest allowed 
 WAIT_TIME_SECONDS = 10  # Maximum amount of time to hold a receive_message connection open.
 
 
-def _build_payload(sqs_messages: List[Any]) -> Optional[Dict[str, List[str]]]:
+def _build_payload(sqs_messages: List[Any]) -> Optional[Dict[str, Any]]:
     """Convert a batch of SQS messages into an analysis Lambda payload.
 
     Args:
@@ -31,7 +31,8 @@ def _build_payload(sqs_messages: List[Any]) -> Optional[Dict[str, List[str]]]:
     Returns:
         Non-empty payload for the analysis Lambda function in the following format:
             {
-                'S3Objects': ['key1', 'key2', ...],
+                'Records': List of unmodified S3 object added records.
+                    Example: {'s3': {'object': {'key': ... }, 'bucket': {'arn' ... }}
                 'SQSReceipts': ['receipt1', 'receipt2', ...]
             }
         Returns None if the SQS message was empty or invalid.
@@ -41,12 +42,11 @@ def _build_payload(sqs_messages: List[Any]) -> Optional[Dict[str, List[str]]]:
         return None
 
     # The payload consists of S3 object keys and SQS receipts (analyzers will delete the message).
-    payload: Dict[str, List[str]] = {'S3Objects': [], 'SQSReceipts': []}
+    payload: Dict[str, List[str]] = {'Records': [], 'SQSReceipts': []}
     invalid_receipts = []  # List of invalid SQS message receipts to delete.
     for msg in sqs_messages:
         try:
-            payload['S3Objects'].extend(
-                record['s3']['object']['key'] for record in json.loads(msg.body)['Records'])
+            payload['Records'].extend(json.loads(msg.body)['Records'])
             payload['SQSReceipts'].append(msg.receipt_handle)
         except (KeyError, ValueError):
             LOGGER.warning('Invalid SQS message body: %s', msg.body)
@@ -62,7 +62,7 @@ def _build_payload(sqs_messages: List[Any]) -> Optional[Dict[str, List[str]]]:
         )
 
     # If there were no valid S3 objects, return None.
-    if not payload['S3Objects']:
+    if not payload['Records']:
         return None
 
     return payload
@@ -97,8 +97,8 @@ def dispatch_lambda_handler(_, lambda_context) -> int:
         payload = _build_payload(sqs_messages)
         if not payload:
             continue
-        LOGGER.info('Sending %d object(s) to an analyzer: %s',
-                    len(payload['S3Objects']), payload['S3Objects'])
+        LOGGER.info('Sending %d object(s) from %d SQS receipt(s)',
+                    len(payload['Records']), len(payload['SQSReceipts']))
 
         # Asynchronously invoke an analyzer lambda.
         LAMBDA.invoke(

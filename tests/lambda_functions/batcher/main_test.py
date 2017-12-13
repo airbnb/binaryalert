@@ -10,17 +10,18 @@ import boto3
 from tests import common
 
 
+@mock.patch.dict(os.environ, {
+    'BATCH_LAMBDA_NAME': 'test_batch_lambda_name',
+    'BATCH_LAMBDA_QUALIFIER': 'Production',
+    'OBJECTS_PER_MESSAGE': '2',
+    'S3_BUCKET_NAME': 'test_s3_bucket',
+    'SQS_QUEUE_URL': 'test_queue'
+})
 class MainTest(unittest.TestCase):
     """Test the batcher enqueuing everything from S3 into SQS."""
 
     def setUp(self):
         """Set environment variables and setup the mocks."""
-        os.environ['BATCH_LAMBDA_NAME'] = 'test_batch_lambda_name'
-        os.environ['BATCH_LAMBDA_QUALIFIER'] = 'Production'
-        os.environ['OBJECTS_PER_MESSAGE'] = '2'
-        os.environ['S3_BUCKET_NAME'] = 'test_s3_bucket'
-        os.environ['SQS_QUEUE_URL'] = 'test_queue'
-
         with mock.patch.object(boto3, 'client'), mock.patch.object(boto3, 'resource'):
             from lambda_functions.batcher import main
             self.batcher_main = main
@@ -65,7 +66,12 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-1'}
+                                }
+                            }
                         ]
                     })
                 }
@@ -103,8 +109,18 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}},
-                            {'s3': {'object': {'key': 'test-key-2'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-1'}
+                                }
+                            },
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-2'}
+                                }
+                            }
                         ]
                     })
                 }
@@ -154,8 +170,18 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-1'}}},
-                            {'s3': {'object': {'key': 'test-key-2'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-1'}
+                                }
+                            },
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-2'}
+                                }
+                            }
                         ]
                     })
                 },
@@ -163,7 +189,12 @@ class MainTest(unittest.TestCase):
                     'Id': '1',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-key-3'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-key-3'}
+                                }
+                            }
                         ]
                     })
                 }
@@ -219,7 +250,12 @@ class MainTest(unittest.TestCase):
                     'Id': '0',
                     'MessageBody': json.dumps({
                         'Records': [
-                            {'s3': {'object': {'key': 'test-continuation-token'}}}
+                            {
+                                's3': {
+                                    'bucket': {'name': 'test_s3_bucket'},
+                                    'object': {'key': 'test-continuation-token'}
+                                }
+                            }
                         ]
                     })
                 }

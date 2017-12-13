@@ -52,6 +52,12 @@ class MockS3Object(object):
         return GOOD_FILE_METADATA if self.key == GOOD_S3_OBJECT_KEY else EVIL_FILE_METADATA
 
 
+@mock.patch.dict(os.environ, {
+    'LAMBDA_TASK_ROOT': '/var/task',
+    'SQS_QUEUE_URL': MOCK_SQS_URL,
+    'YARA_MATCHES_DYNAMO_TABLE_NAME': MOCK_DYNAMO_TABLE_NAME,
+    'YARA_ALERTS_SNS_TOPIC_ARN': MOCK_SNS_TOPIC_ARN
+})
 @mock.patch.object(subprocess, 'check_call')
 @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
 class MainTest(fake_filesystem_unittest.TestCase):
@@ -66,17 +72,23 @@ class MainTest(fake_filesystem_unittest.TestCase):
         os.makedirs(os.path.dirname(COMPILED_RULES_FILEPATH))
         yara_mocks.save_test_yara_rules(COMPILED_RULES_FILEPATH)
 
-        # Set environment variables.
-        os.environ['LAMBDA_TASK_ROOT'] = '/var/task'
-        os.environ['S3_BUCKET_NAME'] = MOCK_S3_BUCKET_NAME
-        os.environ['SQS_QUEUE_URL'] = MOCK_SQS_URL
-        os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'] = MOCK_DYNAMO_TABLE_NAME
-        os.environ['YARA_ALERTS_SNS_TOPIC_ARN'] = MOCK_SNS_TOPIC_ARN
-
         # Create test event.
         self._test_event = {
-            # Two objects, which match different YARA rules.
-            'S3Objects': [urllib.parse.quote_plus(GOOD_S3_OBJECT_KEY), EVIL_S3_OBJECT_KEY],
+            # Two objects which match different YARA rules.
+            'Records': [
+                {
+                    's3': {
+                        'bucket': {'name': MOCK_S3_BUCKET_NAME},
+                        'object': {'key': urllib.parse.quote_plus(GOOD_S3_OBJECT_KEY)}
+                    }
+                },
+                {
+                    's3': {
+                        'bucket': {'name': MOCK_S3_BUCKET_NAME},
+                        'object': {'key': urllib.parse.quote_plus(EVIL_S3_OBJECT_KEY)}
+                    }
+                }
+            ],
             'SQSReceipts': MOCK_SQS_RECEIPTS
         }
 
@@ -104,13 +116,13 @@ class MainTest(fake_filesystem_unittest.TestCase):
             # Verify logging statements.
             mock_logger.assert_has_calls([
                 mock.call.info('Processing %d record(s)', 2),
-                mock.call.info('Analyzing "%s"', GOOD_S3_OBJECT_KEY),
+                mock.call.info('Analyzing "%s:%s"', MOCK_S3_BUCKET_NAME, GOOD_S3_OBJECT_KEY),
                 mock.call.warning(
                     '%s matched YARA rules: %s',
                     mock.ANY,
                     {'externals.yar:filename_contains_win32'}
                 ),
-                mock.call.info('Analyzing "%s"', EVIL_S3_OBJECT_KEY),
+                mock.call.info('Analyzing "%s:%s"', MOCK_S3_BUCKET_NAME, EVIL_S3_OBJECT_KEY),
                 mock.call.warning(
                     '%s matched YARA rules: %s',
                     mock.ANY,

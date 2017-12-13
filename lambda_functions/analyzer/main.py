@@ -1,6 +1,5 @@
 """AWS Lambda function for testing a binary against a list of YARA rules."""
 # Expects the following environment variables:
-#   S3_BUCKET_NAME: Name of the S3 bucket from which to download binaries.
 #   SQS_QUEUE_URL: URL of the queue from which messages originated (needed for message deletion).
 #   YARA_MATCHES_DYNAMO_TABLE_NAME: Name of the Dynamo table which stores YARA match results.
 #   YARA_ALERTS_SNS_TOPIC_ARN: ARN of the SNS topic which should be alerted on a YARA match.
@@ -35,10 +34,23 @@ def analyze_lambda_handler(event_data: Dict[str, Any], lambda_context) -> Dict[s
 
     Args:
         event_data: [dict] of the form: {
-            'S3Objects': [...],  # S3 object keys.
+            'Records': [
+                {
+                    "s3": {
+                        "object": {
+                            "key": "FileName.txt"
+                        },
+                        "bucket": {
+                            "name": "mybucket"
+                        }
+                    }
+                }
+            ],
             'SQSReceipts': [...]  # SQS receipt handles (to be deleted after processing).
         }
             There can be any number of S3objects, but no more than 10 SQS receipts.
+            The Records are the same format as the S3 Put event, which means the analyzer could be
+            directly linked to an S3 bucket notification if needed.
         lambda_context: LambdaContext object (with .function_version).
 
     Returns:
@@ -60,13 +72,13 @@ def analyze_lambda_handler(event_data: Dict[str, Any], lambda_context) -> Dict[s
     except ValueError:
         lambda_version = -1
 
-    LOGGER.info('Processing %d record(s)', len(event_data['S3Objects']))
-    for s3_key in event_data['S3Objects']:
-        # S3 keys in event notifications are url-encoded.
-        s3_key = urllib.parse.unquote_plus(s3_key)
-        LOGGER.info('Analyzing "%s"', s3_key)
+    LOGGER.info('Processing %d record(s)', len(event_data['Records']))
+    for record in event_data['Records']:
+        bucket_name = record['s3']['bucket']['name']
+        s3_key = urllib.parse.unquote_plus(record['s3']['object']['key'])
+        LOGGER.info('Analyzing "%s:%s"', bucket_name, s3_key)
 
-        with binary_info.BinaryInfo(os.environ['S3_BUCKET_NAME'], s3_key, ANALYZER) as binary:
+        with binary_info.BinaryInfo(bucket_name, s3_key, ANALYZER) as binary:
             result[binary.s3_identifier] = binary.summary()
             binaries.append(binary)
 
@@ -79,7 +91,10 @@ def analyze_lambda_handler(event_data: Dict[str, Any], lambda_context) -> Dict[s
                 LOGGER.info('%s did not match any YARA rules', binary)
 
     # Delete all of the SQS receipts (mark them as completed).
-    analyzer_aws_lib.delete_sqs_messages(os.environ['SQS_QUEUE_URL'], event_data['SQSReceipts'])
+    analyzer_aws_lib.delete_sqs_messages(
+        os.environ['SQS_QUEUE_URL'],
+        event_data.get('SQSReceipts', [])
+    )
 
     # Publish metrics.
     try:

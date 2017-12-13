@@ -52,7 +52,15 @@ class SQSMessage(object):
         return {
             'Id': str(self._id),
             'MessageBody': json.dumps({
-                'Records': [{'s3': {'object': {'key': key}}} for key in self._keys]
+                'Records': [
+                    {
+                        's3': {
+                            'bucket': {'name': os.environ['S3_BUCKET_NAME']},
+                            'object': {'key': key}
+                        }
+                    }
+                    for key in self._keys
+                ]
             })
         }
 

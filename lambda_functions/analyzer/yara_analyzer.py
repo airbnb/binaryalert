@@ -29,7 +29,7 @@ _YEXTEND_RESULT_KEYS = {
 
 def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMatch]:
     """Convert Yextend archive analysis results (JSON) into a list of YaraMatch tuples."""
-    if not yextend_json['yara_matches_found']:
+    if not yextend_json.get('yara_matches_found'):
         return []
 
     matches = []

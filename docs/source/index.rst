@@ -42,7 +42,7 @@ Table of Contents
    architecture
    adding-yara-rules
    deploying
-   uploading-files
+   analyzing-files
    yara-matches
    metrics-and-monitoring
    troubleshooting-faq

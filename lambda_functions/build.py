@@ -1,6 +1,7 @@
 """Builds the deployment packages for all of the Lambda functions."""
 import glob
 import os
+import pathlib
 import shutil
 import stat
 import tempfile
@@ -31,6 +32,7 @@ DOWNLOAD_ZIPFILE = 'lambda_downloader'
 def _build_analyzer(target_directory):
     """Build the YARA analyzer Lambda deployment package."""
     print('Creating analyzer deploy package...')
+    pathlib.Path(os.path.join(ANALYZE_SOURCE, 'main.py')).touch()
 
     # Create a new copy of the core lambda directory to avoid cluttering the original.
     temp_package_dir = os.path.join(tempfile.gettempdir(), 'tmp_yara_analyzer.pkg')
@@ -59,6 +61,7 @@ def _build_analyzer(target_directory):
 def _build_batcher(target_directory):
     """Build the batcher Lambda deployment package."""
     print('Creating batcher deploy package...')
+    pathlib.Path(BATCH_SOURCE).touch()  # Change last modified time to force new Lambda deploy
     with zipfile.ZipFile(os.path.join(target_directory, BATCH_ZIPFILE + '.zip'), 'w') as pkg:
         pkg.write(BATCH_SOURCE, os.path.basename(BATCH_SOURCE))
 
@@ -66,6 +69,7 @@ def _build_batcher(target_directory):
 def _build_dispatcher(target_directory):
     """Build the dispatcher Lambda deployment package."""
     print('Creating dispatcher deploy package...')
+    pathlib.Path(DISPATCH_SOURCE).touch()
     with zipfile.ZipFile(os.path.join(target_directory, DISPATCH_ZIPFILE + '.zip'), 'w') as pkg:
         pkg.write(DISPATCH_SOURCE, os.path.basename(DISPATCH_SOURCE))
 
@@ -73,6 +77,8 @@ def _build_dispatcher(target_directory):
 def _build_downloader(target_directory):
     """Build the downloader Lambda deployment package."""
     print('Creating downloader deploy package...')
+    pathlib.Path(DOWNLOAD_SOURCE).touch()
+
     temp_package_dir = os.path.join(tempfile.gettempdir(), 'tmp_yara_downloader.pkg')
     if os.path.exists(temp_package_dir):
         shutil.rmtree(temp_package_dir)
