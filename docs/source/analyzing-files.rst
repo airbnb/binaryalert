@@ -1,5 +1,11 @@
-Uploading Files
+Analyzing Files
 ===============
+Files uploaded to the BinaryAlert S3 bucket will be automatically queued for analysis. You can also
+use the analyzer to scan files from other buckets directly or in response to event notifications.
+
+Uploading Files
+---------------
+
 To upload files for analysis, you need only upload them to the BinaryAlert S3 bucket. The S3 bucket name is of the form
 
 .. code-block:: none
@@ -85,3 +91,84 @@ If you don't use StreamAlert, you can invoke the downloader yourself:
       Qualifier='Production',  # Invoke production alias
       Payload=json.dumps({'md5': 'FILE_MD5'}).encode('utf-8')
   )
+
+
+Analyzing Existing Buckets
+--------------------------
+As of v1.1, the BinaryAlert YARA analyzer is no longer restricted to just its own S3 bucket - it can
+read other existing buckets as well. To grant access to other buckets, modify the analyzer's
+IAM policy in `lambda_iam.tf <https://github.com/airbnb/binaryalert/blob/master/terraform/lambda_iam.tf>`_.
+
+Direct Invocation
+.................
+You can directly invoke the BinaryAlert analyzer to scan any S3 object it has access to:
+
+.. code-block:: python
+
+  import boto3, json
+
+  response = boto3.client('lambda').invoke(
+      FunctionName='your_prefix_binaryalert_analyzer',
+      InvocationType='RequestResponse',
+      Qualifier='Production',
+      Payload=json.dumps({
+          'Records': [
+              {
+                  's3': {
+                      'bucket': {'name': 'BUCKET-NAME'},
+                      'object': {'key': 'KEY1'}
+                  }
+              },
+              {
+                  's3': {
+                      'bucket': {'name': 'BUCKET-NAME'},
+                      'object': {'key': 'KEY2'}
+                  }
+              }
+          ]
+      })
+  )
+
+  decoded = json.loads(response['Payload'].read().decode('utf-8'))
+  print(decoded)
+
+  {
+      'S3:BUCKET-NAME:KEY1': {
+          'FileInfo': {
+              'MD5': '...',
+              'S3LastModified': '...',
+              'S3Metadata': {},
+              'SHA256': '...'
+          },
+          'MatchedRules': {
+              'Rule1':
+                  'MatchedStrings': ['$a'],
+                  'Meta': {
+                      'description': 'Test YARA rule'
+                  },
+                  'RuleFile': 'rules.yara',
+                  'RuleName': 'test_dummy_true'
+           },
+           'NumMatchedRules': 1
+      }
+      'S3:BUCKET-NAME:KEY2': {
+          'FileInfo': {
+              'MD5': '...',
+              'S3LastModified': '...',
+              'S3Metadata': {},
+              'SHA256': '...'
+          },
+          'MatchedRules': {},
+          'NumMatchedRules': 0
+      }
+  }
+
+.. note:: The analyzer will always save YARA matches to Dynamo and send alerts to the SNS topic, even when invoked directly or when analyzing other buckets.
+
+Configuring Event Notifications
+...............................
+You can configure other buckets to send S3 event notifications to the BinaryAlert SQS queue
+(recommended) or to the analyzer directly. In either case, once configured, BinaryAlert will be
+automatically analyzing your existing buckets in addition to its own.
+See `AWS: Enable Event Notifications <http://docs.aws.amazon.com/AmazonS3/latest/user-guide/enable-event-notifications.html>`_
+and a `terraform example <https://www.terraform.io/docs/providers/aws/r/s3_bucket_notification.html#add-notification-configuration-to-sqs-queue>`_ to get started.
