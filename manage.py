@@ -440,7 +440,6 @@ class Manager(object):
                 sys.exit('Please answer exactly "yes" or "no"')
 
             if result == 'yes':
-                # Enable force_destroy for the BinaryAlert S3 buckets
                 print('Enabling force_destroy on the BinaryAlert S3 buckets...')
                 subprocess.check_call([
                     'terraform', 'apply', '-auto-approve=true', '-refresh=false',
