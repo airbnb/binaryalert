@@ -67,9 +67,13 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
     prefix  = ""
     enabled = true
 
-    // Old/deleted object versions are permanently removed after 1 day.
+    // Old object versions are permanently removed after 1 day.
     noncurrent_version_expiration {
       days = 1
+    }
+
+    expiration {
+      expired_object_delete_marker = true
     }
   }
 
