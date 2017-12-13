@@ -73,14 +73,33 @@ class MainTest(unittest.TestCase):
             MockSQSMessage(
                 body=json.dumps({
                     'Records': [
-                        {'s3': {'object': {'key': 'test-key-1'}}},
-                        {'s3': {'object': {'key': 'test-key-2'}}}
+                        {
+                            's3': {
+                                'bucket': {'name': 'test-bucket'},
+                                'object': {'key': 'test-key-1'}
+                            }
+                        },
+                        {
+                            's3': {
+                                'bucket': {'name': 'test-bucket'},
+                                'object': {'key': 'test-key-2'}
+                            }
+                        }
                     ]
                 }),
                 receipt_handle='receipt1'
             ),
             MockSQSMessage(
-                body=json.dumps({'Records': [{'s3': {'object': {'key': 'test-key-3'}}}]}),
+                body=json.dumps({
+                    'Records': [
+                        {
+                            's3': {
+                                'bucket': {'name': 'test-bucket'},
+                                'object': {'key': 'test-key-3'}
+                            }
+                        }
+                    ]
+                }),
                 receipt_handle='receipt2'
             )
         ]
@@ -93,8 +112,7 @@ class MainTest(unittest.TestCase):
             self.assertEqual(1, invocations)
 
             mock_logger.assert_has_calls([
-                mock.call.info('Sending %d object(s) to an analyzer: %s',
-                               3, ['test-key-1', 'test-key-2', 'test-key-3']),
+                mock.call.info('Sending %d object(s) from %d SQS receipt(s)', 3, 2),
                 mock.call.info('Invoked %d total analyzers', 1)
             ])
 
@@ -103,7 +121,26 @@ class MainTest(unittest.TestCase):
                 FunctionName='test-analyzer',
                 InvocationType='Event',
                 Payload=json.dumps({
-                    'S3Objects': ['test-key-1', 'test-key-2', 'test-key-3'],
+                    'Records': [
+                        {
+                            's3': {
+                                'bucket': {'name': 'test-bucket'},
+                                'object': {'key': 'test-key-1'}
+                            }
+                        },
+                        {
+                            's3': {
+                                'bucket': {'name': 'test-bucket'},
+                                'object': {'key': 'test-key-2'}
+                            }
+                        },
+                        {
+                            's3': {
+                                'bucket': {'name': 'test-bucket'},
+                                'object': {'key': 'test-key-3'}
+                            }
+                        },
+                    ],
                     'SQSReceipts': ['receipt1', 'receipt2']
                 }),
                 Qualifier='Production'
