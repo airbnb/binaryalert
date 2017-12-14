@@ -19,6 +19,7 @@ from tests.rules.eicar_rule_test import EICAR_STRING
 
 def _mock_input(prompt: str) -> str:
     """Mock for the user input() function to automatically respond with valid answers."""
+    # pylint: disable=too-many-return-statements
     if prompt.startswith('AWS Region'):
         return 'us-west-2'
     elif prompt.startswith('Unique name prefix'):
@@ -28,6 +29,8 @@ def _mock_input(prompt: str) -> str:
     elif prompt.startswith('CarbonBlack URL'):
         return 'https://new-example.com'
     elif prompt.startswith('Change the CarbonBlack API token'):
+        return 'yes'
+    elif prompt.startswith('Delete all S3 objects'):
         return 'yes'
     return 'UNKNOWN'
 
@@ -358,6 +361,19 @@ class ManagerTest(FakeFilesystemBase):
         mock_build.assert_called_once()
         mock_apply.assert_called_once()
         mock_analyze.assert_called_once()
+
+    @mock.patch.object(manage, 'input', side_effect=_mock_input)
+    @mock.patch.object(manage, 'print')
+    @mock.patch.object(subprocess, 'call')
+    @mock.patch.object(subprocess, 'check_call')
+    def test_destroy(self, mock_check_call: mock.MagicMock, mock_call: mock.MagicMock,
+                     mock_print: mock.MagicMock, mock_input: mock.MagicMock):
+        """Destroy asks whether S3 objects should also be deleted."""
+        self.manager.destroy()
+        mock_input.assert_called_once()
+        mock_print.assert_called_once()
+        mock_check_call.assert_called_once()
+        mock_call.assert_called_once()
 
     @mock.patch.object(time, 'sleep', mock.MagicMock())
     @mock.patch.object(boto3, 'resource')

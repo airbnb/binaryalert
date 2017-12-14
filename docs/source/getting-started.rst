@@ -3,6 +3,8 @@ Getting Started
 All you need is an AWS account to get BinaryAlert up and running in just a few minutes!
 
 
+.. _dependencies:
+
 Install Dependencies
 --------------------
 BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows as well, though we haven't tried).
