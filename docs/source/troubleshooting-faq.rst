@@ -12,6 +12,13 @@ What's the filesize limit?
 The limiting factor is the `space Lambda allocates for "/tmp" <http://docs.aws.amazon.com/lambda/latest/dg/limits.html#limits-list>`_, i.e. **512 MB**. If you use the :ref:`downloader <cb_downloader>`, note that CarbonBlack automatically truncates files to 25 MB.
 
 
+YARA rules with "hash" or "imphash" fail to compile
+---------------------------------------------------
+If the openssl development libraries aren't on your system when installing YARA, the ``hash`` module
+won't work (`example <https://github.com/airbnb/binaryalert/issues/74>`_).
+Be sure to follow instructions for :ref:`Installing Dependencies <dependencies>`.
+
+
 How much does BinaryAlert cost?
 -------------------------------
 The two biggest costs are the S3 storage and Lambda invocations, so it will depend on how many files you have and how often you re-analyze all of them. A rough estimate at current rates is `$0.057 / GB / month <https://medium.com/@austinbyers/good-question-693200ef5830>`_.
@@ -44,7 +51,8 @@ The CarbonBlack server can sometimes take several minutes before binaries and th
 
 Terraform destroy fails because "bucket is not empty"
 -----------------------------------------------------
-The ``force_destroy`` configuration option must be applied before destroying; see the :ref:`terraform destroy <terraform_destroy>` documentation.
+By default, BinaryAlert S3 buckets can't be deleted until they are empty. ``./manage.py destroy``
+will ask if you want to override this setting. See the :ref:`teardown <teardown>` documentation.
 
 
 Contact Us
