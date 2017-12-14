@@ -159,9 +159,11 @@ class BinaryAlertConfig(object):
             )
         self._config['encrypted_carbon_black_api_token'] = value
 
+    @property
     def force_destroy(self) -> str:
         return self._config['force_destroy']
 
+    @property
     def binaryalert_analyzer_name(self) -> str:
         return '{}_binaryalert_analyzer'.format(self.name_prefix)
 
