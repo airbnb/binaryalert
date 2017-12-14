@@ -50,15 +50,20 @@ We recommend using the ``manage.py`` wrapper script for most BinaryAlert managem
   $ terraform show  # Print the current state of the infrastructure
 
 
-.. _terraform_destroy:
+.. _teardown:
 
-Terraform Destroy
-.................
+Teardown
+--------
 To teardown all of the BinaryAlert infrastructure:
 
 .. code-block:: bash
 
-  $ cd terraform/
-  $ terraform destroy
+  $ ./manage.py destroy
 
-.. note:: By default, S3 objects will not be deleted by ``terraform destroy``. To do so, you must first enable the ``force_destroy`` option in the ``terraform/terraform.tfvars`` configuration file and ``apply`` the change.
+By default, the BinaryAlert S3 buckets can't be deleted until they are empty. You will be asked
+if you want to override this setting and delete all objects as well. If so, the new setting will
+be applied before building the destroy plan.
+
+.. note:: You can set ``force_destroy = true`` in the ``terraform/terraform.tfvars`` config file and ``apply`` the change if you want to manually disable S3 delete protections.
+
+Terraform will build a destroy plan which you must approve before the delete will proceed.

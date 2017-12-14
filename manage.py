@@ -40,6 +40,8 @@ LAMBDA_ALIASES_TERRAFORM_IDS = [
     'module.binaryalert_{}.aws_lambda_alias.production_alias'.format(name)
     for name in ['analyzer', 'batcher', 'dispatcher', 'downloader']
 ]
+BINARY_BUCKET_TERRAFORM_ID = 'aws_s3_bucket.binaryalert_binaries'
+LOG_BUCKET_TERRAFORM_ID = 'aws_s3_bucket.binaryalert_log_bucket'
 
 CB_KEY_ALIAS_NAME_TEMPLATE = 'alias/{}_binaryalert_carbonblack_credentials'
 
@@ -57,6 +59,15 @@ class InvalidConfigError(ManagerError):
 class TestFailureError(ManagerError):
     """Exception raised when a BinaryAlert test fails."""
     pass
+
+
+def _get_input(prompt: str, default_value: str) -> str:
+    """Wrapper around input() which shows the current (default value)."""
+    if default_value:
+        prompt = '{} ({}): '.format(prompt, default_value)
+    else:
+        prompt = '{}: '.format(prompt)
+    return input(prompt).strip().lower() or default_value
 
 
 class BinaryAlertConfig(object):
@@ -153,6 +164,10 @@ class BinaryAlertConfig(object):
         self._config['encrypted_carbon_black_api_token'] = value
 
     @property
+    def force_destroy(self) -> str:
+        return self._config['force_destroy']
+
+    @property
     def binaryalert_batcher_name(self) -> str:
         return '{}_binaryalert_batcher'.format(self.name_prefix)
 
@@ -161,15 +176,6 @@ class BinaryAlertConfig(object):
         return '{}.binaryalert-binaries.{}'.format(
             self.name_prefix.replace('_', '.'), self.aws_region
         )
-
-    @staticmethod
-    def _get_input(prompt: str, default_value: str) -> str:
-        """Wrapper around input() which shows the current (default value)."""
-        if default_value:
-            prompt = '{} ({}): '.format(prompt, default_value)
-        else:
-            prompt = '{}: '.format(prompt)
-        return input(prompt).strip().lower() or default_value
 
     def _encrypt_cb_api_token(self) -> None:
         """Save an encrypted CarbonBlack API token.
@@ -210,14 +216,14 @@ class BinaryAlertConfig(object):
         """
         while True:  # Get AWS region.
             try:
-                self.aws_region = self._get_input('AWS Region', self.aws_region)
+                self.aws_region = _get_input('AWS Region', self.aws_region)
                 break
             except InvalidConfigError as error:
                 print('ERROR: {}'.format(error))
 
         while True:  # Get name prefix.
             try:
-                self.name_prefix = self._get_input(
+                self.name_prefix = _get_input(
                     'Unique name prefix, e.g. "company_team"', self.name_prefix
                 )
                 break
@@ -225,7 +231,7 @@ class BinaryAlertConfig(object):
                 print('ERROR: {}'.format(error))
 
         while True:  # Enable downloader?
-            enable_downloader = self._get_input(
+            enable_downloader = _get_input(
                 'Enable the CarbonBlack downloader?',
                 'yes' if self.enable_carbon_black_downloader else 'no'
             )
@@ -238,9 +244,7 @@ class BinaryAlertConfig(object):
         if self.enable_carbon_black_downloader:
             while True:  # CarbonBlack URL
                 try:
-                    self.carbon_black_url = self._get_input(
-                        'CarbonBlack URL', self.carbon_black_url
-                    )
+                    self.carbon_black_url = _get_input('CarbonBlack URL', self.carbon_black_url)
                     break
                 except InvalidConfigError as error:
                     print('ERROR: {}'.format(error))
@@ -249,9 +253,7 @@ class BinaryAlertConfig(object):
             if self.encrypted_carbon_black_api_token:
                 # API token already exists - ask if they want to update it.
                 while True:
-                    update_api_token = self._get_input(
-                        'Change the CarbonBlack API token?', 'no'
-                    )
+                    update_api_token = _get_input('Change the CarbonBlack API token?', 'no')
                     if update_api_token in {'yes', 'no'}:
                         break
                     else:
@@ -320,7 +322,7 @@ class Manager(object):
     def commands(self) -> Set[str]:
         """Return set of available management commands."""
         return {'analyze_all', 'apply', 'build', 'cb_copy_all', 'clone_rules', 'compile_rules',
-                'configure', 'deploy', 'live_test', 'unit_test'}
+                'configure', 'deploy', 'destroy', 'live_test', 'unit_test'}
 
     @property
     def help(self) -> str:
@@ -426,6 +428,26 @@ class Manager(object):
         self.build()
         self.apply()
         self.analyze_all()
+
+    def destroy(self) -> None:
+        """Teardown all of the BinaryAlert infrastructure."""
+        os.chdir(TERRAFORM_DIR)
+
+        if not self._config.force_destroy:
+            result = _get_input('Delete all S3 objects as well?', 'no')
+
+            if result not in {'yes', 'no'}:
+                sys.exit('Please answer exactly "yes" or "no"')
+
+            if result == 'yes':
+                print('Enabling force_destroy on the BinaryAlert S3 buckets...')
+                subprocess.check_call([
+                    'terraform', 'apply', '-auto-approve=true', '-refresh=false',
+                    '-var', 'force_destroy=true',
+                    '-target', BINARY_BUCKET_TERRAFORM_ID, '-target', LOG_BUCKET_TERRAFORM_ID
+                ])
+
+        subprocess.call(['terraform', 'destroy'])
 
     def live_test(self) -> None:
         """Upload an EICAR test file to BinaryAlert which should trigger a YARA match alert.
