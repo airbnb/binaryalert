@@ -6,15 +6,12 @@ import inspect
 import os
 import subprocess
 import sys
-import time
-import uuid
 from unittest import mock, TestCase
 
 import boto3
 from pyfakefs import fake_filesystem_unittest
 
 import manage
-from tests.rules.eicar_rule_test import EICAR_STRING
 
 
 def _mock_input(prompt: str) -> str:
@@ -359,61 +356,9 @@ class ManagerTest(FakeFilesystemBase):
         mock_apply.assert_called_once()
         mock_analyze.assert_called_once()
 
-    @mock.patch.object(time, 'sleep', mock.MagicMock())
-    @mock.patch.object(boto3, 'resource')
-    @mock.patch.object(manage, 'print')
-    @mock.patch.object(manage, 'pprint', mock.MagicMock())
-    @mock.patch.object(uuid, 'uuid4', return_value='test-uuid')
-    def test_live_test(self, mock_uuid: mock.MagicMock, mock_print: mock.MagicMock,
-                       mock_resource: mock.MagicMock):
-        """Verify execution order for boto3 and print mock calls."""
-        self.manager.live_test()
-
-        mock_uuid.assert_called_once()
-
-        mock_resource.assert_has_calls([
-            mock.call('s3'),
-            mock.call().Bucket('test.prefix.binaryalert-binaries.us-test-1'),
-            mock.call().Bucket().put_object(
-                Body=bytes('{}'.format(EICAR_STRING), 'utf-8'),
-                Key='eicar_test_test-uuid.txt',
-                Metadata={'filepath': 'eicar_test_test-uuid.txt'}
-            ),
-            mock.call('dynamodb'),
-            mock.call().Table('test_prefix_binaryalert_matches'),
-            mock.call().Table().query(
-                Select='ALL_ATTRIBUTES',
-                Limit=1,
-                ConsistentRead=True,
-                ScanIndexForward=False,
-                KeyConditionExpression=mock.ANY,
-                FilterExpression=mock.ANY
-            )
-        ])
-
-        mock_resource.assert_has_calls([
-            mock.call().Table().delete_item(Key=mock.ANY),
-            mock.call().Bucket().delete_objects(
-                Delete={'Objects': [{'Key': 'eicar_test_test-uuid.txt'}]}
-            )
-        ])
-
-        mock_print.assert_has_calls([
-            mock.call(
-                'Uploading EICAR test file '
-                'S3:test.prefix.binaryalert-binaries.us-test-1:eicar_test_test-uuid.txt...'
-            ),
-            mock.call(
-                'EICAR test file uploaded! '
-                'Connecting to table DynamoDB:test_prefix_binaryalert_matches...'
-            ),
-            mock.call(
-                '\t[1/10] Querying DynamoDB table for the expected YARA match entry...'
-            ),
-            mock.call('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n'),
-            mock.call('\nRemoving DynamoDB EICAR entry...'),
-            mock.call('Removing EICAR test file from S3...'),
-            mock.call(
-                '\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).'
-            )
-        ])
+    @mock.patch.object(manage.live_test, 'run', return_value=False)
+    def test_live_test(self, mock_live_test: mock.MagicMock):
+        """Live test wrapper raises TestFailureError if appropriate."""
+        with self.assertRaises(manage.TestFailureError):
+            self.manager.live_test()
+        mock_live_test.assert_called_once()
