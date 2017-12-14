@@ -4,26 +4,21 @@
 import argparse
 import base64
 import getpass
-import hashlib
 import inspect
 import os
-import pprint
 import re
 import subprocess
 import sys
-import time
 from typing import Set
 import unittest
-import uuid
 
 import boto3
-from boto3.dynamodb.conditions import Attr, Key
 import hcl
 
 from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
 from lambda_functions.build import build as lambda_build
 from rules import compile_rules, clone_rules
-from tests.rules.eicar_rule_test import EICAR_STRING
+from tests import live_test
 
 # BinaryAlert version.
 VERSION = '1.1.0.beta'
@@ -33,6 +28,7 @@ PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))  # Directory containin
 TERRAFORM_DIR = os.path.join(PROJECT_DIR, 'terraform')
 CONFIG_FILE = os.path.join(TERRAFORM_DIR, 'terraform.tfvars')
 VARIABLES_FILE = os.path.join(TERRAFORM_DIR, 'variables.tf')
+TEST_FILES = os.path.join(PROJECT_DIR, 'tests', 'files')
 
 # Terraform identifiers.
 CB_KMS_ALIAS_TERRAFORM_ID = 'aws_kms_alias.encrypt_credentials_alias'
@@ -153,8 +149,16 @@ class BinaryAlertConfig(object):
         self._config['encrypted_carbon_black_api_token'] = value
 
     @property
+    def binaryalert_analyzer_name(self) -> str:
+        return '{}_binaryalert_analyzer'.format(self.name_prefix)
+
+    @property
     def binaryalert_batcher_name(self) -> str:
         return '{}_binaryalert_batcher'.format(self.name_prefix)
+
+    @property
+    def binaryalert_dynamo_table_name(self) -> str:
+        return '{}_binaryalert_matches'.format(self.name_prefix)
 
     @property
     def binaryalert_s3_bucket_name(self) -> str:
@@ -428,60 +432,14 @@ class Manager(object):
         self.analyze_all()
 
     def live_test(self) -> None:
-        """Upload an EICAR test file to BinaryAlert which should trigger a YARA match alert.
+        """Upload test files to BinaryAlert which should trigger YARA matches.
 
         Raises:
-            TestFailureError: If the live test failed (YARA match not found).
+            TestFailureError: If the live test failed (YARA matches not found).
         """
-        bucket_name = self._config.binaryalert_s3_bucket_name
-        test_filename = 'eicar_test_{}.txt'.format(uuid.uuid4())
-        s3_identifier = 'S3:{}:{}'.format(bucket_name, test_filename)
-
-        print('Uploading EICAR test file {}...'.format(s3_identifier))
-        bucket = boto3.resource('s3').Bucket(bucket_name)
-        bucket.put_object(
-            Body=EICAR_STRING.encode('UTF-8'),
-            Key=test_filename,
-            Metadata={'filepath': test_filename}
-        )
-
-        table_name = '{}_binaryalert_matches'.format(self._config.name_prefix)
-        print('EICAR test file uploaded! Connecting to table DynamoDB:{}...'.format(table_name))
-        table = boto3.resource('dynamodb').Table(table_name)
-        eicar_sha256 = hashlib.sha256(EICAR_STRING.encode('UTF-8')).hexdigest()
-        dynamo_record_found = False
-
-        for attempt in range(1, 11):
-            time.sleep(5)
-            print('\t[{}/10] Querying DynamoDB table for the expected YARA match entry...'.format(
-                attempt))
-            items = table.query(
-                Select='ALL_ATTRIBUTES',
-                Limit=1,
-                ConsistentRead=True,
-                ScanIndexForward=False,  # Sort by AnalyzerVersion descending (e.g. newest first).
-                KeyConditionExpression=Key('SHA256').eq(eicar_sha256),
-                FilterExpression=Attr('S3Objects').contains(s3_identifier)
-            ).get('Items')
-
-            if items:
-                print('\nSUCCESS: Expected DynamoDB entry for the EICAR file was found!\n')
-                dynamo_record_found = True
-                pprint.pprint(items[0])
-
-                print('\nRemoving DynamoDB EICAR entry...')
-                lambda_version = items[0]['AnalyzerVersion']
-                table.delete_item(Key={'SHA256': eicar_sha256, 'AnalyzerVersion': lambda_version})
-                break
-            elif attempt == 10:
-                print('\nFAIL: Expected DynamoDB entry for the EICAR file was *not* found!\n')
-
-        print('Removing EICAR test file from S3...')
-        bucket.delete_objects(Delete={'Objects': [{'Key': test_filename}]})
-
-        if dynamo_record_found:
-            print('\nLive test succeeded! Verify the alert was sent to your SNS subscription(s).')
-        else:
+        if not live_test.run(self._config.binaryalert_s3_bucket_name,
+                             self._config.binaryalert_analyzer_name,
+                             self._config.binaryalert_dynamo_table_name):
             raise TestFailureError(
                 '\nLive test failed! See https://binaryalert.io/troubleshooting-faq.html')
 
