@@ -69,6 +69,7 @@ and install ``yara-python`` and ``yextend`` as follows:
     cp /usr/lib64/libstdc++.so.6 lambda
     cp /usr/local/lib/libyara.so.3 lambda
     cd lambda
+    chmod -R 777 *
     zip -r yara3.7.0_yextend1.6.zip *
 
 
