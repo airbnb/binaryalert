@@ -7,6 +7,11 @@ from typing import Any, Dict, List
 
 import yara
 
+if __package__:
+    from lambda_functions.analyzer.common import LOGGER
+else:
+    from common import LOGGER  # type: ignore
+
 
 # YARA matches from both yara-python and yextend are stored in this generic YaraMatch tuple.
 YaraMatch = collections.namedtuple(
@@ -109,9 +114,13 @@ class YaraAnalyzer(object):
 
         # Yextend matches
         os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
-        yextend_output = subprocess.check_output(
-            ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
-        yextend_list = json.loads(yextend_output.decode('utf-8'))
-        yextend_matches = _convert_yextend_to_yara_match(yextend_list[0])
+        try:
+            yextend_output = subprocess.check_output(
+                ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
+            yextend_list = json.loads(yextend_output.decode('utf-8'))
+        except (json.JSONDecodeError, subprocess.CalledProcessError):
+            LOGGER.exception('Fatal error when running yextend')
+            return yara_python_matches
 
+        yextend_matches = _convert_yextend_to_yara_match(yextend_list[0])
         return yara_python_matches + yextend_matches

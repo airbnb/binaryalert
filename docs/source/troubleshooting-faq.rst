@@ -33,6 +33,8 @@ Why did my live test fail?
 --------------------------
 Check the :ref:`Lambda execution logs <cloudwatch_logs>` and the :ref:`BinaryAlert dashboard <cloudwatch_dashboard>` for abnormalities. A common problem is that the BinaryAlert analyzers don't understand the compiled YARA rules file. Make sure your `virtual environment <getting-started.html>`_ is set up correctly and that your YARA rules only use the :ref:`supported modules <supported_yara_modules>`. It is also possible that one or more AWS components might be down.
 
+It may take 1-3 minutes after a deploy before the Lambda functions are ready to go. If a live test fails immediately after a deploy, wait a few minutes and try again.
+
 
 How do I setup YARA match / metric alarm alerts?
 ------------------------------------------------

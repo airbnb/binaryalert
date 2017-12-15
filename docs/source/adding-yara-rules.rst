@@ -8,6 +8,8 @@ Included Rules
 BinaryAlert includes a number of `custom YARA rules <https://github.com/airbnb/binaryalert/tree/master/rules/public>`_  written by Airbnb's analysts which detect a variety of hacktools, malware, and ransomware. All included rules have been tested against a corpus of more than 2 million binaries to ensure the highest fidelity.
 
 
+.. _clone-yara-rules:
+
 Clone Rules From Other Projects
 -------------------------------
 BinaryAlert makes it easy to clone YARA rules from other open-source projects:
@@ -16,11 +18,7 @@ BinaryAlert makes it easy to clone YARA rules from other open-source projects:
 
   $ ./manage.py clone_rules
 
-This will copy a subset of YARA rules from each of the following repositories:
-
-* `Neo23x0/signature-base <https://github.com/Neo23x0/signature-base>`_
-* `YARA-Rules/rules <https://github.com/YARA-Rules/rules>`_
-
+This will copy a subset of YARA rules from several :ref:`open-source collections <yara-credits>`.
 You can add more rule sources in `rules/clone_rules.py <https://github.com/airbnb/binaryalert/blob/master/rules/clone_rules.py>`_
 
 

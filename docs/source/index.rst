@@ -46,3 +46,4 @@ Table of Contents
    yara-matches
    metrics-and-monitoring
    troubleshooting-faq
+   credits

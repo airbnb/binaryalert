@@ -58,7 +58,7 @@ sqs_retention_minutes = 60
 // Number of S3 object keys to pack into a single SQS message.
 // Each downstream analyzer will process at most 10 SQS messages, each with this many objects.
 // Higher values allow for higher throughput, but are constrained by analyzer execution time limit.
-lambda_batch_objects_per_message = 15
+lambda_batch_objects_per_message = 5
 
 // Memory limit (MB) for the batching Lambda function. 128 is the minimum allowed by Lambda.
 lambda_batch_memory_mb = 128
@@ -68,7 +68,7 @@ lambda_batch_memory_mb = 128
 lambda_dispatch_frequency_minutes = 2
 
 // Maximum number of analyzers that can be asynchronously invoked during one dispatcher run.
-// Higher values allow for more throughtput, but if too many analyzers are invoked too quickly,
+// Higher values allow for more throughput, but if too many analyzers are invoked too quickly,
 // Lambda invocations may be throttled.
 lambda_dispatch_limit = 500
 
