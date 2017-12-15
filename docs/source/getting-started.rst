@@ -70,7 +70,7 @@ Download BinaryAlert
 
 .. code-block:: bash
 
-  $ git clone --branch v1.0.0 --depth 1 https://github.com/airbnb/binaryalert
+  $ git clone --branch v1.1.0 --depth 1 https://github.com/airbnb/binaryalert
 
 2. Create and activate a virtual environment:
 
