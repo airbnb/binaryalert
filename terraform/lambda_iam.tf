@@ -117,9 +117,14 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
   }
 
   statement {
-    sid       = "GetFromBinaryAlertBucket"
-    effect    = "Allow"
-    actions   = ["s3:GetObject"]
+    sid    = "GetFromBinaryAlertBucket"
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObject",
+      "s3:HeadObject",
+    ]
+
     resources = ["${aws_s3_bucket.binaryalert_binaries.arn}/*"]
   }
 
