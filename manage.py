@@ -21,7 +21,7 @@ from rules import compile_rules, clone_rules
 from tests import live_test
 
 # BinaryAlert version.
-VERSION = '1.1.0.beta'
+VERSION = '1.1.0'
 
 # File locations.
 PROJECT_DIR = os.path.dirname(os.path.realpath(__file__))  # Directory containing this file.
