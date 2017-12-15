@@ -72,4 +72,4 @@ and install ``yara-python`` and ``yextend`` as follows:
     zip -r yara3.7.0_yextend1.6.zip *
 
 
-Then ``scp`` the newzipfile to replace the one in the repo.
+Then ``scp`` the new zipfile to replace the one in the repo.
