@@ -35,7 +35,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = "${var.log_retention_days}"
 
   tags {
-    Name = "BinaryAlert"
+    Name = "${var.tagged_name}"
   }
 }
 
@@ -61,7 +61,7 @@ resource "aws_lambda_function" "function" {
   }
 
   tags {
-    Name = "BinaryAlert"
+    Name = "${var.tagged_name}"
   }
 }
 
