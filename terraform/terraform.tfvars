@@ -92,3 +92,8 @@ expected_analysis_frequency_minutes = 30
 // Since there will likely be very few matches, these numbers can be quite low.
 dynamo_read_capacity = 10
 dynamo_write_capacity = 5
+
+// Tags make it easier to organize resources, view grouped billing information, etc.
+// All supported resources (CloudWatch logs, Dyanmo, KMS, Lambda, S3, SQS) are tagged with
+// Name = [YOUR_VALUE_BELOW]
+tagged_name = "BinaryAlert"

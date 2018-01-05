@@ -18,6 +18,6 @@ resource "aws_dynamodb_table" "binaryalert_yara_matches" {
   }
 
   tags {
-    Name = "BinaryAlert"
+    Name = "${var.tagged_name}"
   }
 }

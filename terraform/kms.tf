@@ -6,7 +6,7 @@ resource "aws_kms_key" "carbon_black_credentials" {
   enable_key_rotation = true
 
   tags {
-    Name = "BinaryAlert"
+    Name = "${var.tagged_name}"
   }
 }
 

@@ -27,3 +27,4 @@ variable "lambda_download_timeout_sec" {}
 variable "expected_analysis_frequency_minutes" {}
 variable "dynamo_read_capacity" {}
 variable "dynamo_write_capacity" {}
+variable "tagged_name" {}
