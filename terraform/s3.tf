@@ -34,7 +34,7 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
   }
 
   tags {
-    Name = "BinaryAlert"
+    Name = "${var.tagged_name}"
   }
 
   // Enabling versioning protects against accidental deletes.
@@ -78,7 +78,7 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
   }
 
   tags {
-    Name = "BinaryAlert"
+    Name = "${var.tagged_name}"
   }
 
   versioning {

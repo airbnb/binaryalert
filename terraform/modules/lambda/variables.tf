@@ -45,6 +45,10 @@ variable "log_retention_days" {
   description = "Number of days to retain Lambda execution logs in CloudWatch"
 }
 
+variable "tagged_name" {
+  description = "The 'Name' tag on CloudWatch logs and Lambda will be set to this value"
+}
+
 variable "alarm_errors_help" {
   description = "Function-specific context for the error alarm description"
   default     = ""

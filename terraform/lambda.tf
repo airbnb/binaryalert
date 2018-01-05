@@ -18,6 +18,7 @@ module "binaryalert_downloader" {
   }
 
   log_retention_days = "${var.lambda_log_retention_days}"
+  tagged_name        = "${var.tagged_name}"
 
   alarm_errors_help = <<EOF
 The downloader often times out while waiting for CarbonBlack to process the binary.
@@ -51,6 +52,7 @@ module "binaryalert_batcher" {
   }
 
   log_retention_days = "${var.lambda_log_retention_days}"
+  tagged_name        = "${var.tagged_name}"
   alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
 }
 
@@ -73,6 +75,7 @@ module "binaryalert_dispatcher" {
   }
 
   log_retention_days = "${var.lambda_log_retention_days}"
+  tagged_name        = "${var.tagged_name}"
   alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
 }
 
@@ -104,6 +107,7 @@ module "binaryalert_analyzer" {
   }
 
   log_retention_days = "${var.lambda_log_retention_days}"
+  tagged_name        = "${var.tagged_name}"
 
   // During batch operations, the analyzer will have a high error rate because of S3 latency.
   alarm_errors_help = <<EOF

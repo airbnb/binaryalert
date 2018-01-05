@@ -7,6 +7,10 @@ resource "aws_sqs_queue" "s3_object_queue" {
   visibility_timeout_seconds = "${format("%d", var.lambda_analyze_timeout_sec + 2)}"
 
   message_retention_seconds = "${format("%d", var.sqs_retention_minutes * 60)}"
+
+  tags {
+    Name = "${var.tagged_name}"
+  }
 }
 
 data "aws_iam_policy_document" "s3_object_queue_policy" {
