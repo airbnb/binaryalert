@@ -21,6 +21,8 @@ BinaryAlert makes it easy to clone YARA rules from other open-source projects:
 This will copy a subset of YARA rules from several :ref:`open-source collections <yara-credits>`.
 You can add more rule sources in `rules/clone_rules.py <https://github.com/airbnb/binaryalert/blob/master/rules/clone_rules.py>`_
 
+.. note:: We are working on a more expressive configuration for cloning subsets of rule repositories.
+
 
 Write Your Own Rules
 --------------------
@@ -57,6 +59,13 @@ You can use these variables in your own rules to match or exclude certain filepa
 Supported Modules
 -----------------
 BinaryAlert supports all of the default `YARA modules <http://yara.readthedocs.io/en/latest/modules.html>`_, including ELF, Math, Hash, and PE.
+
+
+Disabling Rules
+---------------
+There may be times you want to disable certain YARA rules, but not delete them (e.g. rules with high false-positive rates). Since only ``.yar`` and ``.yara`` files in the ``rules/`` directory tree are bundled in a BinaryAlert deploy, you can simply rename ``rules.yar`` to any other extension, e.g. ``rules.yar.DISABLED``, to skip it during rules compilation.
+
+If you want to disable an individual rule (not the entire file), you can either comment it out or prefix the rule with the ``private`` modifier to elide it from reported YARA match results. Unfortunately, there is no easy way to automatically *remove* individual rules from a file.
 
 
 .. _testing_yara_rules:
