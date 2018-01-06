@@ -1,0 +1,16 @@
+{
+  "repos": [
+    {
+      "url": "https://github.com/Neo23x0/signature-base.git",
+      "include": [
+        "yara/*"
+      ]
+    },
+    {
+      "url": "https://github.com/YARA-Rules/rules.git",
+      "include": [
+        "CVE_Rules/*"
+      ]
+    }
+  ]
+}
