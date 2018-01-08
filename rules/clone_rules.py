@@ -74,7 +74,7 @@ def _clone_repo(url: str, include: Optional[List[str]], exclude: Optional[List[s
     return files_copied
 
 
-def clone_rules_from_github() -> None:
+def clone_remote_rules() -> None:
     """Clone YARA rules from all remote sources into the rules/ directory."""
     with open(REMOTE_RULE_SOURCES) as f:
         rule_sources = json.loads(f.read())
