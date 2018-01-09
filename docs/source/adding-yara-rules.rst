@@ -79,7 +79,7 @@ Write Your Own Rules
 --------------------
 You can add your own ``.yar`` or ``.yara`` files anywhere in the ``rules/`` directory tree. Refer to the `writing YARA rules <http://yara.readthedocs.io/en/latest/writingrules.html>`_ documentation for guidance and examples. Note that when BinaryAlert finds a file which matches a YARA rule, the rule name, `metadata <http://yara.readthedocs.io/en/latest/writingrules.html#metadata>`_, `tags <http://yara.readthedocs.io/en/latest/writingrules.html#rule-tags>`_, and matched `string <http://yara.readthedocs.io/en/latest/writingrules.html#strings>`_ names will be included in the alert for your convenience.
 
-.. note:: Because the folders for each remote source will be overwritten during rule cloning, we recommend keeping your own YARA rules in the ``rules/private`` folder or similar.
+.. note:: Because the folders for each remote source will be overwritten during rule cloning, we recommend keeping your own YARA rules in ``rules/private`` or similar.
 
 .. _external-variables:
 

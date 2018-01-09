@@ -31,7 +31,7 @@ def _copy_required(path: str, include: Optional[List[str]], exclude: Optional[Li
 
 def _files_to_copy(
         cloned_repo_root: str, include: Optional[List[str]],
-        exclude: List[str]) -> Generator[str, None, None]:
+        exclude: Optional[List[str]]) -> Generator[str, None, None]:
     """Yields string paths to copy, each relative to the root of the repo."""
     for root, _, files in os.walk(cloned_repo_root):
         for filename in files:
