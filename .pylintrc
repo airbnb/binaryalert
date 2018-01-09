@@ -127,7 +127,7 @@ const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
 
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
-docstring-min-length=2
+docstring-min-length=3
 
 # Naming hint for function names
 function-name-hint=(([a-z][a-z0-9_]{2,50})|(_[a-z0-9_]*))$
