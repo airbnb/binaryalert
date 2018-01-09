@@ -10,6 +10,7 @@ script:
   - coverage report  # Required coverage threshold specified in .coveragerc
   - find . -name '*.py' -not -path './docs/source/*' -exec pylint '{}' +
   - mypy . --ignore-missing-imports
+  - bandit -r .  # Configuration in .bandit
   - sphinx-build -W docs/source docs/build
 after_success:
   - coveralls

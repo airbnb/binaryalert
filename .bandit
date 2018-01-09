@@ -1,0 +1,27 @@
+[bandit]
+# Skip the venv/ directory when scanning.
+exclude: venv
+
+# Skip the following tests:
+#
+# - [B303:blacklist] Use of insecure MD2, MD4, or MD5 hash function.
+#   Severity: Medium   Confidence: High
+#       We have to include MD5 file hashes for compatibility with other security tools,
+#       but we also include SHA256 hashes.
+#
+# - [B322:blacklist] On Python 2, use raw_input instead, input is safe in Python 3.
+#   Severity: High   Confidence: High
+#       The input() function is safe in Python 3.
+#
+# - [B404:blacklist] Consider possible security implications associated with subprocess module.
+#   Severity: Low   Confidence: High
+#       There are other warnings specific to subprocess calls (e.g. B603, B607)
+#
+# - [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+#   Severity: Low   Confidence: High
+#       Subprocess is used primarily in the CLI and is safe from shell injection when shell=False.
+#
+# - [B607:start_process_with_partial_path] Starting a process with a partial executable path
+#   Severity: Low   Confidence: High
+#       For portability, we use 'terraform' and 'git' instead of the full executable filepaths.
+skips: B303,B322,B404,B603,B607
