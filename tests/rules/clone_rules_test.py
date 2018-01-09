@@ -111,10 +111,10 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
         mock_print.assert_has_calls([
             mock.call('[1/2] Cloning https://github.com/test-user1/test-repo1... ',
                       end='', flush=True),
-            mock.call('1 YARA files copied'),
+            mock.call('1 YARA file copied'),
             mock.call('[2/2] Cloning https://github.com/test-user2/test-repo2... ',
                       end='', flush=True),
-            mock.call('1 YARA files copied'),
+            mock.call('1 YARA file copied'),
             mock.call('Done! 2 YARA files cloned from 2 repositories.')
         ])
 

@@ -84,7 +84,9 @@ def clone_remote_rules() -> None:
     for count, source in enumerate(rule_sources['repos'], start=1):
         print('[{}/{}] Cloning {}... '.format(count, num_repos, source['url']), end='', flush=True)
         files_copied = _clone_repo(source['url'], source.get('include'), source.get('exclude'))
-        print('{} YARA files copied'.format(files_copied))
+        print('{} YARA {} copied'.format(files_copied, 'file' if files_copied == 1 else 'files'))
         total_files_copied += files_copied
 
-    print('Done! {} YARA files cloned from {} repositories.'.format(total_files_copied, num_repos))
+    print('Done! {} YARA {} cloned from {} {}.'.format(
+        total_files_copied, 'file' if total_files_copied == 1 else 'files',
+        num_repos, 'repository' if num_repos == 1 else 'repositories'))
