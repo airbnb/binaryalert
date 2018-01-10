@@ -26,7 +26,7 @@ The cloned folder structure will mirror that of the remote repository.
 Configuring Rule Sources
 ........................
 
-You can configure the remote rule sources in `rules/rule_sources.json <https://github.com/airbnb/binaryalert/blob/master/rules/rule_sources.json>`_. Each rule source is defined by a git-cloneable ``url``, an optional list of filepaths to ``include``, and an optional list of filepaths to ``exclude``.
+You can configure the remote rule sources in `rules/rule_sources.json <https://github.com/airbnb/binaryalert/blob/master/rules/rule_sources.json>`_. Each rule source is defined by a git-cloneable ``url``, an optional list of file paths to ``include``, and an optional list of file paths to ``exclude``.
 
 Some examples using the `Yara-Rules <https://github.com/Yara-Rules/rules>`_ repository:
 
@@ -67,13 +67,15 @@ The ``Yara-Rules`` repo is very large, and you may only be interested in a speci
       ]
     }
 
-This will copy rules from the ``CVE_Rules`` and ``Malware`` folders, excluding POS and index files. (This example is just for demonstrative purposes and isn't necessarily recommended.) BinaryAlert runs Unix filename pattern matching via `fnmatch <https://docs.python.org/3.6/library/fnmatch.html>`_.
+.. note:: This example is for demonstrative purposes only and is not necessarily recommended.
+
+This will copy rules from the ``CVE_Rules`` and ``Malware`` folders, excluding POS and index files. BinaryAlert runs Unix filename pattern matching via `fnmatch <https://docs.python.org/3.6/library/fnmatch.html>`_.
 
 In summary, BinaryAlert will copy a file from a remote repository if and only if the following conditions apply:
 
-1. The filename ends in ``.yar`` or ``.yara`` (case insensitive), AND
-2. The filepath matches a pattern in the ``include`` list (OR the ``include`` list is empty), AND
-3. The filepath *does not* match a pattern in the ``exclude`` list.
+1. The file name ends in ``.yar`` or ``.yara`` (case insensitive), AND
+2. The file path matches a pattern in the ``include`` list (OR the ``include`` list is empty), AND
+3. The file path *does not* match a pattern in the ``exclude`` list.
 
 Write Your Own Rules
 --------------------
@@ -92,7 +94,7 @@ In order to support the rule repositories listed above, BinaryAlert provides the
 * ``filepath`` - Full file path ("/path/to/file.exe")
 * ``filetype`` - Uppercase ``extension`` without leading period ("DOCX", "EXE", "PDF"), etc
 
-You can use these variables in your own rules to match or exclude certain filepaths. (Note that the variables will default to empty strings if they are not available.) For example, this is a YARA rule which matches only files containing the string "evil" in the ``/home/`` directory:
+You can use these variables in your own rules to match or exclude certain file paths. (Note that the variables will default to empty strings if they are not available.) For example, this is a YARA rule which matches only files containing the string "evil" in the ``/home/`` directory:
 
 .. code-block:: none
 
@@ -111,7 +113,7 @@ You can use these variables in your own rules to match or exclude certain filepa
 
 Supported Modules
 -----------------
-BinaryAlert supports all of the default `YARA modules <http://yara.readthedocs.io/en/latest/modules.html>`_, including ELF, Math, Hash, and PE. Support for other modules is not planned at this time, but feel free to `open an issue <https://github.com/airbnb/binaryalert/issues>`_ if there's something you'd like to see.
+BinaryAlert supports all of the default `YARA modules <http://yara.readthedocs.io/en/latest/modules.html>`_, including ELF, Math, Hash, and PE. Support for other modules is not planned at this time, but please `let us know <https://github.com/airbnb/binaryalert/issues>`_ if you need a special module.
 
 
 Disabling Rules

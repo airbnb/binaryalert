@@ -77,7 +77,7 @@ def _clone_repo(url: str, include: Optional[List[str]], exclude: Optional[List[s
 def clone_remote_rules() -> None:
     """Clone YARA rules from all remote sources into the rules/ directory."""
     with open(REMOTE_RULE_SOURCES) as f:
-        rule_sources = json.loads(f.read())
+        rule_sources = json.load(f)
 
     num_repos = len(rule_sources['repos'])
     total_files_copied = 0
