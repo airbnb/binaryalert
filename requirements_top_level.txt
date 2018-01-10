@@ -1,4 +1,5 @@
 backoff
+bandit
 boto3
 cbapi==1.3.4
 coverage
