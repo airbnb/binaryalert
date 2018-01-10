@@ -413,7 +413,7 @@ class Manager(object):
     @staticmethod
     def clone_rules() -> None:
         """Clone YARA rules from other open-source projects."""
-        clone_rules.clone_rules_from_github()
+        clone_rules.clone_remote_rules()
 
     @staticmethod
     def compile_rules() -> None:
