@@ -321,9 +321,9 @@ class ManagerTest(FakeFilesystemBase):
         with self.assertRaises(manage.InvalidConfigError):
             self.manager.cb_copy_all()
 
-    @mock.patch.object(manage.clone_rules, 'clone_rules_from_github')
+    @mock.patch.object(manage.clone_rules, 'clone_remote_rules')
     def test_clone_rules(self, mock_clone: mock.MagicMock):
-        """Calls clone_rules_from_github (tested elsewhere)."""
+        """Calls clone_remote_rules (tested elsewhere)."""
         self.manager.clone_rules()
         mock_clone.assert_called_once()
 

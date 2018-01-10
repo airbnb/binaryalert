@@ -12,22 +12,76 @@ BinaryAlert includes a number of `custom YARA rules <https://github.com/airbnb/b
 
 Clone Rules From Other Projects
 -------------------------------
-BinaryAlert makes it easy to clone YARA rules from other open-source projects:
+BinaryAlert makes it easy to clone YARA rules from other projects:
 
 .. code-block:: bash
 
   $ ./manage.py clone_rules
 
-This will copy a subset of YARA rules from several :ref:`open-source collections <yara-credits>`.
-You can add more rule sources in `rules/clone_rules.py <https://github.com/airbnb/binaryalert/blob/master/rules/clone_rules.py>`_
+This will copy a subset of YARA rules from several default :ref:`open-source collections <yara-credits>` into the ``rules/`` folder.
+The cloned folder structure will mirror that of the remote repository.
 
-.. note:: We are working on a more expressive configuration for cloning subsets of rule repositories.
+.. note:: To ensure all upstream changes are copied (including deletions), the cloned folder structure for each repo will be deleted before cloning. For example, ``rules/github.com/Yara-Rules/rules.git`` will be deleted from your local filesystem before cloning from ``Yara-Rules``.
 
+Configuring Rule Sources
+........................
+
+You can configure the remote rule sources in `rules/rule_sources.json <https://github.com/airbnb/binaryalert/blob/master/rules/rule_sources.json>`_. Each rule source is defined by a git-cloneable ``url``, an optional list of file paths to ``include``, and an optional list of file paths to ``exclude``.
+
+Some examples using the `Yara-Rules <https://github.com/Yara-Rules/rules>`_ repository:
+
+**1. URL only**
+
+.. code-block:: json
+
+    {
+      "repos": [
+        {
+          "url": "https://github.com/Yara-Rules/rules.git"
+        }
+      ]
+    }
+
+If you specify just the ``git`` URL, BinaryAlert will traverse the entire repo and copy every ``.yar`` and ``.yara`` file (case insensitive).
+SSH URLs (e.g. ``git@github.com:Yara-Rules/rules.git``) are also supported, since BinaryAlert just runs a ``git clone`` on the specified URL.
+
+**2. Filter with Include and Exclude**
+
+The ``Yara-Rules`` repo is very large, and you may only be interested in a specific subset of rules:
+
+.. code-block:: json
+
+    {
+      "repos": [
+        {
+          "url": "https://github.com/Yara-Rules/rules.git",
+          "include": [
+            "CVE_Rules/*",
+            "Malware/*"
+          ],
+          "exclude": [
+            "Malware/POS*",
+            "*_index.yar"
+          ]
+        }
+      ]
+    }
+
+.. note:: This example is for demonstrative purposes only and is not necessarily recommended.
+
+This will copy rules from the ``CVE_Rules`` and ``Malware`` folders, excluding POS and index files. BinaryAlert runs Unix filename pattern matching via `fnmatch <https://docs.python.org/3.6/library/fnmatch.html>`_.
+
+In summary, BinaryAlert will copy a file from a remote repository if and only if the following conditions apply:
+
+1. The file name ends in ``.yar`` or ``.yara`` (case insensitive), AND
+2. The file path matches a pattern in the ``include`` list (OR the ``include`` list is empty), AND
+3. The file path *does not* match a pattern in the ``exclude`` list.
 
 Write Your Own Rules
 --------------------
 You can add your own ``.yar`` or ``.yara`` files anywhere in the ``rules/`` directory tree. Refer to the `writing YARA rules <http://yara.readthedocs.io/en/latest/writingrules.html>`_ documentation for guidance and examples. Note that when BinaryAlert finds a file which matches a YARA rule, the rule name, `metadata <http://yara.readthedocs.io/en/latest/writingrules.html#metadata>`_, `tags <http://yara.readthedocs.io/en/latest/writingrules.html#rule-tags>`_, and matched `string <http://yara.readthedocs.io/en/latest/writingrules.html#strings>`_ names will be included in the alert for your convenience.
 
+.. note:: Because the folders for each remote source will be overwritten during rule cloning, we recommend keeping your own YARA rules in ``rules/private`` or similar.
 
 .. _external-variables:
 
@@ -40,7 +94,7 @@ In order to support the rule repositories listed above, BinaryAlert provides the
 * ``filepath`` - Full file path ("/path/to/file.exe")
 * ``filetype`` - Uppercase ``extension`` without leading period ("DOCX", "EXE", "PDF"), etc
 
-You can use these variables in your own rules to match or exclude certain filepaths. (Note that the variables will default to empty strings if they are not available.) For example, this is a YARA rule which matches only files containing the string "evil" in the ``/home/`` directory:
+You can use these variables in your own rules to match or exclude certain file paths. (Note that the variables will default to empty strings if they are not available.) For example, this is a YARA rule which matches only files containing the string "evil" in the ``/home/`` directory:
 
 .. code-block:: none
 
@@ -53,12 +107,13 @@ You can use these variables in your own rules to match or exclude certain filepa
           $evil and filepath matches /\/home\/*/
   }
 
+.. warning:: YARA analysis of archives `does not yet support external variables <https://github.com/BayshoreNetworks/yextend/issues/17>`_.
 
 .. _supported_yara_modules:
 
 Supported Modules
 -----------------
-BinaryAlert supports all of the default `YARA modules <http://yara.readthedocs.io/en/latest/modules.html>`_, including ELF, Math, Hash, and PE.
+BinaryAlert supports all of the default `YARA modules <http://yara.readthedocs.io/en/latest/modules.html>`_, including ELF, Math, Hash, and PE. Support for other modules is not planned at this time, but please `let us know <https://github.com/airbnb/binaryalert/issues>`_ if you need a special module.
 
 
 Disabling Rules
