@@ -2,8 +2,10 @@
 # Expects the following environment variables:
 #   BATCH_LAMBDA_NAME: The name of this Lambda function.
 #   BATCH_LAMBDA_QUALIFIER: The qualifier (alias) which is used to invoke this function.
+#   OBJECT_PREFIX: (Optional) Limit the batch operation to keys which begin with the specified prefix.
 #   OBJECTS_PER_MESSAGE: The number of S3 objects to pack into a single SQS message.
 #   S3_BUCKET_NAME: Name of the S3 bucket to enumerate.
+#   SKIP_PREFIXES: Comma-separated list of object prefixes which should be skipped during batch analysis.
 #   SQS_QUEUE_URL: URL of the SQS queue which will buffer all of the S3 objects for analysis.
 import json
 import logging
@@ -103,6 +105,7 @@ class SQSBatcher(object):
 
         failures = response.get('Failed', [])
         if failures:
+            # TODO: If failure['SenderFault'] == False, we could retry the failed messages
             for failure in failures:
                 LOGGER.error('Unable to enqueue SQS message: %s', failure)
             CLOUDWATCH.put_metric_data(Namespace='BinaryAlert', MetricData=[{
@@ -143,16 +146,26 @@ class SQSBatcher(object):
 class S3BucketEnumerator(object):
     """Enumerates all of the S3 objects in a given bucket."""
 
-    def __init__(self, bucket_name: str, continuation_token: Optional[str] = None) -> None:
+    def __init__(self, bucket_name: str, prefix: Optional[str], continuation_token: Optional[str] = None) -> None:
         """Instantiate with an optional continuation token.
 
         Args:
             bucket_name: Name of the S3 bucket to enumerate.
+            prefix: Limit the enumeration to keys that begin with the specified prefix.
             continuation_token: Continuation token returned from S3 list objects.
         """
-        self.bucket_name = bucket_name
-        self.continuation_token = continuation_token
+        # Construct the list_objects keyword arguments.
+        self.kwargs = {'Bucket': bucket_name}
+        if prefix:
+            LOGGER.info('Restricting batch operation to prefix: %s', prefix)
+            self.kwargs['Prefix'] = prefix
+        if continuation_token:
+            self.kwargs['ContinuationToken'] = continuation_token
         self.finished = False  # Have we finished enumerating all of the S3 bucket?
+
+    @property
+    def continuation_token(self):
+        return self.kwargs.get('ContinuationToken')
 
     def next_page(self) -> List[str]:
         """Get the next page of S3 objects and sets self.finished = True if this is the last page.
@@ -160,19 +173,14 @@ class S3BucketEnumerator(object):
         Returns:
             List of S3 object keys.
         """
-        if self.continuation_token:
-            # We have to use the lower-level client to explicitly keep track of the pagination.
-            response = S3.list_objects_v2(
-                Bucket=self.bucket_name, ContinuationToken=self.continuation_token)
-        else:
-            response = S3.list_objects_v2(Bucket=self.bucket_name)
+        response = S3.list_objects_v2(**self.kwargs)
 
         if 'Contents' not in response:
             LOGGER.info('The S3 bucket is empty; nothing to do')
             self.finished = True
             return []
 
-        self.continuation_token = response.get('NextContinuationToken')
+        self.kwargs['ContinuationToken'] = response.get('NextContinuationToken')
         if not response['IsTruncated']:
             self.finished = True
 
@@ -193,7 +201,7 @@ def batch_lambda_handler(event: Dict[str, str], lambda_context) -> int:
     LOGGER.info('Invoked with event %s', event)
 
     s3_enumerator = S3BucketEnumerator(
-        os.environ['S3_BUCKET_NAME'], event.get('S3ContinuationToken'))
+        os.environ['S3_BUCKET_NAME'], os.environ.get('OBJECT_PREFIX'), event.get('S3ContinuationToken'))
     sqs_batcher = SQSBatcher(os.environ['SQS_QUEUE_URL'], int(os.environ['OBJECTS_PER_MESSAGE']))
 
     # As long as there are at least 10 seconds remaining, enumerate S3 objects into SQS.
