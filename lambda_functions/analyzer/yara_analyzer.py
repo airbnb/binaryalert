@@ -107,20 +107,23 @@ class YaraAnalyzer(object):
         raw_yara_matches = self._rules.match(
             target_file, externals=self._yara_variables(original_target_path)
         )
-        yara_python_matches = [
+        result = [
             YaraMatch(m.rule, m.namespace, m.meta, set(t[1] for t in m.strings))
             for m in raw_yara_matches
         ]
 
         # Yextend matches
         os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
+        yextend_output = None
         try:
             yextend_output = subprocess.check_output(
                 ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
             yextend_list = json.loads(yextend_output.decode('utf-8'))
-        except (json.JSONDecodeError, subprocess.CalledProcessError):
-            LOGGER.exception('Fatal error when running yextend')
-            return yara_python_matches
-
-        yextend_matches = _convert_yextend_to_yara_match(yextend_list[0])
-        return yara_python_matches + yextend_matches
+            result.extend(_convert_yextend_to_yara_match(yextend_list[0]))
+        except Exception:  # pylint: disable=broad-exception
+            # If yextend fails for any reason, we still want to return the yara-python match results.
+            LOGGER.exception('Error running yextend or parsing its output')
+            if yextend_output:
+                LOGGER.error('yextend output: <%s>', yextend_output)
+        finally:
+            return result
