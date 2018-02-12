@@ -114,13 +114,15 @@ class YaraAnalyzer(object):
 
         # Yextend matches
         os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
+        yextend_output = None
         try:
             yextend_output = subprocess.check_output(
                 ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
             yextend_list = json.loads(yextend_output.decode('utf-8'))
-        except (json.JSONDecodeError, subprocess.CalledProcessError):
-            LOGGER.exception('Fatal error when running yextend')
+            return yara_python_matches + _convert_yextend_to_yara_match(yextend_list[0])
+        except Exception:  # pylint: disable=broad-except
+            # If yextend fails for any reason, still return the yara-python match results.
+            LOGGER.exception('Error running yextend or parsing its output')
+            if yextend_output:
+                LOGGER.error('yextend output: <%s>', yextend_output)
             return yara_python_matches
-
-        yextend_matches = _convert_yextend_to_yara_match(yextend_list[0])
-        return yara_python_matches + yextend_matches

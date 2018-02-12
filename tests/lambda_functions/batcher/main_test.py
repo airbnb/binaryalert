@@ -262,6 +262,31 @@ class MainTest(unittest.TestCase):
             ])
         ])
 
+    @mock.patch.dict(os.environ, {'OBJECT_PREFIX': 'important'})  # type: ignore
+    def test_batcher_with_prefix(self):
+        """Limit batch operation to object keys which start with the given prefix."""
+        def mock_list(**kwargs):
+            """Mock for S3.list_objects_v2 which honors the object prefix."""
+            keys = ['test-key-1', 'test-key-2', 'important/path', 'important-file']
+            return {
+                'Contents': [{'Key': k} for k in keys if k.startswith(kwargs['Prefix'])],
+                'IsTruncated': False
+            }
+
+        self.batcher_main.S3.list_objects_v2 = mock_list
+
+        with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
+            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext())
+            self.assertEqual(2, num_keys)
+
+            mock_logger.assert_has_calls([
+                mock.call.info('Invoked with event %s', {}),
+                mock.call.info('Restricting batch operation to prefix: %s', 'important'),
+                mock.call.info('Finalize: sending last batch of keys'),
+                mock.call.info('Sending SQS batch of %d keys: %s ... %s',
+                               2, 'important/path', 'important-file')
+            ])
+
     def test_batcher_sqs_errors(self):
         """Verify SQS errors are logged and reported to CloudWatch."""
         sqs_batcher = self.batcher_main.SQSBatcher('test_queue', 1)

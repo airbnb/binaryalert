@@ -46,6 +46,7 @@ module "binaryalert_batcher" {
   environment_variables = {
     BATCH_LAMBDA_NAME      = "${var.name_prefix}_binaryalert_batcher"
     BATCH_LAMBDA_QUALIFIER = "Production"
+    OBJECT_PREFIX          = ""
     OBJECTS_PER_MESSAGE    = "${var.lambda_batch_objects_per_message}"
     S3_BUCKET_NAME         = "${aws_s3_bucket.binaryalert_binaries.id}"
     SQS_QUEUE_URL          = "${aws_sqs_queue.s3_object_queue.id}"
