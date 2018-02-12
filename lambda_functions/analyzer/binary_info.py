@@ -78,7 +78,7 @@ class BinaryInfo(object):
 
     @property
     def matched_rule_ids(self) -> Set[str]:
-        """A list of 'yara_file:rule_name' for each YARA match."""
+        """A set of 'yara_file:rule_name' for each YARA match."""
         return set('{}:{}'.format(match.rule_namespace, match.rule_name)
                    for match in self.yara_matches)
 

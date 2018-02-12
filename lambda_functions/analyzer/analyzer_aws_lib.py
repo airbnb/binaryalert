@@ -199,8 +199,6 @@ class DynamoMatchTable(object):
 
     def _create_new_entry(self, binary: BinaryInfo, analyzer_version: int) -> None:
         """Create a new Dynamo entry with YARA match information."""
-        LOGGER.info('Creating new entry (SHA256: %s, AnalyzerVersion: %d)',
-                    binary.computed_sha, analyzer_version)
         item = {
             'SHA256': binary.computed_sha,
             'AnalyzerVersion': analyzer_version,
@@ -210,6 +208,7 @@ class DynamoMatchTable(object):
             'S3Metadata': binary.s3_metadata,
             'S3Objects': {binary.s3_identifier}
         }
+        LOGGER.info('Creating new entry %s', item)
         self._table.put_item(Item=item)
 
     def _add_s3_key(self, binary: BinaryInfo, analyzer_version: int) -> None:

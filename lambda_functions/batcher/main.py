@@ -2,10 +2,9 @@
 # Expects the following environment variables:
 #   BATCH_LAMBDA_NAME: The name of this Lambda function.
 #   BATCH_LAMBDA_QUALIFIER: The qualifier (alias) which is used to invoke this function.
-#   OBJECT_PREFIX: (Optional) Limit the batch operation to keys which begin with the specified prefix.
+#   OBJECT_PREFIX: (Optional) Limit batching to keys which begin with the specified prefix.
 #   OBJECTS_PER_MESSAGE: The number of S3 objects to pack into a single SQS message.
 #   S3_BUCKET_NAME: Name of the S3 bucket to enumerate.
-#   SKIP_PREFIXES: Comma-separated list of object prefixes which should be skipped during batch analysis.
 #   SQS_QUEUE_URL: URL of the SQS queue which will buffer all of the S3 objects for analysis.
 import json
 import logging
@@ -146,12 +145,13 @@ class SQSBatcher(object):
 class S3BucketEnumerator(object):
     """Enumerates all of the S3 objects in a given bucket."""
 
-    def __init__(self, bucket_name: str, prefix: Optional[str], continuation_token: Optional[str] = None) -> None:
+    def __init__(self, bucket_name: str, prefix: Optional[str],
+                 continuation_token: Optional[str] = None) -> None:
         """Instantiate with an optional continuation token.
 
         Args:
             bucket_name: Name of the S3 bucket to enumerate.
-            prefix: Limit the enumeration to keys that begin with the specified prefix.
+            prefix: Limit the enumeration to keys which begin with the specified prefix.
             continuation_token: Continuation token returned from S3 list objects.
         """
         # Construct the list_objects keyword arguments.
@@ -201,7 +201,10 @@ def batch_lambda_handler(event: Dict[str, str], lambda_context) -> int:
     LOGGER.info('Invoked with event %s', event)
 
     s3_enumerator = S3BucketEnumerator(
-        os.environ['S3_BUCKET_NAME'], os.environ.get('OBJECT_PREFIX'), event.get('S3ContinuationToken'))
+        os.environ['S3_BUCKET_NAME'],
+        os.environ.get('OBJECT_PREFIX'),
+        event.get('S3ContinuationToken')
+    )
     sqs_batcher = SQSBatcher(os.environ['SQS_QUEUE_URL'], int(os.environ['OBJECTS_PER_MESSAGE']))
 
     # As long as there are at least 10 seconds remaining, enumerate S3 objects into SQS.

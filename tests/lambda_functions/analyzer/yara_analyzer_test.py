@@ -116,7 +116,8 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
              'externals.yar:filename_contains_win32'],
             list(sorted(matched_rule_ids)))
 
-    @mock.patch.object(subprocess, 'check_output', return_value=json.dumps(_YEXTEND_MATCH).encode('utf-8'))
+    @mock.patch.object(
+        subprocess, 'check_output', return_value=json.dumps(_YEXTEND_MATCH).encode('utf-8'))
     def test_analyze_with_yextend(self, mock_subprocess: mock.MagicMock):
         """Yextend match results are combined with those from yara-python."""
         yara_matches = self._analyzer.analyze('/target.exe')
@@ -128,7 +129,8 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
                 rule_namespace='evil_check.yar',
                 rule_metadata={
                     'author': 'Austin Byers',
-                    'description': 'A helpful description about why this rule matches dastardly evil files.'
+                    'description': ('A helpful description about why this rule '
+                                    'matches dastardly evil files.')
                 },
                 matched_strings={'$evil_string'}
             ),
@@ -141,7 +143,11 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             yara_analyzer.YaraMatch(
                 rule_name='Rule3',
                 rule_namespace='yextend',
-                rule_metadata={'author': 'Airbnb', 'description': 'Hello, YARA world', 'scan_type': 'Scan3'},
+                rule_metadata={
+                    'author': 'Airbnb',
+                    'description': 'Hello, YARA world',
+                    'scan_type': 'Scan3'
+                },
                 matched_strings={'$longer_string_name'}
             )
         ]
@@ -149,8 +155,11 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
 
     @mock.patch.object(subprocess, 'check_output', return_value='nonsense-yextend-output')
     def test_analyze_yextend_exception(self, mock_subprocess: mock.MagicMock):
+        """Yextend exceptions are logged, but yara-python results are still returned."""
         with mock.patch.object(yara_analyzer, 'LOGGER') as mock_logger:
             yara_matches = self._analyzer.analyze('/target.exe')
+
+            mock_subprocess.assert_called_once()
 
             # The yara_python match result should still have been returned.
             self.assertEqual(1, len(yara_matches))

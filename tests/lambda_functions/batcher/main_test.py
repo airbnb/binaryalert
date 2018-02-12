@@ -262,7 +262,7 @@ class MainTest(unittest.TestCase):
             ])
         ])
 
-    @mock.patch.dict(os.environ, {'OBJECT_PREFIX': 'important'})
+    @mock.patch.dict(os.environ, {'OBJECT_PREFIX': 'important'})  # type: ignore
     def test_batcher_with_prefix(self):
         """Limit batch operation to object keys which start with the given prefix."""
         def mock_list(**kwargs):
