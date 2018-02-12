@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import boto3
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
 
 if __package__:
     from lambda_functions.analyzer.binary_info import BinaryInfo
@@ -199,6 +200,8 @@ class DynamoMatchTable(object):
 
     def _create_new_entry(self, binary: BinaryInfo, analyzer_version: int) -> None:
         """Create a new Dynamo entry with YARA match information."""
+        LOGGER.info('Creating new entry (SHA256: %s, AnalyzerVersion: %d)',
+                    binary.computed_sha, analyzer_version)
         item = {
             'SHA256': binary.computed_sha,
             'AnalyzerVersion': analyzer_version,
@@ -208,8 +211,11 @@ class DynamoMatchTable(object):
             'S3Metadata': binary.s3_metadata,
             'S3Objects': {binary.s3_identifier}
         }
-        LOGGER.info('Creating new entry %s', item)
-        self._table.put_item(Item=item)
+        try:
+            self._table.put_item(Item=item)
+        except ClientError:
+            LOGGER.error('Error saving item %s', item)
+            raise
 
     def _add_s3_key(self, binary: BinaryInfo, analyzer_version: int) -> None:
         """Add S3 key to an existing entry. If the S3 key already exists, this is a no-op."""
