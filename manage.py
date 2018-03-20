@@ -32,10 +32,6 @@ TEST_FILES = os.path.join(PROJECT_DIR, 'tests', 'files')
 
 # Terraform identifiers.
 CB_KMS_ALIAS_TERRAFORM_ID = 'aws_kms_alias.encrypt_credentials_alias'
-LAMBDA_ALIASES_TERRAFORM_IDS = [
-    'module.binaryalert_{}.aws_lambda_alias.production_alias'.format(name)
-    for name in ['analyzer', 'batcher', 'dispatcher', 'downloader']
-]
 BINARY_BUCKET_TERRAFORM_ID = 'aws_s3_bucket.binaryalert_binaries'
 LOG_BUCKET_TERRAFORM_ID = 'aws_s3_bucket.binaryalert_log_bucket'
 
@@ -375,18 +371,10 @@ class Manager(object):
         # Setup the backend if needed and reload modules.
         subprocess.check_call(['terraform', 'init'])
 
-        subprocess.check_call(['terraform', 'validate'])
         subprocess.check_call(['terraform', 'fmt'])
 
         # Apply changes (requires interactive approval)
         subprocess.check_call(['terraform', 'apply', '-auto-approve=false'])
-
-        # A second apply is unfortunately necessary to update the Lambda aliases.
-        print('\nRe-applying to update Lambda aliases...')
-        subprocess.check_call(
-            ['terraform', 'apply', '-auto-approve=true', '-refresh=false'] +
-            ['-target=' + alias for alias in LAMBDA_ALIASES_TERRAFORM_IDS]
-        )
 
     def build(self) -> None:
         """Build Lambda packages (saves *.zip files in terraform/)."""
