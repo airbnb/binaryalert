@@ -288,25 +288,15 @@ class ManagerTest(FakeFilesystemBase):
             )
         ])
 
-    @mock.patch.object(manage, 'print')
     @mock.patch.object(subprocess, 'check_call')
-    def test_apply(self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock):
+    def test_apply(self, mock_subprocess: mock.MagicMock):
         """Validate order of Terraform operations."""
         self.manager.apply()
         mock_subprocess.assert_has_calls([
             mock.call(['terraform', 'init']),
-            mock.call(['terraform', 'validate']),
             mock.call(['terraform', 'fmt']),
-            mock.call(['terraform', 'apply', '-auto-approve=false']),
-            mock.call([
-                'terraform', 'apply', '-auto-approve=true', '-refresh=false',
-                '-target=module.binaryalert_analyzer.aws_lambda_alias.production_alias',
-                '-target=module.binaryalert_batcher.aws_lambda_alias.production_alias',
-                '-target=module.binaryalert_dispatcher.aws_lambda_alias.production_alias',
-                '-target=module.binaryalert_downloader.aws_lambda_alias.production_alias'
-            ])
+            mock.call(['terraform', 'apply', '-auto-approve=false'])
         ])
-        mock_print.assert_called_once()
 
     @mock.patch.object(manage, 'lambda_build')
     def test_build(self, mock_build: mock.MagicMock):
