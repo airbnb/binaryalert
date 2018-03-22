@@ -468,6 +468,11 @@ class Manager(object):
 
 def main() -> None:
     """Main command dispatcher."""
+    if sys.version_info < (3, 6):
+        print('ERROR: Python 3.6+ is required, found Python {}.{}.{}'.format(
+            sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
+        exit(1)
+
     manager = Manager()
 
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)

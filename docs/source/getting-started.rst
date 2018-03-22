@@ -9,13 +9,22 @@ Install Dependencies
 --------------------
 BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows as well, though we haven't tried).
 
-1. Install `Python 3.6 <https://www.python.org/downloads/release/python-362>`_:
+1. Install `Python 3.6 <https://www.python.org/downloads/release/python-364/>`_:
 
 .. code-block:: bash
 
-  $ brew install python3  # MacOS Homebrew
-  $ sudo apt-get install python3.6  # Ubuntu 16+
-  $ python3 --version  # Should show 3.6.x
+  # MacOS Homebrew
+  brew install python3
+  python3 --version
+
+  # Ubuntu16 - Python 3.6 is only available in third-party repositories
+  sudo add-apt-repository ppa:deadsnakes/ppa
+  sudo apt-get update
+  sudo apt-get install python3.6 python3.6-dev python3-pip
+  sudo -H pip3 install --upgrade pip
+  python3.6 --version
+
+.. warning:: Python 3.5 is installed by default on some systems, but BinaryAlert requires Python 3.6.
 
 2. Install `Terraform <https://www.terraform.io/downloads.html>`_ v0.11.X:
 
@@ -28,7 +37,7 @@ BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows
 
 .. code-block:: bash
 
-  $ pip3 install virtualenv
+  $ sudo -H pip3 install virtualenv
   $ virtualenv --version
 
 4. Install the OpenSSL development library if it isn't already (OS X should have it).
@@ -39,6 +48,37 @@ and must be installed *before* installing the BinaryAlert requirements.
 
   $ sudo apt-get install libssl-dev  # Ubuntu
   $ sudo yum install openssl-devel   # Amazon Linux
+
+
+Download BinaryAlert
+--------------------
+1. Clone the latest official release of BinaryAlert:
+
+.. code-block:: bash
+
+  $ git clone --branch v1.1.0 --depth 1 https://github.com/airbnb/binaryalert
+
+2. Create and activate a virtual environment:
+
+.. code-block:: bash
+
+  $ cd binaryalert
+  $ virtualenv -p python3.6 venv
+  $ source venv/bin/activate
+
+3. Install the BinaryAlert requirements:
+
+.. code-block:: bash
+
+  $ pip3 install -r requirements.txt
+
+.. note:: If there is an error finding ``openssl.h``, try ``export CFLAGS='-I/usr/local/opt/openssl/include'`` before the install.
+
+4. Run unit tests to make sure everything is installed correctly:
+
+.. code-block:: bash
+
+  $ ./manage.py unit_test
 
 Set AWS Credentials
 -------------------
@@ -62,38 +102,6 @@ For example, using the AWS CLI:
 
   $ pip3 install awscli
   $ aws configure
-
-
-Download BinaryAlert
---------------------
-1. Clone the latest official release of BinaryAlert:
-
-.. code-block:: bash
-
-  $ git clone --branch v1.1.0 --depth 1 https://github.com/airbnb/binaryalert
-
-2. Create and activate a virtual environment:
-
-.. code-block:: bash
-
-  $ cd binaryalert
-  $ virtualenv -p python3 venv
-  $ source venv/bin/activate
-
-3. Install the BinaryAlert requirements:
-
-.. code-block:: bash
-
-  $ pip3 install -r requirements.txt
-
-.. note:: If there is an error finding ``openssl.h``, try ``export CFLAGS='-I/usr/local/opt/openssl/include'`` before the install.
-
-4. Run unit tests to make sure everything is installed correctly:
-
-.. code-block:: bash
-
-  $ ./manage.py unit_test
-
 
 Deploy!
 -------
