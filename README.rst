@@ -36,5 +36,4 @@ Links
 
 - `Announcement Post <https://medium.com/airbnb-engineering/binaryalert-real-time-serverless-malware-detection-ca44370c1b90>`_
 - `Documentation <https://binaryalert.io>`_
-- `Twitter <https://twitter.com/binaryalert_io>`_ (unofficial)
 - `Slack <https://binaryalert.herokuapp.com>`_ (unofficial)

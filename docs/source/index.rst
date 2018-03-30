@@ -29,7 +29,6 @@ Resources
 * `GitHub Repo <https://github.com/airbnb/binaryalert>`_
 * `Blog Post <https://medium.com/airbnb-engineering/binaryalert-real-time-serverless-malware-detection-ca44370c1b90>`_
 * `Slack <https://binaryalert.herokuapp.com/>`_ (unofficial)
-* `Twitter <https://twitter.com/binaryalert_io>`_ (unofficial)
 
 
 Table of Contents
