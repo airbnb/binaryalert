@@ -25,7 +25,6 @@ DISPATCH_SOURCE = os.path.join(LAMBDA_DIR, 'dispatcher', 'main.py')
 DISPATCH_ZIPFILE = 'lambda_dispatcher'
 
 DOWNLOAD_SOURCE = os.path.join(LAMBDA_DIR, 'downloader', 'main.py')
-DOWNLOAD_DEPENDENCIES = os.path.join(LAMBDA_DIR, 'downloader', 'cbapi_1.3.4.zip')
 DOWNLOAD_ZIPFILE = 'lambda_downloader'
 
 
@@ -83,12 +82,8 @@ def _build_downloader(target_directory):
     if os.path.exists(temp_package_dir):
         shutil.rmtree(temp_package_dir)
 
-    # Extract cbapi library.
-    with zipfile.ZipFile(DOWNLOAD_DEPENDENCIES, 'r') as deps:
-        deps.extractall(temp_package_dir)
-
-    # Pip install backoff library (has no native dependencies).
-    pip.main(['install', '--quiet', '--target', temp_package_dir, 'backoff'])
+    # Pip install cbapi library (has no native dependencies).
+    pip.main(['install', '--quiet', '--target', temp_package_dir, 'cbapi==1.3.6'])
 
     # Copy Lambda code into the package.
     shutil.copy(DOWNLOAD_SOURCE, temp_package_dir)

@@ -249,7 +249,7 @@ class BinaryAlertConfigTestRealFilesystem(TestCase):
             mock.call('Encrypting API token...')
         ])
         mock_subprocess.assert_has_calls([
-            mock.call(['terraform', 'get']),
+            mock.call(['terraform', 'init']),
             mock.call(['terraform', 'apply', '-target={}'.format(manage.CB_KMS_ALIAS_TERRAFORM_ID)])
         ])
 
