@@ -52,7 +52,7 @@ class MockS3Object(object):
         return GOOD_FILE_METADATA if self.key == GOOD_S3_OBJECT_KEY else EVIL_FILE_METADATA
 
 
-@mock.patch.dict(os.environ, {
+@mock.patch.dict(os.environ, values={
     'LAMBDA_TASK_ROOT': '/var/task',
     'SQS_QUEUE_URL': MOCK_SQS_URL,
     'YARA_MATCHES_DYNAMO_TABLE_NAME': MOCK_DYNAMO_TABLE_NAME,

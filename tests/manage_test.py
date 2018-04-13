@@ -54,6 +54,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
 
     def setUp(self):
         """Enable pyfakefs and write out Terraform config files."""
+        # pylint: disable=no-member
         self.setUpPyfakefs()
 
         # pyhcl automatically writes "parsetab.dat" in its site-package path.

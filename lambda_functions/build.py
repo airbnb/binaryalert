@@ -28,7 +28,7 @@ DOWNLOAD_SOURCE = os.path.join(LAMBDA_DIR, 'downloader', 'main.py')
 DOWNLOAD_ZIPFILE = 'lambda_downloader'
 
 
-def _build_analyzer(target_directory):
+def _build_analyzer(target_directory: str) -> None:
     """Build the YARA analyzer Lambda deployment package."""
     print('Creating analyzer deploy package...')
     pathlib.Path(os.path.join(ANALYZE_SOURCE, 'main.py')).touch()
@@ -57,7 +57,7 @@ def _build_analyzer(target_directory):
     shutil.rmtree(temp_package_dir)
 
 
-def _build_batcher(target_directory):
+def _build_batcher(target_directory: str) -> None:
     """Build the batcher Lambda deployment package."""
     print('Creating batcher deploy package...')
     pathlib.Path(BATCH_SOURCE).touch()  # Change last modified time to force new Lambda deploy
@@ -65,7 +65,7 @@ def _build_batcher(target_directory):
         pkg.write(BATCH_SOURCE, os.path.basename(BATCH_SOURCE))
 
 
-def _build_dispatcher(target_directory):
+def _build_dispatcher(target_directory: str) -> None:
     """Build the dispatcher Lambda deployment package."""
     print('Creating dispatcher deploy package...')
     pathlib.Path(DISPATCH_SOURCE).touch()
@@ -73,7 +73,7 @@ def _build_dispatcher(target_directory):
         pkg.write(DISPATCH_SOURCE, os.path.basename(DISPATCH_SOURCE))
 
 
-def _build_downloader(target_directory):
+def _build_downloader(target_directory: str) -> None:
     """Build the downloader Lambda deployment package."""
     print('Creating downloader deploy package...')
     pathlib.Path(DOWNLOAD_SOURCE).touch()
@@ -93,7 +93,7 @@ def _build_downloader(target_directory):
     shutil.rmtree(temp_package_dir)
 
 
-def build(target_directory, downloader=False):
+def build(target_directory: str, downloader: bool = False) -> None:
     """Build Lambda deployment packages.
 
     Args:

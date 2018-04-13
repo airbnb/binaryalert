@@ -58,6 +58,7 @@ class CopyRequiredTest(unittest.TestCase):
 
 class CloneRulesTest(fake_filesystem_unittest.TestCase):
     """Tests for the rule-cloning logic."""
+    # pylint: disable=no-member
 
     def setUp(self):
         """Setup the fake filesystem with the expected rules folder structure."""

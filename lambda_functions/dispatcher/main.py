@@ -96,7 +96,7 @@ def _publish_metrics(batch_sizes: Dict[str, List[int]]) -> None:
         CLOUDWATCH.put_metric_data(Namespace='BinaryAlert', MetricData=metric_data)
 
 
-def dispatch_lambda_handler(_, lambda_context):
+def dispatch_lambda_handler(_: Dict[str, Any], lambda_context: Any) -> None:
     """Dispatch Lambda function entry point.
 
     Args:
@@ -104,7 +104,7 @@ def dispatch_lambda_handler(_, lambda_context):
         lambda_context: LambdaContext object with .get_remaining_time_in_millis().
     """
     # Keep track of the batch sizes (one element for each invocation) for each target function.
-    batch_sizes = {config.lambda_name: [] for config in DISPATCH_CONFIGS}
+    batch_sizes: Dict[str, List[int]] = {config.lambda_name: [] for config in DISPATCH_CONFIGS}
 
     # The maximum amount of time needed in the execution loop.
     # This allows us to dispatch as long as possible while still staying under the time limit.

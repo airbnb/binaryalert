@@ -149,7 +149,7 @@ def _publish_metrics(receive_counts: List[int]) -> None:
     )
 
 
-def download_lambda_handler(event: Dict[str, Any], _) -> None:
+def download_lambda_handler(event: Dict[str, Any], _: Any) -> None:
     """Lambda function entry point - copy a binary from CarbonBlack into the BinaryAlert S3 bucket.
 
     Args:

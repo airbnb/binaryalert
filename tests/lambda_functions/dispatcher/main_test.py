@@ -28,7 +28,7 @@ class MainTest(unittest.TestCase):
             'SQS_QUEUE_URLS': '{},{}'.format(url1, url2)
         }
 
-        with mock.patch.dict(os.environ, mock_environ):
+        with mock.patch.dict(os.environ, values=mock_environ):
             from lambda_functions.dispatcher import main
             self.main = main
 

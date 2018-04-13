@@ -7,7 +7,8 @@ from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 if __package__:
-    from lambda_functions.analyzer.binary_info import BinaryInfo
+    # BinaryInfo is imported here just for the type annotation - the cyclic import will resolve
+    from lambda_functions.analyzer.binary_info import BinaryInfo  # pylint: disable=cyclic-import
     from lambda_functions.analyzer.common import LOGGER
 else:
     # mypy complains about duplicate definitions

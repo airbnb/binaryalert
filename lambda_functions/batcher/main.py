@@ -9,7 +9,7 @@
 import json
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import boto3
 
@@ -164,7 +164,7 @@ class S3BucketEnumerator(object):
         self.finished = False  # Have we finished enumerating all of the S3 bucket?
 
     @property
-    def continuation_token(self):
+    def continuation_token(self) -> str:
         return self.kwargs.get('ContinuationToken')
 
     def next_page(self) -> List[str]:
@@ -187,7 +187,7 @@ class S3BucketEnumerator(object):
         return [obj['Key'] for obj in response['Contents']]
 
 
-def batch_lambda_handler(event: Dict[str, str], lambda_context) -> int:
+def batch_lambda_handler(event: Dict[str, str], lambda_context: Any) -> int:
     """Entry point for the batch Lambda function.
 
     Args:

@@ -82,7 +82,7 @@ def _objects_to_analyze(event: Dict[str, Any]) -> Generator[Tuple[str, str], Non
         yield from _s3_objects(event['Records'])
 
 
-def analyze_lambda_handler(event: Dict[str, Any], lambda_context) -> Dict[str, Dict[str, Any]]:
+def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[str, Dict[str, Any]]:
     """Analyzer Lambda function entry point.
 
     Args:

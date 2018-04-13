@@ -1,16 +1,17 @@
 """Compile all of the YARA rules into a single binary file."""
 import os
+from typing import Generator
 
 import yara
 
 RULES_DIR = os.path.dirname(os.path.realpath(__file__))  # Directory containing this file.
 
 
-def _find_yara_files():
+def _find_yara_files() -> Generator[str, None, None]:
     """Find all .yar[a] files in the rules directory.
 
     Yields:
-        [string] YARA rule filepaths, relative to the rules root directory.
+        YARA rule filepaths, relative to the rules root directory.
     """
     for root, _, files in os.walk(RULES_DIR):
         for filename in files:
@@ -19,11 +20,11 @@ def _find_yara_files():
                 yield os.path.relpath(os.path.join(root, filename), start=RULES_DIR)
 
 
-def compile_rules(target_path):
+def compile_rules(target_path: str) -> None:
     """Compile YARA rules into a single binary rules file.
 
     Args:
-        target_path: [String] Where to save the compiled rules file.
+        target_path: Where to save the compiled rules file.
     """
     # Each rule file must be keyed by an identifying "namespace"; in our case the relative path.
     yara_filepaths = {relative_path: os.path.join(RULES_DIR, relative_path)
