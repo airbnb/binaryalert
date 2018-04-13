@@ -58,10 +58,10 @@ class MockS3Object(object):
     'YARA_MATCHES_DYNAMO_TABLE_NAME': MOCK_DYNAMO_TABLE_NAME,
     'YARA_ALERTS_SNS_TOPIC_ARN': MOCK_SNS_TOPIC_ARN
 })
-@mock.patch.object(subprocess, 'check_call')
-@mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
 class MainTest(fake_filesystem_unittest.TestCase):
     """Test end-to-end functionality of the analyzer."""
+    # pylint: disable=protected-access
+
     def setUp(self):
         """Before each test, create the mock environment."""
         # Show all differences on assertion failures, even for large dictionaries.
@@ -74,22 +74,37 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Create test event.
         self._test_event = {
-            # Two objects which match different YARA rules.
-            'Records': [
+            'messages': [
                 {
-                    's3': {
-                        'bucket': {'name': MOCK_S3_BUCKET_NAME},
-                        'object': {'key': urllib.parse.quote_plus(GOOD_S3_OBJECT_KEY)}
-                    }
+                    'body': json.dumps({
+                        'Records': [
+                            {
+                                's3': {
+                                    'bucket': {'name': MOCK_S3_BUCKET_NAME},
+                                    'object': {'key': urllib.parse.quote_plus(GOOD_S3_OBJECT_KEY)}
+                                }
+                            }
+                        ]
+                    }),
+                    'receipt': MOCK_SQS_RECEIPTS[0],
+                    'receive_count': 1
                 },
                 {
-                    's3': {
-                        'bucket': {'name': MOCK_S3_BUCKET_NAME},
-                        'object': {'key': urllib.parse.quote_plus(EVIL_S3_OBJECT_KEY)}
-                    }
+                    'body': json.dumps({
+                        'Records': [
+                            {
+                                's3': {
+                                    'bucket': {'name': MOCK_S3_BUCKET_NAME},
+                                    'object': {'key': urllib.parse.quote_plus(EVIL_S3_OBJECT_KEY)}
+                                }
+                            }
+                        ]
+                    }),
+                    'receipt': MOCK_SQS_RECEIPTS[1],
+                    'receive_count': 2
                 }
             ],
-            'SQSReceipts': MOCK_SQS_RECEIPTS
+            'queue_url': MOCK_SQS_URL
         }
 
         # Import the module under test (now that YARA is mocked out).
@@ -109,13 +124,110 @@ class MainTest(fake_filesystem_unittest.TestCase):
         # Mock S3 Object
         self.main.analyzer_aws_lib.S3.Object = MockS3Object
 
+    def test_objects_to_analyze_sqs_event(self):
+        """Test event parsing when invoked from dispatcher with SQS messages."""
+        event = {
+            'messages': [
+                {
+                    'body': json.dumps({
+                        'Records': [
+                            {
+                                's3': {
+                                    'bucket': {'name': 'bucket1'},
+                                    'object': {'key': 'key1'}
+                                }
+                            },
+                            {
+                                's3': {}  # Invalid record should be skipped
+                            },
+                            {
+                                's3': {
+                                    'bucket': {'name': 'bucket1'},
+                                    'object': {'key': 'key2'}
+                                }
+                            },
+
+                        ]
+                    }),
+                    'receipt': 'receipt1',
+                    'receive_count': 1
+                },
+                {
+                    'body': {'Records': []}  # Invalid SQS message should be skipped
+                },
+                {
+                    'body': json.dumps({
+                        'Records': [
+                            {
+                                's3': {
+                                    'bucket': {'name': 'bucket2'},
+                                    'object': {'key': 'key3'}
+                                }
+                            }
+                        ]
+                    }),
+                    'receipt': 'receipt2',
+                    'receive_count': 2
+                }
+            ],
+            'queue_url': 'url'
+        }
+
+        with mock.patch.object(self.main, 'LOGGER') as mock_logger:
+            result = list(self.main._objects_to_analyze(event))
+            mock_logger.assert_has_calls([
+                mock.call.exception('Skipping invalid S3 record %s', mock.ANY),
+                mock.call.exception('Skipping invalid SQS message %s', mock.ANY)
+            ])
+
+        expected = [
+            ('bucket1', 'key1'),
+            ('bucket1', 'key2'),
+            ('bucket2', 'key3')
+        ]
+        self.assertEqual(expected, result)
+
+    def test_objects_to_analyze_s3_event(self):
+        """Test event parsing when invoked from dispatcher with an S3 event."""
+        event = {
+            'Records': [
+                {
+                    's3': {
+                        'bucket': {'name': 'bucket1'},
+                        'object': {'key': 'key1'}
+                    }
+                },
+                {
+                    's3': {
+                        'bucket': {'name': 'bucket1'},
+                        'object': {'key': 'key2'}
+                    }
+                },
+                {
+                    's3': {
+                        'bucket': {'name': 'bucket2'},
+                        'object': {'key': 'key3'}
+                    }
+                }
+            ]
+        }
+        result = list(self.main._objects_to_analyze(event))
+        expected = [
+            ('bucket1', 'key1'),
+            ('bucket1', 'key2'),
+            ('bucket2', 'key3')
+        ]
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(subprocess, 'check_call')
+    @mock.patch.object(subprocess, 'check_output', return_value=b'[{"yara_matches_found": false}]')
     def test_analyze_lambda_handler(self, mock_output: mock.MagicMock, mock_call: mock.MagicMock):
         """Verify return value, logging, and boto3 calls when multiple files match YARA rules."""
         with mock.patch.object(self.main, 'LOGGER') as mock_logger:
             result = self.main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
             # Verify logging statements.
             mock_logger.assert_has_calls([
-                mock.call.info('Processing %d record(s)', 2),
+                mock.call.info('Invoked from dispatcher with %d messages', 2),
                 mock.call.info('Analyzing "%s:%s"', MOCK_S3_BUCKET_NAME, GOOD_S3_OBJECT_KEY),
                 mock.call.warning(
                     '%s matched YARA rules: %s',
