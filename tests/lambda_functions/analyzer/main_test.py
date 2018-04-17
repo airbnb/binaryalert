@@ -248,11 +248,11 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j'])
             ])
 
-            # Verify 2 shred calls
+            # Verify 2 UPX and 2 shred calls
             mock_call.assert_has_calls([
-                mock.call(['shred', '--remove', mock.ANY]),
+                mock.call(['./upx', '-d', mock.ANY]),
                 mock.call(['shred', '--remove', mock.ANY])
-            ])
+            ] * 2)
 
         # Verify return value.
         good_s3_id = 'S3:{}:{}'.format(MOCK_S3_BUCKET_NAME, GOOD_S3_OBJECT_KEY)

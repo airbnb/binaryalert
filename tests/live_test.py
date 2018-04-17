@@ -1,7 +1,7 @@
 """Upload test files to S3 and see if the expected matches appear in Dynamo."""
 import hashlib
+import json
 import os
-import pprint
 import time
 from typing import Dict, List
 import uuid
@@ -9,6 +9,7 @@ import uuid
 import boto3
 
 TEST_DIR = os.path.dirname(os.path.realpath(__file__))
+TEST_FILES = ['eicar.txt', 'eicar.tar.gz.bz2', 'eicar_packed.py.upx', 'eicar_text.pdf']
 
 
 def _upload_test_files_to_s3(bucket_name: str) -> Dict[str, str]:
@@ -17,7 +18,7 @@ def _upload_test_files_to_s3(bucket_name: str) -> Dict[str, str]:
     random_suffix = str(uuid.uuid4()).split('-')[-1]
 
     result = {}
-    for filename in ['eicar.txt', 'eicar.tar.gz.bz2']:
+    for filename in TEST_FILES:
         filepath = os.path.join(TEST_DIR, 'files', filename)
         s3_object_key = '{}_{}'.format(filename, random_suffix)
         s3_full_identifier = 'S3:{}:{}'.format(bucket_name, s3_object_key)
@@ -44,7 +45,7 @@ def _lambda_production_version(function_name: str) -> int:
 
 def _query_dynamo_for_test_files(
         table_name: str, file_info: Dict[str, str], analyzer_version: int,
-        max_attempts: int = 15) -> List:
+        max_attempts: int = 15) -> Dict[str, List[str]]:
     """Repeatedly query DynamoDB to look for the expected YARA matches.
 
     Args:
@@ -54,17 +55,18 @@ def _query_dynamo_for_test_files(
         max_attempts: Max number of times to query for results (with 5 seconds between each).
 
     Returns:
-        True if the expected entries were found
+        dict: Map from test filename (str) to list of matched YARA rules.
     """
     client = boto3.client('dynamodb')
 
+    results = {}  # Map filename to list of matched rules.
     for attempt in range(1, max_attempts + 1):
         if attempt > 1:
             time.sleep(5)
         print('\t[{}/{}] Querying DynamoDB table for the expected YARA match entries...'.format(
             attempt, max_attempts))
 
-        results = client.batch_get_item(
+        response = client.batch_get_item(
             RequestItems={
                 table_name: {
                     'Keys': [
@@ -78,25 +80,13 @@ def _query_dynamo_for_test_files(
             }
         )['Responses'][table_name]
 
-        if len(results) < len(file_info):
-            # If there weren't as many matches as files uploaded, stop and try again.
-            continue
+        for match in response:
+            results[match['S3Metadata']['M']['filepath']['S']] = match['MatchedRules']['SS']
 
-        # Make sure the matches found are from the files we uploaded (and not others).
-        all_objects_found = True
-        for entry in results:
-            file_id = file_info[entry['SHA256']['S']]
-            if file_id not in entry['S3Objects']['SS']:
-                all_objects_found = False
-                break
+        if len(results) == len(file_info):
+            break
 
-        if not all_objects_found:
-            continue
-
-        # The results check out!
-        return results
-
-    return []
+    return results
 
 
 def _cleanup(
@@ -149,12 +139,35 @@ def run(bucket_name: str, analyzer_function_name: str, table_name: str) -> bool:
     analyzer_version = _lambda_production_version(analyzer_function_name)
     results = _query_dynamo_for_test_files(table_name, test_file_info, analyzer_version)
 
-    if results:
-        print()
-        pprint.pprint(results)
+    expected = {
+        'eicar.txt': [
+            'public/eicar.yara:eicar_av_test',
+            'public/eicar.yara:eicar_substring_test',
+            'yextend:eicar_av_test',
+            'yextend:eicar_substring_test'
+        ],
+        'eicar.tar.gz.bz2': [
+            'yextend:eicar_av_test',
+            'yextend:eicar_substring_test'
+        ],
+        'eicar_packed.py.upx': [
+            'public/eicar.yara:eicar_substring_test',
+            'yextend:eicar_substring_test'
+        ],
+        'eicar_text.pdf': [
+            'yextend:eicar_substring_test'
+        ]
+    }
+
+    if results == expected:
         print('\nSUCCESS: Expected DynamoDB entries for the test files were found!')
+        print(json.dumps(results, sort_keys=True, indent=4))
     else:
         print('\nFAIL: Expected DynamoDB entries for the test files were *not* found :(\n')
+        print('Expected Results:')
+        print(json.dumps(expected, sort_keys=True, indent=4))
+        print('Actual Results:')
+        print(json.dumps(results, sort_keys=True, indent=4))
 
     _cleanup(bucket_name, test_file_info, table_name, analyzer_version)
     print('Done!')
