@@ -125,6 +125,9 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
             }
         }
     """
+    # Executables in the root of the deployment package (upx, pdftotext, etc) are added to PATH.
+    os.environ['PATH'] = '{}:{}'.format(os.environ['PATH'], os.environ['LAMBDA_TASK_ROOT'])
+
     result = {}
     binaries = []  # List of the BinaryInfo data.
 
@@ -158,9 +161,10 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
         analyzer_aws_lib.delete_sqs_messages(event['queue_url'], receipts_to_delete)
 
     # Publish metrics.
-    try:
-        analyzer_aws_lib.put_metric_data(NUM_YARA_RULES, binaries)
-    except ClientError:
-        LOGGER.exception('Error saving metric data')
+    if binaries:
+        try:
+            analyzer_aws_lib.put_metric_data(NUM_YARA_RULES, binaries)
+        except ClientError:
+            LOGGER.exception('Error saving metric data')
 
     return result

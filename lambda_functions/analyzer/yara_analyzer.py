@@ -102,6 +102,13 @@ class YaraAnalyzer(object):
         Returns:
             List of YaraMatch tuples.
         """
+        # UPX-unpack the file if possible
+        try:
+            subprocess.check_call(['./upx', '-d', target_file])
+            LOGGER.info('Unpacked UPX-compressed file %s', target_file)
+        except subprocess.CalledProcessError:
+            pass  # Not a packed file
+
         # Raw YARA matches (yara-python)
         # TODO: Once yextend is more robust, we may eventually not need yara-python anymore.
         raw_yara_matches = self._rules.match(

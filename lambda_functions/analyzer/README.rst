@@ -6,16 +6,19 @@ S3, scans them against all available YARA rules, and forwards any matches to Dyn
 
 Updating YARA Binaries
 ----------------------
-The YARA libaries used by BinaryAlert are natively compiled, and must therefore be pre-built on an
+Many libraries used by BinaryAlert are natively compiled, and must therefore be pre-built on an
 Amazon Linux AMI in order to run in Lambda. This has already been done for you:
-``yara3.7.0_yextend1.6.zip`` contains the pre-built
-`yara_python <https://github.com/VirusTotal/yara-python>`_ (v3.7.0) and
-`yextend <https://github.com/BayshoreNetworks/yextend>`_ (v1.6) libraries for the Lambda environment
-and is automatically bundled with every deploy.
+``dependencies.zip`` contains the following pre-built libraries:
+
+- `UPX <https://github.com/upx/upx>`_ (v3.94)
+- `yara-python <https://github.com/VirusTotal/yara-python>`_ (v3.7.0)
+    - `yara <https://github.com/VirusTotal/yara>`_ (v3.7.1)
+- `yextend <https://github.com/BayshoreNetworks/yextend>`_ (v1.6)
+    - `pdftotext <https://poppler.freedesktop.org/>`_ (v0.26.5)
 
 If, however, you need to update or re-create the zipfile, SSH to an EC2 instance running the
 `AWS Lambda AMI <http://docs.aws.amazon.com/lambda/latest/dg/current-supported-versions.html>`_
-and install ``yara-python`` and ``yextend`` as follows:
+and install the dependencies as follows:
 
 .. code-block:: bash
 
@@ -25,10 +28,10 @@ and install ``yara-python`` and ``yextend`` as follows:
         libuuid-devel openssl-devel pcre-devel poppler-utils python36 python36-devel zlib-devel
     sudo pip install nose
 
-    # Install YARA
-    wget https://github.com/VirusTotal/yara/archive/v3.7.0.tar.gz
-    tar -xvzf v3.7.0.tar.gz
-    cd yara-3.7.0
+    # Compile YARA
+    wget https://github.com/VirusTotal/yara/archive/v3.7.1.tar.gz
+    tar -xzf v3.7.1.tar.gz
+    cd yara-3.7.1
     ./bootstrap.sh
     ./configure
     make
@@ -41,7 +44,6 @@ and install ``yara-python`` and ``yextend`` as follows:
     pip-3.6 install yara-python -t pip
 
     # Compile yextend
-    cd ~
     wget https://github.com/BayshoreNetworks/yextend/archive/1.6.tar.gz
     tar -xvzf 1.6.tar.gz
     cd yextend-1.6
@@ -63,13 +65,34 @@ and install ``yara-python`` and ``yextend`` as follows:
     cp yextend-1.6/libs/*.o lambda/libs
     cp yextend-1.6/libs/*.yara lambda/libs
 
+    # Download UPX
+    wget https://github.com/upx/upx/releases/download/v3.94/upx-3.94-amd64_linux.tar.xz
+    tar -xf upx-3.94-amd64_linux.tar.xz
+    cp upx-3.94-amd64_linux/upx lambda
+    cp upx-3.94-amd64_linux/COPYING lambda/UPX_LICENSE
+
     # Gather compiled libraries
+    cp /usr/bin/pdftotext lambda
     cp /usr/lib64/libarchive.so.13 lambda
+    cp /usr/lib64/libfontconfig.so.1 lambda
+    cp /usr/lib64/libfreetype.so.6 lambda
+    cp /usr/lib64/libjbig.so.2.0 lambda
+    cp /usr/lib64/libjpeg.so.62 lambda
+    cp /usr/lib64/liblcms2.so.2 lambda
+    cp /usr/lib64/liblzma.so.5 lambda
     cp /usr/lib64/liblzo2.so.2 lambda
+    cp /usr/lib64/libopenjpeg.so.2 lambda
+    cp /usr/lib64/libpcrecpp.so.0 lambda
+    cp /usr/lib64/libpng12.so.0 lambda
+    cp /usr/lib64/libpoppler.so.46 lambda
     cp /usr/lib64/libstdc++.so.6 lambda
+    cp /usr/lib64/libtiff.so.5 lambda
+    cp /usr/lib64/libxml2.so.2 lambda
     cp /usr/local/lib/libyara.so.3 lambda
+
+    # Build Zipfile
     cd lambda
-    zip -r yara3.7.0_yextend1.6.zip *
+    zip -r dependencies.zip *
 
 
 Then ``scp`` the new zipfile to replace the one in the repo.

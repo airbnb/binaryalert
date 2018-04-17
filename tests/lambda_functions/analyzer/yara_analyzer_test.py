@@ -82,6 +82,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         self.assertEqual(
             {'extension': '', 'filename': '', 'filepath': '', 'filetype': ''}, variables)
 
+    @mock.patch.object(subprocess, 'check_call', mock.MagicMock())
     @mock.patch.object(subprocess, 'check_output', return_value=_YEXTEND_NO_MATCHES)
     def test_analyze(self, mock_subprocess: mock.MagicMock):
         """Analyze returns the expected list of rule matches."""
@@ -93,6 +94,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         self.assertEqual('evil_check.yar', match.rule_namespace)
         self.assertEqual('contains_evil', match.rule_name)
 
+    @mock.patch.object(subprocess, 'check_call', mock.MagicMock())
     @mock.patch.object(subprocess, 'check_output', return_value=_YEXTEND_NO_MATCHES)
     def test_analyze_no_matches(self, mock_subprocess: mock.MagicMock):
         """Analyze returns empty list if no matches."""
@@ -104,6 +106,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         self.assertEqual([], empty_analyzer.analyze('/target.exe'))
         mock_subprocess.assert_called_once()
 
+    @mock.patch.object(subprocess, 'check_call', mock.MagicMock())
     @mock.patch.object(subprocess, 'check_output', return_value=_YEXTEND_NO_MATCHES)
     def test_analyze_match_with_target_path(self, mock_subprocess: mock.MagicMock):
         """Match additional rules if the target path is provided."""
@@ -117,6 +120,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
              'externals.yar:filename_contains_win32'],
             list(sorted(matched_rule_ids)))
 
+    @mock.patch.object(subprocess, 'check_call', mock.MagicMock())
     @mock.patch.object(
         subprocess, 'check_output', return_value=json.dumps(_YEXTEND_MATCH).encode('utf-8'))
     def test_analyze_with_yextend(self, mock_subprocess: mock.MagicMock):
@@ -154,6 +158,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
         ]
         self.assertEqual(expected, yara_matches)
 
+    @mock.patch.object(subprocess, 'check_call', mock.MagicMock())
     @mock.patch.object(subprocess, 'check_output', return_value='nonsense-yextend-output')
     def test_analyze_yextend_exception(self, mock_subprocess: mock.MagicMock):
         """Yextend exceptions are logged, but yara-python results are still returned."""
