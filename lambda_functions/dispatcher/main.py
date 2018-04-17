@@ -8,6 +8,7 @@
 import collections
 import json
 import logging
+from multiprocessing import Process
 import os
 from typing import Any, Dict, List
 
@@ -16,7 +17,6 @@ import boto3
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
-CLOUDWATCH = boto3.client('cloudwatch')
 LAMBDA = boto3.client('lambda')
 
 # Build a DispatchConfig tuple for each queue specified in the environment variables.
@@ -35,7 +35,7 @@ DISPATCH_CONFIGS = [
 ]
 
 SQS_MAX_MESSAGES = 10  # Maximum number of messages to request (highest allowed by SQS).
-WAIT_TIME_SECONDS = 3  # Maximum amount of time to hold a receive_message connection open.
+WAIT_TIME_SECONDS = 20  # Maximum amount of time to hold a receive_message connection open.
 
 
 def _invoke_lambda(queue_url: str, sqs_messages: List[Any], config: DispatchConfig) -> None:
@@ -64,36 +64,21 @@ def _invoke_lambda(queue_url: str, sqs_messages: List[Any], config: DispatchConf
     )
 
 
-def _publish_metrics(batch_sizes: Dict[str, List[int]]) -> None:
-    """Publish metrics about how many times each function was invoked, and with what batch sizes."""
-    metric_data = []
+def _sqs_poll(config: DispatchConfig, lambda_context: Any) -> None:
+    """Process entry point: long polling of a single queue."""
+    LOGGER.info('Polling process started: %s => lambda:%s:%s',
+                config.queue.url, config.lambda_name, config.lambda_qualifier)
 
-    for function_name, batches in batch_sizes.items():
-        if not batches:
-            continue
-
-        dimensions = [{'Name': 'FunctionName', 'Value': function_name}]
-        metric_data.append({
-            'MetricName': 'DispatchInvocations',
-            'Dimensions': dimensions,
-            'Value': len(batches),
-            'Unit': 'Count'
-        })
-        metric_data.append({
-            'MetricName': 'DispatchBatchSize',
-            'Dimensions': dimensions,
-            'StatisticValues': {
-                'Minimum': min(batches),
-                'Maximum': max(batches),
-                'SampleCount': len(batches),
-                'Sum': sum(batches)
-            },
-            'Unit': 'Count'
-        })
-
-    if metric_data:
-        LOGGER.info('Publishing invocation metrics')
-        CLOUDWATCH.put_metric_data(Namespace='BinaryAlert', MetricData=metric_data)
+    # Keep polling the queue until we're about to run out of time.
+    while lambda_context.get_remaining_time_in_millis() > (WAIT_TIME_SECONDS + 3) * 1000:
+        # Long-polling: blocks until at least one message is available or the connection times out.
+        sqs_messages = config.queue.receive_messages(
+            AttributeNames=['ApproximateReceiveCount'],
+            MaxNumberOfMessages=SQS_MAX_MESSAGES,
+            WaitTimeSeconds=WAIT_TIME_SECONDS
+        )
+        if sqs_messages:
+            _invoke_lambda(config.queue.url, sqs_messages, config)
 
 
 def dispatch_lambda_handler(_: Dict[str, Any], lambda_context: Any) -> None:
@@ -103,24 +88,14 @@ def dispatch_lambda_handler(_: Dict[str, Any], lambda_context: Any) -> None:
         _: Unused invocation event.
         lambda_context: LambdaContext object with .get_remaining_time_in_millis().
     """
-    # Keep track of the batch sizes (one element for each invocation) for each target function.
-    batch_sizes: Dict[str, List[int]] = {config.lambda_name: [] for config in DISPATCH_CONFIGS}
+    # Create a separate process for polling each queue.
+    processes = [Process(target=_sqs_poll, args=(config, lambda_context))
+                 for config in DISPATCH_CONFIGS]
 
-    # The maximum amount of time needed in the execution loop.
-    # This allows us to dispatch as long as possible while still staying under the time limit.
-    # We need time to wait for sqs messages as well as a few seconds (e.g. 3) to forward them.
-    loop_execution_time_ms = (WAIT_TIME_SECONDS + 3) * 1000 * len(DISPATCH_CONFIGS)
+    # Start each polling process.
+    for process in processes:
+        process.start()
 
-    while lambda_context.get_remaining_time_in_millis() > loop_execution_time_ms:
-        # Receive a batch of messages for each configured queue.
-        for config in DISPATCH_CONFIGS:
-            sqs_messages = config.queue.receive_messages(
-                AttributeNames=['ApproximateReceiveCount'],
-                MaxNumberOfMessages=SQS_MAX_MESSAGES,
-                WaitTimeSeconds=WAIT_TIME_SECONDS
-            )
-            if sqs_messages:
-                _invoke_lambda(config.queue.url, sqs_messages, config)
-                batch_sizes[config.lambda_name].append(len(sqs_messages))
-
-    _publish_metrics(batch_sizes)
+    # Wait for all of the polling processes to finish, then exit normally.
+    for process in processes:
+        process.join()

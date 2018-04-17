@@ -83,11 +83,11 @@ lambda_batch_objects_per_message = 5
 lambda_batch_memory_mb = 128
 
 // How often the Lambda dispatcher will be invoked.
-lambda_dispatch_frequency_minutes = 1
+lambda_dispatch_frequency_minutes = 5
 
 // Memory and time limits for the dispatching function.
 lambda_dispatch_memory_mb = 128
-lambda_dispatch_timeout_sec = 60
+lambda_dispatch_timeout_sec = 300
 
 // Memory and time limits for the downloader function.
 lambda_download_memory_mb = 128

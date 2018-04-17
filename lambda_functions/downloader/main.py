@@ -125,7 +125,7 @@ def _process_md5(md5: str) -> bool:
 def _delete_sqs_messages(queue_url: str, receipts: List[str], ) -> None:
     """Mark a batch of SQS receipts as completed (removing them from the queue)."""
     LOGGER.info('Deleting %d SQS receipt(s)', len(receipts))
-    SQS.queue(queue_url).delete_messages(
+    SQS.Queue(queue_url).delete_messages(
         Entries=[
             {'Id': str(index), 'ReceiptHandle': receipt} for index, receipt in enumerate(receipts)
         ]
