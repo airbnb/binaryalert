@@ -7,7 +7,8 @@ from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 if __package__:
-    from lambda_functions.analyzer.binary_info import BinaryInfo
+    # BinaryInfo is imported here just for the type annotation - the cyclic import will resolve
+    from lambda_functions.analyzer.binary_info import BinaryInfo  # pylint: disable=cyclic-import
     from lambda_functions.analyzer.common import LOGGER
 else:
     # mypy complains about duplicate definitions
@@ -24,6 +25,10 @@ SNS = boto3.resource('sns')
 SQS = boto3.resource('sqs')
 
 
+class FileDownloadError(Exception):
+    """File can't be downloaded from S3 with a 4XX error code - do not retry."""
+
+
 def download_from_s3(
         bucket_name: str, object_key: str, download_path: str) -> Tuple[str, Dict[str, str]]:
     """Download an object from S3 to the given download path.
@@ -35,11 +40,21 @@ def download_from_s3(
 
     Returns:
         Last modified timestamp (i.e. object upload timestamp), object metadata.
+
+    Raises:
+        FileDownloadError: If the file couldn't be downloaded because
     """
-    s3_object = S3.Object(bucket_name, object_key)
-    s3_object.download_file(download_path)
-    last_modified = str(s3_object.last_modified)  # UTC timestamp, e.g. '2017-09-04 04:49:06-00:00'
-    return last_modified, s3_object.metadata
+    try:
+        s3_object = S3.Object(bucket_name, object_key)
+        s3_object.download_file(download_path)
+        # UTC timestamp, e.g. '2017-09-04 04:49:06-00:00'
+        last_modified = str(s3_object.last_modified)
+        return last_modified, s3_object.metadata
+    except ClientError as error:
+        if 400 <= error.response['ResponseMetadata']['HTTPStatusCode'] < 500:
+            raise FileDownloadError(error)
+        else:
+            raise
 
 
 def _elide_string_middle(text: str, max_length: int) -> str:
@@ -81,8 +96,6 @@ def delete_sqs_messages(queue_url: str, receipts: List[str]) -> None:
         queue_url: The URL of the SQS queue containing the messages.
         receipts: List of SQS receipt handles.
     """
-    if not receipts:
-        return
     LOGGER.info('Deleting %d SQS receipt(s) from %s', len(receipts), queue_url)
     SQS.Queue(queue_url).delete_messages(
         Entries=[

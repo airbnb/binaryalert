@@ -1,148 +1,128 @@
 """Unit tests for batcher main.py. Mocks out boto3 clients."""
 import collections
-import json
 import os
 import unittest
 from unittest import mock
 
 import boto3
+import moto
 
 from tests import common
 
-MockSQSMessage = collections.namedtuple('MockSQSMessage', ['body', 'receipt_handle'])
+MockSQSMessage = collections.namedtuple('MockSQSMessage', ['attributes', 'body', 'receipt_handle'])
 
 
+@moto.mock_cloudwatch()
+@moto.mock_lambda()
+@moto.mock_sqs()
 class MainTest(unittest.TestCase):
     """Test the dispatch handler."""
 
     def setUp(self):
         """Set environment variables and setup the mocks."""
-        os.environ['ANALYZE_LAMBDA_NAME'] = 'test-analyzer'
-        os.environ['ANALYZE_LAMBDA_QUALIFIER'] = 'Production'
-        os.environ['MAX_DISPATCHES'] = '10'
-        os.environ['SQS_QUEUE_URL'] = 'test-queue-url'
+        url1 = boto3.client('sqs').create_queue(QueueName='q1')['QueueUrl']
+        url2 = boto3.client('sqs').create_queue(QueueName='q2')['QueueUrl']
 
-        with mock.patch.object(boto3, 'client'), mock.patch.object(boto3, 'resource'):
+        mock_environ = {
+            'LAMBDA_TARGETS': 'analyzer:production,downloader:staging',
+            'SQS_QUEUE_URLS': '{},{}'.format(url1, url2)
+        }
+
+        with mock.patch.dict(os.environ, values=mock_environ):
             from lambda_functions.dispatcher import main
-            self.dispatcher_main = main
+            self.main = main
 
-        # Reset mocks
-        self.dispatcher_main.LAMBDA = mock.MagicMock()
-        self.dispatcher_main.SQS_QUEUE = mock.MagicMock()
+        self.config1 = self.main.DISPATCH_CONFIGS[0]
+        self.config2 = self.main.DISPATCH_CONFIGS[1]
 
-    def test_dispatcher_no_messages(self):
+    def test_dispatch_configs(self):
+        """Environment variables were parsed correctly into 2 DispatchConfig tuples."""
+        self.assertTrue(self.config1.queue.url.endswith('q1'))
+        self.assertEqual('analyzer', self.config1.lambda_name)
+        self.assertEqual('production', self.config1.lambda_qualifier)
+
+        self.assertTrue(self.config2.queue.url.endswith('q2'))
+        self.assertNotEqual(self.config1.queue, self.config2.queue)
+        self.assertEqual('downloader', self.config2.lambda_name)
+        self.assertEqual('staging', self.config2.lambda_qualifier)
+
+    def test_dispatch_no_messages(self):
         """Dispatcher doesn't do anything if there are no SQS messages."""
-        self.dispatcher_main.SQS_QUEUE.receive_messages.return_value = []
+        with mock.patch.object(self.main, 'WAIT_TIME_SECONDS', 0), \
+                mock.patch.object(self.main, 'LOGGER') as mock_logger:
+            self.main.dispatch_lambda_handler(None, common.MockLambdaContext())
+            mock_logger.assert_not_called()
 
-        with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
-            invocations = self.dispatcher_main.dispatch_lambda_handler(
-                {},
-                common.MockLambdaContext(decrement_ms=10000)
-            )
-            self.assertEqual(0, invocations)
+    def test_dispatch_invokes_all_targets(self):
+        """Dispatcher invokes each of the Lambda targets with data from its respective queue."""
+        self.config1.queue.send_message(MessageBody='queue1-message1')
+        self.config1.queue.send_message(MessageBody='queue1-message2')
+        self.config2.queue.send_message(MessageBody='queue2-message1')
 
-            mock_logger.assert_has_calls([
-                mock.call.info('No SQS messages found'),
-                mock.call.info('Invoked %d total analyzers', 0)
-            ])
-
-    def test_dispatcher_invalid_message(self):
-        """Dispatcher discards invalid SQS messages."""
-        self.dispatcher_main.SQS_QUEUE.receive_messages.return_value = [
-            MockSQSMessage(body=json.dumps({'InvalidKey': 'Value'}), receipt_handle='receipt1'),
-            MockSQSMessage(body=json.dumps({}), receipt_handle='receipt2'),
-        ]
-
-        with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
-            invocations = self.dispatcher_main.dispatch_lambda_handler(
-                {},
-                common.MockLambdaContext(decrement_ms=10000)
-            )
-            self.assertEqual(0, invocations)
+        with mock.patch.object(self.main, 'LOGGER') as mock_logger, \
+                mock.patch.object(self.main, 'CLOUDWATCH') as mock_cloudwatch, \
+                mock.patch.object(self.main, 'LAMBDA') as mock_lambda:
+            self.main.dispatch_lambda_handler(None, common.MockLambdaContext())
 
             mock_logger.assert_has_calls([
-                mock.call.warning('Invalid SQS message body: %s', mock.ANY),
-                mock.call.warning('Invalid SQS message body: %s', mock.ANY),
-                mock.call.warning('Removing %d invalid messages', 2),
-                mock.call.info('Invoked %d total analyzers', 0)
+                mock.call.info('Sending %d messages to %s:%s', 2, 'analyzer', 'production'),
+                mock.call.info('Sending %d messages to %s:%s', 1, 'downloader', 'staging'),
+                mock.call.info('Publishing invocation metrics')
             ])
 
-    def test_dispatcher_invokes_analyzer(self):
-        """Dispatcher flattens multiple messages and invokes an analyzer."""
-        self.dispatcher_main.SQS_QUEUE.receive_messages.return_value = [
-            MockSQSMessage(
-                body=json.dumps({
-                    'Records': [
+            mock_lambda.assert_has_calls([
+                mock.call.invoke(
+                    FunctionName='analyzer',
+                    InvocationType='Event',
+                    Payload=mock.ANY,
+                    Qualifier='production'
+                ),
+                mock.call.invoke(
+                    FunctionName='downloader',
+                    InvocationType='Event',
+                    Payload=mock.ANY,
+                    Qualifier='staging'
+                )
+            ])
+
+            mock_cloudwatch.assert_has_calls([
+                mock.call.put_metric_data(
+                    Namespace='BinaryAlert',
+                    MetricData=[
                         {
-                            's3': {
-                                'bucket': {'name': 'test-bucket'},
-                                'object': {'key': 'test-key-1'}
-                            }
+                            'MetricName': 'DispatchInvocations',
+                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'analyzer'}],
+                            'Value': 1,
+                            'Unit': 'Count'
                         },
                         {
-                            's3': {
-                                'bucket': {'name': 'test-bucket'},
-                                'object': {'key': 'test-key-2'}
-                            }
+                            'MetricName': 'DispatchBatchSize',
+                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'analyzer'}],
+                            'StatisticValues': {
+                                'Minimum': 2,
+                                'Maximum': 2,
+                                'SampleCount': 1,
+                                'Sum': 2
+                            },
+                            'Unit': 'Count'
+                        },
+                        {
+                            'MetricName': 'DispatchInvocations',
+                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'downloader'}],
+                            'Value': 1,
+                            'Unit': 'Count'
+                        },
+                        {
+                            'MetricName': 'DispatchBatchSize',
+                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'downloader'}],
+                            'StatisticValues': {
+                                'Minimum': 1,
+                                'Maximum': 1,
+                                'SampleCount': 1,
+                                'Sum': 1
+                            },
+                            'Unit': 'Count'
                         }
                     ]
-                }),
-                receipt_handle='receipt1'
-            ),
-            MockSQSMessage(
-                body=json.dumps({
-                    'Records': [
-                        {
-                            's3': {
-                                'bucket': {'name': 'test-bucket'},
-                                'object': {'key': 'test-key-3'}
-                            }
-                        }
-                    ]
-                }),
-                receipt_handle='receipt2'
-            )
-        ]
-
-        with mock.patch.object(self.dispatcher_main, 'LOGGER') as mock_logger:
-            invocations = self.dispatcher_main.dispatch_lambda_handler(
-                {},
-                common.MockLambdaContext(decrement_ms=10000)
-            )
-            self.assertEqual(1, invocations)
-
-            mock_logger.assert_has_calls([
-                mock.call.info('Sending %d object(s) from %d SQS receipt(s)', 3, 2),
-                mock.call.info('Invoked %d total analyzers', 1)
+                )
             ])
-
-        self.dispatcher_main.LAMBDA.assert_has_calls([
-            mock.call.invoke(
-                FunctionName='test-analyzer',
-                InvocationType='Event',
-                Payload=json.dumps({
-                    'Records': [
-                        {
-                            's3': {
-                                'bucket': {'name': 'test-bucket'},
-                                'object': {'key': 'test-key-1'}
-                            }
-                        },
-                        {
-                            's3': {
-                                'bucket': {'name': 'test-bucket'},
-                                'object': {'key': 'test-key-2'}
-                            }
-                        },
-                        {
-                            's3': {
-                                'bucket': {'name': 'test-bucket'},
-                                'object': {'key': 'test-key-3'}
-                            }
-                        },
-                    ],
-                    'SQSReceipts': ['receipt1', 'receipt2']
-                }),
-                Qualifier='Production'
-            )
-        ])

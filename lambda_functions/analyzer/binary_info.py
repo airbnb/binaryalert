@@ -59,7 +59,7 @@ class BinaryInfo(object):
             self.bucket_name, self.object_key, self.download_path)
         self.download_time_ms = (time.time() - start_time) * 1000
 
-    def __enter__(self):
+    def __enter__(self) -> Any:  # mypy/typing doesn't support recursive type yet
         """Download the binary from S3 and run YARA analysis."""
         self._download_from_s3()
         self.computed_sha, self.computed_md5 = file_hash.compute_hashes(self.download_path)
@@ -71,7 +71,7 @@ class BinaryInfo(object):
 
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exception_type: Any, exception_value: Any, traceback: Any) -> None:
         """Shred the downloaded binary and delete it from disk."""
         # Note: This runs even during exception handling (it is the "with" context).
         subprocess.check_call(['shred', '--remove', self.download_path])

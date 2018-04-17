@@ -92,10 +92,10 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
 
   queue {
-    queue_arn = "${aws_sqs_queue.s3_object_queue.arn}"
+    queue_arn = "${aws_sqs_queue.analyzer_queue.arn}"
     events    = ["s3:ObjectCreated:*"]
   }
 
   // The queue policy must be created before we can configure the S3 notification.
-  depends_on = ["aws_sqs_queue_policy.s3_object_queue_policy"]
+  depends_on = ["aws_sqs_queue_policy.analyzer_queue_policy"]
 }

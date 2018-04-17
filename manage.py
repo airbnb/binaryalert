@@ -5,6 +5,7 @@ import argparse
 import base64
 import getpass
 import inspect
+import json
 import os
 import re
 import subprocess
@@ -13,6 +14,8 @@ from typing import Set
 import unittest
 
 import boto3
+import cbapi
+from cbapi.response.models import Binary
 import hcl
 
 from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
@@ -71,7 +74,7 @@ class BinaryAlertConfig(object):
     VALID_CB_ENCRYPTED_TOKEN_FORMAT = r'\S{50,500}'
     VALID_CB_URL_FORMAT = r'https?://\S+'
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Parse the terraform.tfvars config file and make sure it contains every variable.
 
         Raises:
@@ -95,7 +98,7 @@ class BinaryAlertConfig(object):
         return self._config['aws_region']
 
     @aws_region.setter
-    def aws_region(self, value: str):
+    def aws_region(self, value: str) -> None:
         if not re.fullmatch(self.VALID_AWS_REGION_FORMAT, value, re.ASCII):
             raise InvalidConfigError(
                 'aws_region "{}" does not match format {}'.format(
@@ -108,7 +111,7 @@ class BinaryAlertConfig(object):
         return self._config['name_prefix']
 
     @name_prefix.setter
-    def name_prefix(self, value: str):
+    def name_prefix(self, value: str) -> None:
         if not re.fullmatch(self.VALID_NAME_PREFIX_FORMAT, value, re.ASCII):
             raise InvalidConfigError(
                 'name_prefix "{}" does not match format {}'.format(
@@ -121,7 +124,7 @@ class BinaryAlertConfig(object):
         return self._config['enable_carbon_black_downloader']
 
     @enable_carbon_black_downloader.setter
-    def enable_carbon_black_downloader(self, value: int):
+    def enable_carbon_black_downloader(self, value: int) -> None:
         if value not in {0, 1}:
             raise InvalidConfigError(
                 'enable_carbon_black_downloader "{}" must be either 0 or 1.'.format(value)
@@ -133,7 +136,7 @@ class BinaryAlertConfig(object):
         return self._config['carbon_black_url']
 
     @carbon_black_url.setter
-    def carbon_black_url(self, value: str):
+    def carbon_black_url(self, value: str) -> None:
         if not re.fullmatch(self.VALID_CB_URL_FORMAT, value, re.ASCII):
             raise InvalidConfigError(
                 'carbon_black_url "{}" does not match format {}'.format(
@@ -146,7 +149,7 @@ class BinaryAlertConfig(object):
         return self._config['encrypted_carbon_black_api_token']
 
     @encrypted_carbon_black_api_token.setter
-    def encrypted_carbon_black_api_token(self, value: str):
+    def encrypted_carbon_black_api_token(self, value: str) -> None:
         if not re.fullmatch(self.VALID_CB_ENCRYPTED_TOKEN_FORMAT, value, re.ASCII):
             raise InvalidConfigError(
                 'encrypted_carbon_black_api_token "{}" does not match format {}'.format(
@@ -154,6 +157,11 @@ class BinaryAlertConfig(object):
                 )
             )
         self._config['encrypted_carbon_black_api_token'] = value
+
+    @property
+    def plaintext_carbon_black_api_token(self) -> str:
+        return boto3.client('kms').decrypt(
+            CiphertextBlob=base64.b64decode(self.encrypted_carbon_black_api_token))['Plaintext']
 
     @property
     def force_destroy(self) -> str:
@@ -166,6 +174,10 @@ class BinaryAlertConfig(object):
     @property
     def binaryalert_batcher_name(self) -> str:
         return '{}_binaryalert_batcher'.format(self.name_prefix)
+
+    @property
+    def binaryalert_downloader_queue_name(self) -> str:
+        return '{}_binaryalert_downloader_queue'.format(self.name_prefix)
 
     @property
     def binaryalert_dynamo_table_name(self) -> str:
@@ -197,7 +209,7 @@ class BinaryAlertConfig(object):
         # The same key will be used by the downloader to decrypt the API token at runtime.
         print('Terraforming KMS key...')
         os.chdir(TERRAFORM_DIR)
-        subprocess.check_call(['terraform', 'get'])
+        subprocess.check_call(['terraform', 'init'])
         subprocess.check_call(
             ['terraform', 'apply', '-target={}'.format(CB_KMS_ALIAS_TERRAFORM_ID)]
         )
@@ -314,7 +326,7 @@ class BinaryAlertConfig(object):
 class Manager(object):
     """BinaryAlert management utility."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Parse the terraform.tfvars config file."""
         self._config = BinaryAlertConfig()
 
@@ -343,7 +355,7 @@ class Manager(object):
 
         # Validate the configuration.
         try:
-            if command not in {'compile_rules', 'configure', 'unit_test'}:
+            if command not in {'clone_rules', 'compile_rules', 'configure', 'unit_test'}:
                 self._config.validate()
             getattr(self, command)()  # Command validation already happened in the ArgumentParser.
         except InvalidConfigError as error:
@@ -381,22 +393,35 @@ class Manager(object):
         lambda_build(TERRAFORM_DIR, self._config.enable_carbon_black_downloader == 1)
 
     def cb_copy_all(self) -> None:
-        """Copy all binaries from CarbonBlack into BinaryAlert.
+        """Copy all binaries from CarbonBlack Response into BinaryAlert.
 
         Raises:
             InvalidConfigError: If the CarbonBlack downloader is not enabled.
         """
         if not self._config.enable_carbon_black_downloader:
             raise InvalidConfigError('CarbonBlack downloader is not enabled.')
-        os.environ['CARBON_BLACK_URL'] = self._config.carbon_black_url
-        os.environ['ENCRYPTED_CARBON_BLACK_API_TOKEN'] = (
-            self._config.encrypted_carbon_black_api_token
-        )
-        os.environ['TARGET_S3_BUCKET'] = self._config.binaryalert_s3_bucket_name
 
-        # Downloader must be imported here because the cb_api is configured at import time.
-        from lambda_functions.downloader import copy_all
-        copy_all.copy_all_binaries()
+        print('Connecting to CarbonBlack server {} ...'.format(self._config.carbon_black_url))
+        carbon_black = cbapi.CbEnterpriseResponseAPI(
+            url=self._config.carbon_black_url, token=self._config.plaintext_carbon_black_api_token)
+        print('Connecting to SQS queue {} ...'.format(
+            self._config.binaryalert_downloader_queue_name))
+        queue = boto3.resource('sqs').get_queue_by_name(
+            QueueName=self._config.binaryalert_downloader_queue_name)
+
+        md5s = []
+        for index, binary in enumerate(carbon_black.select(Binary).all()):
+            print('\r{} {}'.format(index, binary.md5), flush=True, end='')
+            md5s.append(binary.md5)
+            if len(md5s) == 10:  # Up to 10 messages can be delivered at a time.
+                response = queue.send_messages(
+                    Entries=[
+                        {'Id': str(i), 'MessageBody': json.dumps({'md5': md5})}
+                        for i, md5 in enumerate(md5s)
+                    ]
+                )
+                # If there were any failures sending to SQS, put those back in the md5s list.
+                md5s = [md5s[int(failure['Id'])] for failure in response.get('Failed', [])]
 
     @staticmethod
     def clone_rules() -> None:

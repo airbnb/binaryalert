@@ -10,7 +10,7 @@ import boto3
 from tests import common
 
 
-@mock.patch.dict(os.environ, {
+@mock.patch.dict(os.environ, values={
     'BATCH_LAMBDA_NAME': 'test_batch_lambda_name',
     'BATCH_LAMBDA_QUALIFIER': 'Production',
     'OBJECTS_PER_MESSAGE': '2',
@@ -153,7 +153,8 @@ class MainTest(unittest.TestCase):
         self.batcher_main.S3.list_objects_v2 = mock_list
 
         with mock.patch.object(self.batcher_main, 'LOGGER') as mock_logger:
-            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext())
+            num_keys = self.batcher_main.batch_lambda_handler({}, common.MockLambdaContext(
+                time_limit_ms=50000, decrement_ms=10000))
             self.assertEqual(3, num_keys)
 
             mock_logger.assert_has_calls([
@@ -262,7 +263,7 @@ class MainTest(unittest.TestCase):
             ])
         ])
 
-    @mock.patch.dict(os.environ, {'OBJECT_PREFIX': 'important'})  # type: ignore
+    @mock.patch.dict(os.environ, values={'OBJECT_PREFIX': 'important'})
     def test_batcher_with_prefix(self):
         """Limit batch operation to object keys which start with the given prefix."""
         def mock_list(**kwargs):

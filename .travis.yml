@@ -8,8 +8,8 @@ install:
 script:
   - coverage run manage.py unit_test
   - coverage report  # Required coverage threshold specified in .coveragerc
-  - find . -name '*.py' -not -path './docs/source/*' -exec pylint '{}' +  # Config in .pylintrc
-  - mypy . --ignore-missing-imports
+  - pylint lambda_functions rules tests *.py -j 1  # Config in .pylintrc
+  - mypy lambda_functions rules *.py --disallow-untyped-defs --ignore-missing-imports --warn-unused-ignores
   - bandit -r .  # Configuration in .bandit
   - sphinx-build -W docs/source docs/build
 after_success:

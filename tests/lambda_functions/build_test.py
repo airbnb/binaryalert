@@ -14,7 +14,7 @@ from lambda_functions import build
 def _mock_pip_main(args_list: List[str]) -> None:
     """Mock pip install just creates the target directory."""
     directory = args_list[-2]
-    package = args_list[-1]
+    package = args_list[-1].split('==')[0]
     os.makedirs(os.path.join(directory, package))
 
 
@@ -32,7 +32,7 @@ class BuildTest(unittest.TestCase):
                           subset: bool = False):
         """Verify the set of filenames in the zip archive matches the expected list."""
         with zipfile.ZipFile(archive_path, 'r') as archive:
-            filenames = set(zip_info.filename for zip_info in archive.filelist)  # type: ignore
+            filenames = set(zip_info.filename for zip_info in archive.filelist)
         if subset:
             self.assertTrue(expected_filenames.issubset(filenames))
         else:
@@ -101,7 +101,7 @@ class BuildTest(unittest.TestCase):
         build._build_downloader(self._tempdir)
         self._verify_filenames(
             os.path.join(self._tempdir, build.DOWNLOAD_ZIPFILE + '.zip'),
-            {'backoff/', 'cbapi/', 'main.py'},
+            {'cbapi/', 'main.py'},
             subset=True
         )
         mock_pip.assert_called_once()

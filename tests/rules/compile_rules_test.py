@@ -12,6 +12,7 @@ from rules import compile_rules
 @mock.patch.object(compile_rules, 'RULES_DIR', '/rules')
 class FindYaraFilesTest(fake_filesystem_unittest.TestCase):
     """Verify that we can walk the rules directory and retrieve all .yar[a] rules."""
+    # pylint: disable=no-member
 
     def setUp(self):
         """Setup the fake filesystem."""

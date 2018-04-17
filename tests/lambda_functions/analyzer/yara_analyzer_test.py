@@ -39,7 +39,7 @@ _YEXTEND_MATCH = [
 ]
 
 
-@mock.patch.dict(os.environ, {'LAMBDA_TASK_ROOT': '/var/task'})
+@mock.patch.dict(os.environ, values={'LAMBDA_TASK_ROOT': '/var/task'})
 class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
     """Uses the real YARA library to parse the test rules."""
 
@@ -51,6 +51,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
             self._analyzer = yara_analyzer.YaraAnalyzer('./all.yara.rules')
 
         # Write target file.
+        # pylint: disable=no-member
         self.fs.CreateFile('./target.exe', contents='This is definitely not an evil file. ^_^\n')
 
     @staticmethod

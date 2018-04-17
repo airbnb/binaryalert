@@ -52,8 +52,20 @@ class MainTest(fake_filesystem_unittest.TestCase):
             observed_filenames=['/Users/name/file.txt'],
             os_type='Linux',
             virustotal=MockBinary.MockVirusTotal(),
-            webui_link='example.com'
+            webui_link='example.com/file'
         )
+
+        # Create the test event.
+        self.event = {
+            'messages': [
+                {
+                    'body': '{"md5": "ABC123"}',
+                    'receipt': 'TEST-RECEIPT',
+                    'receive_count': 1
+                }
+            ],
+            'queue_url': 'TEST-QUEUE-URL'
+        }
 
         # Mock out cbapi and import the file under test.
         with mock.patch.object(boto3, 'client'), mock.patch.object(boto3, 'resource'), \
@@ -64,14 +76,11 @@ class MainTest(fake_filesystem_unittest.TestCase):
     def test_download_from_carbon_black(self):
         """Verify that a CarbonBlack binary is uploaded correctly to S3."""
         with mock.patch.object(self.download_main.CARBON_BLACK, 'select') as mock_select, \
-                mock.patch.object(self.download_main.LOGGER, 'info') as mock_info_logger, \
-                mock.patch.object(self.download_main.os, 'remove'):
+                mock.patch.object(self.download_main, 'LOGGER') as mock_logger, \
+                mock.patch.object(self.download_main, 'subprocess') as mock_subprocess:
             mock_select.return_value = self._binary
 
-            upload_s3_key = self.download_main.download_lambda_handler({'md5': 'ABC123'}, None)
-
-            # Check return value.
-            self.assertEqual('carbonblack/ABC123', upload_s3_key)
+            self.download_main.download_lambda_handler(self.event, None)
 
             expected_metadata = {
                 'carbon_black_group': 'Production,Laptops',
@@ -80,7 +89,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 'carbon_black_md5': 'ABC123',
                 'carbon_black_os_type': 'Linux',
                 'carbon_black_virustotal_score': '0',
-                'carbon_black_webui_link': 'example.com',
+                'carbon_black_webui_link': 'example.com/file',
                 'filepath': '/Users/name/file.txt'
             }
 
@@ -90,11 +99,15 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 )
             ])
 
+            mock_subprocess.assert_has_calls([
+                mock.call.check_call(['shred', '--remove', mock.ANY])
+            ])
+
             # Verify the log statements.
-            mock_info_logger.assert_has_calls([
-                mock.call('Invoked with event %s', {'md5': 'ABC123'}),
-                mock.call(
+            mock_logger.assert_has_calls([
+                mock.call.info(
                     'Downloading %s to %s', self._binary.webui_link, mock.ANY),
-                mock.call('Retrieving binary metadata'),
-                mock.call('Uploading to S3 with key %s', upload_s3_key)
+                mock.call.info('Uploading to S3 with key %s', mock.ANY),
+                mock.call.info('Deleting %d SQS receipt(s)', 1),
+                mock.call.info('Sending ReceiveCount metrics')
             ])

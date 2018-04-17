@@ -9,7 +9,7 @@ from lambda_functions.analyzer import file_hash
 
 class FileUtilsTest(fake_filesystem_unittest.TestCase):
     """Unit tests for file utilities."""
-    # pylint: disable=protected-access
+    # pylint: disable=no-member,protected-access
 
     def setUp(self):
         """Enable the fake filesystem and write some test files."""
