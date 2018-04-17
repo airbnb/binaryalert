@@ -1,5 +1,4 @@
 """Unit tests for batcher main.py. Mocks out boto3 clients."""
-import collections
 import os
 import unittest
 from unittest import mock
@@ -9,14 +8,11 @@ import moto
 
 from tests import common
 
-MockSQSMessage = collections.namedtuple('MockSQSMessage', ['attributes', 'body', 'receipt_handle'])
 
-
-@moto.mock_cloudwatch()
-@moto.mock_lambda()
 @moto.mock_sqs()
 class MainTest(unittest.TestCase):
-    """Test the dispatch handler."""
+    """Test lambda_functions/dispatcher"""
+    # pylint: disable=protected-access
 
     def setUp(self):
         """Set environment variables and setup the mocks."""
@@ -46,83 +42,40 @@ class MainTest(unittest.TestCase):
         self.assertEqual('downloader', self.config2.lambda_name)
         self.assertEqual('staging', self.config2.lambda_qualifier)
 
-    def test_dispatch_no_messages(self):
-        """Dispatcher doesn't do anything if there are no SQS messages."""
-        with mock.patch.object(self.main, 'WAIT_TIME_SECONDS', 0), \
-                mock.patch.object(self.main, 'LOGGER') as mock_logger:
-            self.main.dispatch_lambda_handler(None, common.MockLambdaContext())
-            mock_logger.assert_not_called()
-
-    def test_dispatch_invokes_all_targets(self):
+    def test_sqs_poll(self):
         """Dispatcher invokes each of the Lambda targets with data from its respective queue."""
         self.config1.queue.send_message(MessageBody='queue1-message1')
         self.config1.queue.send_message(MessageBody='queue1-message2')
-        self.config2.queue.send_message(MessageBody='queue2-message1')
 
         with mock.patch.object(self.main, 'LOGGER') as mock_logger, \
-                mock.patch.object(self.main, 'CLOUDWATCH') as mock_cloudwatch, \
-                mock.patch.object(self.main, 'LAMBDA') as mock_lambda:
-            self.main.dispatch_lambda_handler(None, common.MockLambdaContext())
+                mock.patch.object(self.main, 'LAMBDA') as mock_lambda, \
+                mock.patch.object(self.main, 'WAIT_TIME_SECONDS', 0):
+            self.main._sqs_poll(self.config1, common.MockLambdaContext())
 
             mock_logger.assert_has_calls([
-                mock.call.info('Sending %d messages to %s:%s', 2, 'analyzer', 'production'),
-                mock.call.info('Sending %d messages to %s:%s', 1, 'downloader', 'staging'),
-                mock.call.info('Publishing invocation metrics')
+                mock.call.info(
+                    'Polling process started: %s => lambda:%s:%s',
+                    self.config1.queue.url,
+                    self.config1.lambda_name, self.config1.lambda_qualifier),
+                mock.call.info('Sending %d messages to %s:%s', 2, 'analyzer', 'production')
             ])
 
-            mock_lambda.assert_has_calls([
-                mock.call.invoke(
-                    FunctionName='analyzer',
-                    InvocationType='Event',
-                    Payload=mock.ANY,
-                    Qualifier='production'
-                ),
-                mock.call.invoke(
-                    FunctionName='downloader',
-                    InvocationType='Event',
-                    Payload=mock.ANY,
-                    Qualifier='staging'
-                )
-            ])
+            mock_lambda.invoke.assert_called_once_with(
+                FunctionName='analyzer',
+                InvocationType='Event',
+                Payload=mock.ANY,
+                Qualifier='production'
+            )
 
-            mock_cloudwatch.assert_has_calls([
-                mock.call.put_metric_data(
-                    Namespace='BinaryAlert',
-                    MetricData=[
-                        {
-                            'MetricName': 'DispatchInvocations',
-                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'analyzer'}],
-                            'Value': 1,
-                            'Unit': 'Count'
-                        },
-                        {
-                            'MetricName': 'DispatchBatchSize',
-                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'analyzer'}],
-                            'StatisticValues': {
-                                'Minimum': 2,
-                                'Maximum': 2,
-                                'SampleCount': 1,
-                                'Sum': 2
-                            },
-                            'Unit': 'Count'
-                        },
-                        {
-                            'MetricName': 'DispatchInvocations',
-                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'downloader'}],
-                            'Value': 1,
-                            'Unit': 'Count'
-                        },
-                        {
-                            'MetricName': 'DispatchBatchSize',
-                            'Dimensions': [{'Name': 'FunctionName', 'Value': 'downloader'}],
-                            'StatisticValues': {
-                                'Minimum': 1,
-                                'Maximum': 1,
-                                'SampleCount': 1,
-                                'Sum': 1
-                            },
-                            'Unit': 'Count'
-                        }
-                    ]
-                )
+    def test_dispatch_handler(self):
+        """Dispatch handler creates and starts processes."""
+        with mock.patch.object(self.main, 'Process') as mock_process:
+            self.main.dispatch_lambda_handler(None, common.MockLambdaContext())
+            mock_process.assert_has_calls([
+                mock.call(target=self.main._sqs_poll, args=(self.config1, mock.ANY)),
+                mock.call(target=self.main._sqs_poll, args=(self.config2, mock.ANY)),
+                mock.call().start(),
+                mock.call().start(),
+                mock.call().join(),
+                mock.call().join()
             ])
