@@ -64,7 +64,7 @@ def _invoke_lambda(queue_url: str, sqs_messages: List[Any], config: DispatchConf
     )
 
 
-def _sqs_poll(config: DispatchConfig, lambda_context: Any):
+def _sqs_poll(config: DispatchConfig, lambda_context: Any) -> None:
     """Process entry point: long polling of a single queue."""
     LOGGER.info('Polling process started: %s => lambda:%s:%s',
                 config.queue.url, config.lambda_name, config.lambda_qualifier)
