@@ -83,7 +83,7 @@ EOF
   "type": "metric",
   "width": 12,
   "properties": {
-    "title": "Analyzer SQS - Age Of Oldest Message (Seconds)",
+    "title": "Analyzer SQS - Age Of Oldest Message",
     "region": "${var.aws_region}",
     "stat": "Average",
     "metrics": [
@@ -136,7 +136,7 @@ EOF
   "type": "metric",
   "width": 12,
   "properties": {
-    "title": "Downloader SQS - Age Of Oldest Message (Seconds)",
+    "title": "Downloader SQS - Age Of Oldest Message",
     "region": "${var.aws_region}",
     "stat": "Average",
     "metrics": [
@@ -197,7 +197,7 @@ EOF
   "type": "metric",
   "width": 12,
   "properties": {
-    "title": "Maximum Lambda Duration (ms)",
+    "title": "Maximum Lambda Duration",
     "region": "${var.aws_region}",
     "stat": "Maximum",
     "metrics": [
@@ -265,7 +265,7 @@ EOF
   "type": "metric",
   "width": 12,
   "properties": {
-    "title": "S3 Download Latency (ms)",
+    "title": "S3 Download Latency",
     "region": "${var.aws_region}",
     "metrics": [
       ["BinaryAlert", "S3DownloadLatency", {"label": "Minimum", "stat": "Minimum"}],
@@ -305,7 +305,7 @@ EOF
   "type": "metric",
   "width": 12,
   "properties": {
-    "title": "BinaryAlert Logs (Bytes)",
+    "title": "BinaryAlert Logs",
     "region": "${var.aws_region}",
     "stacked": true,
     "stat": "Sum",

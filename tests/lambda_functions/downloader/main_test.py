@@ -46,7 +46,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
         self._binary = MockBinary(
             b'hello world',
             group=['Production', 'Laptops'],
-            host_count=2,
             last_seen='sometime-recently',
             md5='ABC123',
             observed_filenames=['/Users/name/file.txt'],
@@ -84,7 +83,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
             expected_metadata = {
                 'carbon_black_group': 'Production,Laptops',
-                'carbon_black_host_count': '2',
                 'carbon_black_last_seen': 'sometime-recently',
                 'carbon_black_md5': 'ABC123',
                 'carbon_black_os_type': 'Linux',

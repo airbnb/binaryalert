@@ -68,9 +68,9 @@ EOF
     QueueName = "${aws_sqs_queue.analyzer_queue.name}"
   }
 
-  // The queue is consistently more than 30 minutes behind.
+  // The queue is consistently more than 2 hours behind.
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = 1800
+  threshold                 = 7200
   period                    = 60
   evaluation_periods        = 15
   alarm_actions             = ["${aws_sns_topic.metric_alarms.arn}"]
@@ -95,9 +95,9 @@ EOF
     QueueName = "${aws_sqs_queue.downloader_queue.name}"
   }
 
-  // The queue is consistently more than 30 minutes behind.
+  // The queue is consistently more than 2 hours behind.
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = 1800
+  threshold                 = 7200
   period                    = 60
   evaluation_periods        = 15
   alarm_actions             = ["${aws_sns_topic.metric_alarms.arn}"]
@@ -116,8 +116,8 @@ ${aws_sqs_queue.dead_letter_queue.name}.
 EOF
 
   namespace   = "AWS/SQS"
-  metric_name = "NumberOfMessagesReceived"
-  statistic   = "Sum"
+  metric_name = "ApproximateNumberOfMessagesVisible"
+  statistic   = "Maximum"
 
   dimensions = {
     QueueName = "${aws_sqs_queue.dead_letter_queue.name}"
