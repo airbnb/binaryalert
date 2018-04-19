@@ -2,6 +2,9 @@
 resource "aws_sqs_queue" "analyzer_queue" {
   name = "${var.name_prefix}_binaryalert_analyzer_queue"
 
+  // Messages are dropped from the queue after 12 hours
+  message_retention_seconds = 43200
+
   // When a message is received, it will be invisible to other consumers for this long.
   // Set to just a few seconds after the lambda analyzer would timeout.
   visibility_timeout_seconds = "${format("%d", var.lambda_analyze_timeout_sec + 2)}"
@@ -43,6 +46,10 @@ resource "aws_sqs_queue_policy" "analyzer_queue_policy" {
 resource "aws_sqs_queue" "downloader_queue" {
   count = "${var.enable_carbon_black_downloader}"
   name  = "${var.name_prefix}_binaryalert_downloader_queue"
+
+  // Messages are dropped from the queue after 12 hours
+  // (In practice, the redrive policy should kick in long before then)
+  message_retention_seconds = 43200
 
   // When a message is received, it will be invisible to other consumers for this long.
   // Set to just a few seconds after the downloader would timeout.

@@ -73,8 +73,8 @@ def _download_from_carbon_black(binary: Binary) -> str:
 def _build_metadata(binary: Binary) -> Dict[str, str]:
     """Return basic metadata to make it easier to triage YARA match alerts."""
     return {
-        'carbon_black_group': ','.join(binary.group),
-        'carbon_black_host_count': str(binary.host_count),
+        'carbon_black_group': (
+            ','.join(binary.group) if isinstance(binary.group, list) else binary.group),
         'carbon_black_last_seen': binary.last_seen,
         'carbon_black_md5': binary.md5,
         'carbon_black_os_type': binary.os_type,
@@ -83,6 +83,7 @@ def _build_metadata(binary: Binary) -> Dict[str, str]:
         'filepath': (
             # Throw out any non-ascii characters (S3 metadata must be ascii).
             binary.observed_filenames[0].encode('ascii', 'ignore').decode('ascii')
+            if binary.observed_filenames else '(unknown)'
         )
     }
 

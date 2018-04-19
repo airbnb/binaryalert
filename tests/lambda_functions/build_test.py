@@ -6,8 +6,6 @@ import unittest
 from unittest import mock
 import zipfile
 
-import pip
-
 from lambda_functions import build
 
 
@@ -110,7 +108,7 @@ class BuildTest(unittest.TestCase):
         )
         mock_print.assert_called_once()
 
-    @mock.patch.object(pip, 'main', side_effect=_mock_pip_main)
+    @mock.patch.object(build.subprocess, 'check_call', side_effect=_mock_pip_main)
     def test_build_downloader(self, mock_pip: mock.MagicMock, mock_print: mock.MagicMock):
         """Verify list of bundled files for the downloader."""
         build._build_downloader(self._tempdir)

@@ -4,10 +4,10 @@ import os
 import pathlib
 import shutil
 import stat
+import subprocess
+import sys
 import tempfile
 import zipfile
-
-import pip
 
 from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
 from rules.compile_rules import compile_rules
@@ -84,7 +84,10 @@ def _build_downloader(target_directory: str) -> None:
         shutil.rmtree(temp_package_dir)
 
     # Pip install cbapi library (has no native dependencies).
-    pip.main(['install', '--quiet', '--target', temp_package_dir, 'cbapi==1.3.6'])
+    subprocess.check_call([
+        sys.executable, '-m', 'pip', 'install',
+        '--quiet', '--target', temp_package_dir, 'cbapi==1.3.6'
+    ])
 
     # Copy Lambda code into the package.
     shutil.copy(DOWNLOAD_SOURCE, temp_package_dir)
