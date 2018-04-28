@@ -43,6 +43,11 @@ def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMat
             continue
 
         rule_name = result['yara_rule_id']
+        if rule_name.lower().startswith('anomalies present in archive'):
+            # Yextend was unable to analyze this archive, e.g. password-protected zipfile.
+            # This isn't actually a YARA match result, so we elide it.
+            continue
+
         rule_namespace = 'yextend'  # TODO: Yextend does not yet report namespaces
         matched_strings = set(
             x.split(':')[1] for x in result.get('detected offsets', []) if ':' in x)

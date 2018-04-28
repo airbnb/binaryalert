@@ -26,6 +26,13 @@ _YEXTEND_MATCH = [
                 "yara_matches_found": False,
             },
             {
+                # This should be ignored
+                "detected offsets": ["0x30:$abc"],
+                "scan_type": "Scan1",
+                "yara_matches_found": True,
+                "yara_rule_id": "Anomalies present in Archive (possible Decompression Bomb)"
+            },
+            {
                 "author": "Airbnb",
                 "detected offsets": ["0x0:$longer_string_name"],
                 "description": "Hello, YARA world",
