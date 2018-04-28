@@ -127,6 +127,7 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
     """
     # Executables in the root of the deployment package (upx, pdftotext, etc) are added to PATH.
     os.environ['PATH'] = '{}:{}'.format(os.environ['PATH'], os.environ['LAMBDA_TASK_ROOT'])
+    os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
 
     result = {}
     binaries = []  # List of the BinaryInfo data.

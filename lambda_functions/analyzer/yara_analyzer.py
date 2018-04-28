@@ -44,7 +44,8 @@ def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMat
 
         rule_name = result['yara_rule_id']
         rule_namespace = 'yextend'  # TODO: Yextend does not yet report namespaces
-        matched_strings = set(x.split(':')[1] for x in result.get('detected offsets', []))
+        matched_strings = set(
+            x.split(':')[1] for x in result.get('detected offsets', []) if ':' in x)
 
         rule_metadata = {}
         for key, value in result.items():
@@ -92,6 +93,49 @@ class YaraAnalyzer(object):
             'filetype': file_suffix.upper()  # Used in only one rule (checking for "GIF").
         }
 
+    def _yextend_matches(self, target_file: str) -> List[YaraMatch]:
+        """Use yextend to check for YARA matches against archive contents.
+
+        Args:
+            target_file: Local path to target file to be analyzed.
+
+        Returns:
+            List of YaraMatch tuples, or an empty list if yextend didn't work correctly.
+        """
+        try:
+            output = subprocess.check_output(
+                ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'],
+                stderr=subprocess.STDOUT
+            )
+        except subprocess.CalledProcessError:
+            LOGGER.exception('Yextend invocation failed')
+            return []
+
+        try:
+            decoded_output = output.decode('utf-8')
+        except UnicodeDecodeError:
+            LOGGER.error('Yextend output could not be decoded to utf-8:\n%s', output)
+            return []
+
+        try:
+            yextend_list = json.loads(decoded_output)
+        except json.JSONDecodeError:
+            # There may be an error message on the first line and then the JSON result.
+            try:
+                yextend_list = json.loads('\n'.join(decoded_output.split('\n')[1:]))
+            except json.JSONDecodeError:
+                # Still can't parse as JSON
+                LOGGER.error('Cannot parse yextend output as JSON:\n%s', decoded_output)
+                return []
+
+        # Yextend worked!
+        try:
+            return _convert_yextend_to_yara_match(yextend_list[0])
+        except (KeyError, IndexError):
+            LOGGER.exception('Unexpected yextend output format')
+            LOGGER.error('Yextend output: %s', decoded_output)
+            return []
+
     def analyze(self, target_file: str, original_target_path: str = '') -> List[YaraMatch]:
         """Run YARA analysis on a file.
 
@@ -104,13 +148,13 @@ class YaraAnalyzer(object):
         """
         # UPX-unpack the file if possible
         try:
-            subprocess.check_call(['./upx', '-d', target_file])
+            # Ignore all UPX output
+            subprocess.check_output(['./upx', '-q', '-d', target_file], stderr=subprocess.STDOUT)
             LOGGER.info('Unpacked UPX-compressed file %s', target_file)
         except subprocess.CalledProcessError:
             pass  # Not a packed file
 
         # Raw YARA matches (yara-python)
-        # TODO: Once yextend is more robust, we may eventually not need yara-python anymore.
         raw_yara_matches = self._rules.match(
             target_file, externals=self._yara_variables(original_target_path)
         )
@@ -119,17 +163,4 @@ class YaraAnalyzer(object):
             for m in raw_yara_matches
         ]
 
-        # Yextend matches
-        os.environ['LD_LIBRARY_PATH'] = os.environ['LAMBDA_TASK_ROOT']
-        yextend_output = None
-        try:
-            yextend_output = subprocess.check_output(
-                ['./yextend', '-r', self._compiled_rules_file, '-t', target_file, '-j'])
-            yextend_list = json.loads(yextend_output.decode('utf-8'))
-            return yara_python_matches + _convert_yextend_to_yara_match(yextend_list[0])
-        except Exception:  # pylint: disable=broad-except
-            # If yextend fails for any reason, still return the yara-python match results.
-            LOGGER.exception('Error running yextend or parsing its output')
-            if yextend_output:
-                LOGGER.error('yextend output: <%s>', yextend_output)
-            return yara_python_matches
+        return yara_python_matches + self._yextend_matches(target_file)
