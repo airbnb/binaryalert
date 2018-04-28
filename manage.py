@@ -402,7 +402,7 @@ class Manager(object):
             raise InvalidConfigError('CarbonBlack downloader is not enabled.')
 
         print('Connecting to CarbonBlack server {} ...'.format(self._config.carbon_black_url))
-        carbon_black = cbapi.CbEnterpriseResponseAPI(
+        carbon_black = cbapi.CbResponseAPI(
             url=self._config.carbon_black_url, token=self._config.plaintext_carbon_black_api_token)
         print('Connecting to SQS queue {} ...'.format(
             self._config.binaryalert_downloader_queue_name))
