@@ -242,16 +242,16 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 )
             ])
 
-            # Verify 2 subprocess calls (yextend over each binary)
+            # Verify 2 UPX and yextend calls
             mock_output.assert_has_calls([
-                mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j']),
-                mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j'])
-            ])
+                mock.call(['./upx', '-q', '-d', mock.ANY], stderr=subprocess.STDOUT),
+                mock.call(['./yextend', '-r', COMPILED_RULES_FILEPATH, '-t', mock.ANY, '-j'],
+                          stderr=subprocess.STDOUT)
+            ] * 2)
 
-            # Verify 2 UPX and 2 shred calls
+            # Verify 2 shred calls
             mock_call.assert_has_calls([
-                mock.call(['./upx', '-d', mock.ANY]),
-                mock.call(['shred', '--remove', mock.ANY])
+                mock.call(['shred', '--force', '--remove', mock.ANY])
             ] * 2)
 
         # Verify return value.

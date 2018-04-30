@@ -34,7 +34,7 @@ class DynamoMatchTableTest(unittest.TestCase):
         """Before each test, setup a BinaryInfo."""
         self._binary = binary_info.BinaryInfo('test-bucket', 'test-key', None)
         self._binary.s3_last_modified = 'time:right_now'
-        self._binary.s3_metadata = {'test-filename': 'test.txt'}
+        self._binary.s3_metadata = {'test-filename': 'test.txt', 'empty-filename': ''}
         self._binary.computed_md5 = 'Computed_MD5'
         self._binary.computed_sha = 'Computed_SHA'
         self._binary.yara_matches = [YaraMatch('rule_name', 'file.yara', dict(), set())]
@@ -54,7 +54,7 @@ class DynamoMatchTableTest(unittest.TestCase):
                 'MatchedRules': {'file.yara:rule_name'},
                 'MD5': 'Computed_MD5',
                 'S3LastModified': 'time:right_now',
-                'S3Metadata': {'test-filename': 'test.txt'},
+                'S3Metadata': {'test-filename': 'test.txt', 'empty-filename': '(empty)'},
                 'S3Objects': {'S3:test-bucket:test-key'}
             })
         ])
@@ -82,7 +82,7 @@ class DynamoMatchTableTest(unittest.TestCase):
                 'MatchedRules': {'file.yara:rule_name'},
                 'MD5': 'Computed_MD5',
                 'S3LastModified': 'time:right_now',
-                'S3Metadata': {'test-filename': 'test.txt'},
+                'S3Metadata': {'test-filename': 'test.txt', 'empty-filename': '(empty)'},
                 'S3Objects': {'S3:test-bucket:test-key'}
             })
         ])
@@ -163,7 +163,7 @@ class DynamoMatchTableTest(unittest.TestCase):
                 'MatchedRules': {'new_file.yara:different_rule_name', 'file.yara:rule_name'},
                 'MD5': 'Computed_MD5',
                 'S3LastModified': 'time:right_now',
-                'S3Metadata': {'test-filename': 'test.txt'},
+                'S3Metadata': {'test-filename': 'test.txt', 'empty-filename': '(empty)'},
                 'S3Objects': {'S3:test-bucket:test-key'}})
         ])
 

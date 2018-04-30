@@ -72,9 +72,15 @@ class BinaryInfo(object):
         return self
 
     def __exit__(self, exception_type: Any, exception_value: Any, traceback: Any) -> None:
-        """Shred the downloaded binary and delete it from disk."""
+        """Shred and delete all /tmp files (including the downloaded binary)."""
         # Note: This runs even during exception handling (it is the "with" context).
-        subprocess.check_call(['shred', '--remove', self.download_path])
+        # The only temp file we explicitly create is self.download_path, but others can be left
+        # behind by subprocesses (e.g. pdftotext).
+        for root, dirs, files in os.walk(tempfile.gettempdir(), topdown=False):
+            for name in files:
+                subprocess.check_call(['shred', '--force', '--remove', os.path.join(root, name)])
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
 
     @property
     def matched_rule_ids(self) -> Set[str]:

@@ -211,6 +211,14 @@ class DynamoMatchTable(object):
         else:
             return None
 
+    @staticmethod
+    def _replace_empty_strings(data: Dict[str, str]) -> Dict[str, str]:
+        """Replace empty string values, which are not allowed in Dynamo."""
+        for key, val in data.items():
+            if val == '':
+                data[key] = '(empty)'
+        return data
+
     def _create_new_entry(self, binary: BinaryInfo, analyzer_version: int) -> None:
         """Create a new Dynamo entry with YARA match information."""
         LOGGER.info('Creating new entry (SHA256: %s, AnalyzerVersion: %d)',
@@ -221,7 +229,7 @@ class DynamoMatchTable(object):
             'MatchedRules': binary.matched_rule_ids,
             'MD5': binary.computed_md5,
             'S3LastModified': binary.s3_last_modified,
-            'S3Metadata': binary.s3_metadata,
+            'S3Metadata': self._replace_empty_strings(binary.s3_metadata),
             'S3Objects': {binary.s3_identifier}
         }
         try:
