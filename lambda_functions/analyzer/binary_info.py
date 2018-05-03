@@ -110,6 +110,21 @@ class BinaryInfo(object):
             LOGGER.info('Publishing an SNS alert')
             analyzer_aws_lib.publish_alert_to_sns(self, sns_topic_arn)
 
+    # alerts on files that are safe
+    def safe_alert_only(
+            self, analyzer_version: int, sns_topic_arn: str) -> None:
+        """Publish an alert to SNS .
+
+        Args:
+            analyzer_version: The currently executing version of the Lambda function.
+            sns_topic_arn: Publish match alerts to this SNS topic ARN.
+        """
+
+        # Send alert appropriate.
+
+        LOGGER.info('Publishing an SNS alert')
+        analyzer_aws_lib.publish_safe_to_sns(self, sns_topic_arn)
+
     def summary(self) -> Dict[str, Any]:
         """Generate a summary dictionary of binary attributes."""
         matched_rules = {
