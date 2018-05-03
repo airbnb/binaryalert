@@ -88,6 +88,20 @@ def publish_alert_to_sns(binary: BinaryInfo, topic_arn: str) -> None:
         Message=(json.dumps(binary.summary(), indent=4, sort_keys=True))
     )
 
+def publish_safe_to_sns(binary: BinaryInfo, topic_arn: str) -> None:
+    """Publish a JSON SNS alert: a binary has matched none and is safe.
+
+    Args:
+        binary: Instance containing information about the binary.
+        topic_arn: Publish to this SNS topic ARN.
+    """
+    subject = '[BinaryAlert] {} is a safe file'.format(
+        binary.filepath or binary.computed_sha)
+    SNS.Topic(topic_arn).publish(
+        Subject=_elide_string_middle(subject, SNS_PUBLISH_SUBJECT_MAX_SIZE),
+        Message=(json.dumps(binary.summary(), indent=4, sort_keys=True))
+    )
+
 
 def delete_sqs_messages(queue_url: str, receipts: List[str]) -> None:
     """Mark a batch of SQS receipts as completed (removing them from the queue).
