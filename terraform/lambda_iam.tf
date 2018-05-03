@@ -57,6 +57,13 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
   }
 
   statement {
+    sid       = "PublishAlertsToSNS"
+    effect    = "Allow"
+    actions   = ["sns:Publish"]
+    resources = ["${aws_sns_topic.safe_alerts.arn}"]
+  }
+
+  statement {
     sid       = "DeleteSQSMessages"
     effect    = "Allow"
     actions   = ["sqs:DeleteMessage"]
