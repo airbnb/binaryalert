@@ -6,10 +6,10 @@
 // These are the only settings you need to get started.
 
 // AWS region in which to deploy the BinaryAlert components.
-aws_region = "eu-west-1"
+aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = "fork2binary"
+name_prefix = ""
 
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
