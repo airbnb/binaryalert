@@ -11,5 +11,5 @@ resource "aws_sns_topic" "metric_alarms" {
 //No YARA match alerts will be published to this SNS topic.
 resource "aws_sns_topic" "safe_alerts" {
   count = "${var.enable_safe_alerts}"
-  name = "${var.name_prefix}_binaryalert_safe_alerts"
+  name  = "${var.name_prefix}_binaryalert_safe_alerts"
 }
