@@ -151,10 +151,10 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
             continue
 
         if binary.yara_matches:
-                LOGGER.warning('%s matched YARA rules: %s', binary, binary.matched_rule_ids)
-                binary.save_matches_and_alert(
-                    lambda_version, os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'],
-                    os.environ['YARA_ALERTS_SNS_TOPIC_ARN'])
+            LOGGER.warning('%s matched YARA rules: %s', binary, binary.matched_rule_ids)
+            binary.save_matches_and_alert(
+                lambda_version, os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'],
+                os.environ['YARA_ALERTS_SNS_TOPIC_ARN'])
         else:
             LOGGER.info('%s did not match any YARA rules', binary)
             binary.safe_alert_only(
