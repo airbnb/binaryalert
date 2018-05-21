@@ -112,11 +112,10 @@ class BinaryInfo(object):
 
     # alerts on files that are safe
     def safe_alert_only(
-            self, analyzer_version: int, sns_topic_arn: str) -> None:
+            self: int, sns_topic_arn: str) -> None:
         """Publish an alert to SNS .
 
         Args:
-            analyzer_version: The currently executing version of the Lambda function.
             sns_topic_arn: Publish match alerts to this SNS topic ARN.
         """
 
