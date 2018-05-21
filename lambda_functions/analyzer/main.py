@@ -158,7 +158,6 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
         else:
             LOGGER.info('%s did not match any YARA rules', binary)
             binary.safe_alert_only(
-                lambda_version, 
                 os.environ['SAFE_SNS_TOPIC_ARN'])
                 
              
