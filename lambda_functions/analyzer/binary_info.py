@@ -114,13 +114,9 @@ class BinaryInfo(object):
     def safe_alert_only(
             self: int, sns_topic_arn: str) -> None:
         """Publish an alert to SNS .
-
         Args:
             sns_topic_arn: Publish match alerts to this SNS topic ARN.
         """
-
-        # Send alert appropriate.
-
         LOGGER.info('Publishing an SNS alert')
         analyzer_aws_lib.publish_safe_to_sns(self, sns_topic_arn)
 
