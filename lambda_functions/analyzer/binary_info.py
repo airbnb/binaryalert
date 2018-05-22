@@ -112,7 +112,7 @@ class BinaryInfo(object):
 
     # alerts on files that are safe
     def safe_alert_only(
-            self: int, sns_topic_arn: str) -> None:
+            self, sns_topic_arn: str) -> None:
         """Publish an alert to SNS .
         Args:
             sns_topic_arn: Publish match alerts to this SNS topic ARN.
