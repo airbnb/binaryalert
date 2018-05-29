@@ -159,8 +159,7 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
             LOGGER.info('%s did not match any YARA rules', binary)
             binary.safe_alert_only(
                 os.environ['SAFE_SNS_TOPIC_ARN'])
-                
-             
+
     # Delete all of the SQS receipts (mark them as completed).
     receipts_to_delete = [msg['receipt'] for msg in event.get('messages', [])]
     if receipts_to_delete:
