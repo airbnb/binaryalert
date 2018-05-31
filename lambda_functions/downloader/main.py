@@ -30,7 +30,7 @@ DECRYPTED_TOKEN = boto3.client('kms').decrypt(
 )['Plaintext']
 
 # Establish boto3 and S3 clients at import time so Lambda can cache them for re-use.
-CARBON_BLACK = cbapi.CbEnterpriseResponseAPI(
+CARBON_BLACK = cbapi.CbResponseAPI(
     url=os.environ['CARBON_BLACK_URL'], token=DECRYPTED_TOKEN)
 CLOUDWATCH = boto3.client('cloudwatch')
 S3_BUCKET = boto3.resource('s3').Bucket(os.environ['TARGET_S3_BUCKET'])

@@ -11,9 +11,10 @@ from lambda_functions import build
 
 def _mock_pip_main(args_list: List[str]) -> None:
     """Mock pip install just creates the target directory."""
-    directory = args_list[-2]
-    package = args_list[-1].split('==')[0]
-    os.makedirs(os.path.join(directory, package))
+    directory = args_list[6]
+    packages = args_list[7:]
+    for pkg in packages:
+        os.makedirs(os.path.join(directory, pkg.split('==')[0]))
 
 
 @mock.patch.object(build, 'print')
