@@ -2,6 +2,8 @@
 resource "aws_sqs_queue" "analyzer_queue" {
   name = "${var.name_prefix}_binaryalert_analyzer_queue"
 
+  kms_master_key_id = "${aws_kms_key.sse_sqs.arn}"
+
   // Messages are dropped from the queue after 12 hours
   message_retention_seconds = 43200
 
@@ -47,6 +49,8 @@ resource "aws_sqs_queue" "downloader_queue" {
   count = "${var.enable_carbon_black_downloader}"
   name  = "${var.name_prefix}_binaryalert_downloader_queue"
 
+  kms_master_key_id = "${aws_kms_key.sse_sqs.arn}"
+
   // Messages are dropped from the queue after 12 hours
   // (In practice, the redrive policy should kick in long before then)
   message_retention_seconds = 43200
@@ -70,6 +74,8 @@ resource "aws_sqs_queue" "dead_letter_queue" {
   count                     = "${var.enable_carbon_black_downloader}"
   name                      = "${var.name_prefix}_binaryalert_sqs_dead_letter_queue"
   message_retention_seconds = 1209600
+
+  kms_master_key_id = "${aws_kms_key.sse_sqs.arn}"
 
   tags {
     Name = "${var.tagged_name}"
