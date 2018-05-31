@@ -17,7 +17,9 @@ import manage
 def _mock_input(prompt: str) -> str:
     """Mock for the user input() function to automatically respond with valid answers."""
     # pylint: disable=too-many-return-statements
-    if prompt.startswith('AWS Region'):
+    if prompt.startswith('AWS Account'):
+        return '111122223333'
+    elif prompt.startswith('AWS Region'):
         return 'us-west-2'
     elif prompt.startswith('Unique name prefix'):
         return ' NEW_NAME_PREFIX '  # Spaces and case shouldn't matter.
@@ -37,12 +39,17 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
 
     @staticmethod
     def _write_config(
-            region: str = 'us-test-1', prefix: str = 'test_prefix', enable_downloader: bool = True,
-            cb_url: str = 'https://cb-example.com', encrypted_api_token: str = 'A'*100):
+            account_id: str = '123412341234',
+            region: str = 'us-test-1',
+            prefix: str = 'test_prefix',
+            enable_downloader: bool = True,
+            cb_url: str = 'https://cb-example.com',
+            encrypted_api_token: str = 'A'*100):
         """Create terraform.tfvars file with the given configuration values."""
         with open(manage.CONFIG_FILE, 'w') as config_file:
             config_file.write('\n'.join([
                 '// comment1',
+                'aws_account_id = "{}"'.format(account_id),
                 'aws_region = "{}" // comment2'.format(region),
                 'name_prefix = "{}" // comment3'.format(prefix),
                 'enable_carbon_black_downloader = {}'.format(1 if enable_downloader else 0),
@@ -66,6 +73,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
         self.fs.CreateFile(
             manage.VARIABLES_FILE,
             contents='\n'.join([
+                'variable "aws_account_id" {}',
                 'variable "aws_region" {}',
                 'variable "name_prefix" {}',
                 'variable "enable_carbon_black_downloader" {}',
@@ -86,6 +94,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         """Access each property in the BinaryAlertConfig."""
         config = manage.BinaryAlertConfig()
 
+        self.assertEqual('123412341234', config.aws_account_id)
         self.assertEqual('us-test-1', config.aws_region)
         self.assertEqual('test_prefix', config.name_prefix)
         self.assertEqual(1, config.enable_carbon_black_downloader)
@@ -102,6 +111,12 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
 
         with self.assertRaises(manage.InvalidConfigError):
             manage.BinaryAlertConfig()
+
+    def test_invalid_aws_account_id(self):
+        """InvalidConfigError raised if AWS account ID is not a 12-digit number"""
+        config = manage.BinaryAlertConfig()
+        with self.assertRaises(manage.InvalidConfigError):
+            config.aws_account_id = '1234'
 
     def test_invalid_aws_region(self):
         """InvalidConfigError raised if AWS region is set incorrectly."""

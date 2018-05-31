@@ -86,7 +86,7 @@ def _build_downloader(target_directory: str) -> None:
     # Pip install cbapi library (has no native dependencies).
     subprocess.check_call([
         sys.executable, '-m', 'pip', 'install',
-        '--quiet', '--target', temp_package_dir, 'cbapi==1.3.6'
+        '--quiet', '--target', temp_package_dir, 'cbapi==1.3.6', 'python-dateutil==2.6.1'
     ])
 
     # Copy Lambda code into the package.

@@ -38,6 +38,13 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
   }
 
   statement {
+    sid       = "DecryptSSE"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = ["${aws_kms_key.sse_s3.arn}"]
+  }
+
+  statement {
     sid    = "GetFromBinaryAlertBucket"
     effect = "Allow"
 
@@ -74,6 +81,18 @@ resource "aws_iam_role_policy" "binaryalert_analyzer_policy" {
 
 data "aws_iam_policy_document" "binaryalert_batcher_policy" {
   statement {
+    sid    = "UseSSE"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+    ]
+
+    resources = ["${aws_kms_key.sse_sqs.arn}"]
+  }
+
+  statement {
     sid       = "InvokeBinaryAlertBatcher"
     effect    = "Allow"
     actions   = ["lambda:InvokeFunction"]
@@ -104,6 +123,13 @@ resource "aws_iam_role_policy" "binaryalert_batcher_policy" {
 // ********** Dispatcher **********
 
 data "aws_iam_policy_document" "binaryalert_dispatcher_policy_analyzer" {
+  statement {
+    sid       = "DecryptSSE"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = ["${aws_kms_key.sse_sqs.arn}"]
+  }
+
   statement {
     sid       = "InvokeBinaryAlertAnalyzer"
     effect    = "Allow"
@@ -154,6 +180,18 @@ resource "aws_iam_role_policy" "binaryalert_dispatcher_policy_downloader" {
 
 data "aws_iam_policy_document" "binaryalert_downloader_policy" {
   count = "${var.enable_carbon_black_downloader}"
+
+  statement {
+    sid    = "AllowSSE"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+    ]
+
+    resources = ["${aws_kms_key.sse_s3.arn}"]
+  }
 
   statement {
     sid       = "DecryptCarbonBlackCredentials"

@@ -5,6 +5,9 @@
 /* ********** [Auto-Configured] Base Configuration ********** */
 // These are the only settings you need to get started.
 
+// 12-digit AWS account ID
+aws_account_id = ""
+
 // AWS region in which to deploy the BinaryAlert components.
 aws_region = "us-east-1"
 
