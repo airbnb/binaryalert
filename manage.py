@@ -68,6 +68,7 @@ def _get_input(prompt: str, default_value: str) -> str:
 class BinaryAlertConfig(object):
     """Wrapper around reading, validating, and updating the terraform.tfvars config file."""
     # Expected configuration value formats.
+    VALID_AWS_ACCOUNT_ID_FORMAT = r'\d{12}'
     VALID_AWS_REGION_FORMAT = r'[a-z]{2}-[a-z]{2,15}-\d'
     VALID_NAME_PREFIX_FORMAT = r'[a-z][a-z0-9_]{3,50}'
     VALID_CB_API_TOKEN_FORMAT = r'[a-f0-9]{40}'  # CarbonBlack API token.
@@ -92,6 +93,19 @@ class BinaryAlertConfig(object):
                 raise InvalidConfigError(
                     'variable "{}" is not defined in {}'.format(variable, CONFIG_FILE)
                 )
+
+    @property
+    def aws_account_id(self) -> str:
+        return self._config['aws_account_id']
+
+    @aws_account_id.setter
+    def aws_account_id(self, value: str) -> None:
+        if not re.fullmatch(self.VALID_AWS_ACCOUNT_ID_FORMAT, value, re.ASCII):
+            raise InvalidConfigError(
+                'aws_account_id "{}" does not match format {}'.format(
+                    value, self.VALID_AWS_ACCOUNT_ID_FORMAT)
+            )
+        self._config['aws_account_id'] = value
 
     @property
     def aws_region(self) -> str:
@@ -221,11 +235,41 @@ class BinaryAlertConfig(object):
         self.encrypted_carbon_black_api_token = base64.b64encode(
             response['CiphertextBlob']).decode('utf-8')
 
+    def _configure_carbon_black(self) -> None:
+        """If CarbonBlack downloader is enabled, request URL and credentials"""
+        while True:  # CarbonBlack URL
+            try:
+                self.carbon_black_url = _get_input('CarbonBlack URL', self.carbon_black_url)
+                break
+            except InvalidConfigError as error:
+                print('ERROR: {}'.format(error))
+
+        update_api_token = 'yes'
+        if self.encrypted_carbon_black_api_token:
+            # API token already exists - ask if they want to update it.
+            while True:
+                update_api_token = _get_input('Change the CarbonBlack API token?', 'no')
+                if update_api_token in {'yes', 'no'}:
+                    break
+                else:
+                    print('ERROR: Please enter exactly "yes" or "no"')
+
+        if update_api_token == 'yes':
+            self.save()  # Save updates so far to enable the downloader for terraform.
+            self._encrypt_cb_api_token()
+
     def configure(self) -> None:
         """Request basic configuration settings from the user.
 
         Each request will be retried until the answer is in the correct format.
         """
+        while True:  # Get AWS account ID
+            try:
+                self.aws_account_id = _get_input('AWS Account ID', self.aws_account_id)
+                break
+            except InvalidConfigError as error:
+                print('ERROR: {}'.format(error))
+
         while True:  # Get AWS region.
             try:
                 self.aws_region = _get_input('AWS Region', self.aws_region)
@@ -254,26 +298,7 @@ class BinaryAlertConfig(object):
         self.enable_carbon_black_downloader = 1 if enable_downloader == 'yes' else 0
 
         if self.enable_carbon_black_downloader:
-            while True:  # CarbonBlack URL
-                try:
-                    self.carbon_black_url = _get_input('CarbonBlack URL', self.carbon_black_url)
-                    break
-                except InvalidConfigError as error:
-                    print('ERROR: {}'.format(error))
-
-            update_api_token = 'yes'
-            if self.encrypted_carbon_black_api_token:
-                # API token already exists - ask if they want to update it.
-                while True:
-                    update_api_token = _get_input('Change the CarbonBlack API token?', 'no')
-                    if update_api_token in {'yes', 'no'}:
-                        break
-                    else:
-                        print('ERROR: Please enter exactly "yes" or "no"')
-
-            if update_api_token == 'yes':
-                self.save()  # Save updates so far to enable the downloader for terraform.
-                self._encrypt_cb_api_token()
+            self._configure_carbon_black()
 
         # Save the updated configuration.
         self.save()
@@ -290,6 +315,7 @@ class BinaryAlertConfig(object):
             InvalidConfigError: If any config variable has an invalid value.
         """
         # Go through the internal setters which have the validation logic.
+        self.aws_account_id = self.aws_account_id
         self.aws_region = self.aws_region
         self.name_prefix = self.name_prefix
         self.enable_carbon_black_downloader = self.enable_carbon_black_downloader
