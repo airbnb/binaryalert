@@ -68,7 +68,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Mock out cbapi and import the file under test.
         with mock.patch.object(boto3, 'client'), mock.patch.object(boto3, 'resource'), \
-                mock.patch.object(cbapi, 'CbEnterpriseResponseAPI'):
+                mock.patch.object(cbapi, 'CbResponseAPI'):
             from lambda_functions.downloader import main
             self.download_main = main
 
