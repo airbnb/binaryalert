@@ -1,8 +1,10 @@
 /* See terraform.tfvars for descriptions of each of the variables. */
 
+variable "aws_account_id" {}
 variable "aws_region" {}
 variable "name_prefix" {}
 
+variable "enable_safe_alerts" {}
 variable "enable_carbon_black_downloader" {}
 variable "carbon_black_url" {}
 variable "encrypted_carbon_black_api_token" {}

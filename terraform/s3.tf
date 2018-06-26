@@ -33,6 +33,14 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
     target_prefix = "self/"
   }
 
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+
   tags {
     Name = "${var.tagged_name}"
   }
@@ -74,6 +82,15 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
 
     expiration {
       expired_object_delete_marker = true
+    }
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = "${aws_kms_key.sse_s3.arn}"
+        sse_algorithm     = "aws:kms"
+      }
     }
   }
 

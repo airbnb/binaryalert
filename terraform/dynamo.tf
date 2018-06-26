@@ -17,6 +17,11 @@ resource "aws_dynamodb_table" "binaryalert_yara_matches" {
     type = "N"
   }
 
+  // Server-side encryption works with AWS-managed keys (no support for customer keys yet)
+  server_side_encryption {
+    enabled = true
+  }
+
   tags {
     Name = "${var.tagged_name}"
   }
