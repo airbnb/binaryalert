@@ -9,7 +9,7 @@
 aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = ""
+name_prefix = "steph"
 
 //option for safe alerts to be enabled
 enable_safe_alerts = 0
