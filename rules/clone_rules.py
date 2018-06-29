@@ -54,7 +54,10 @@ def _clone_repo(url: str, include: Optional[List[str]], exclude: Optional[List[s
     subprocess.check_call(['git', 'clone', '--quiet', '--depth', '1', url, cloned_repo_root])
 
     # Remove existing rules in target folder before copying (in case upstream rules were deleted).
-    target_repo_root = os.path.join(RULES_DIR, url.split('//')[1])
+    if '//' in url:
+        target_repo_root = os.path.join(RULES_DIR, url.split('//')[1])
+    else:
+        target_repo_root = os.path.join(RULES_DIR, url.split('@')[1].replace(':', '/', 1))
     if os.path.exists(target_repo_root):
         shutil.rmtree(target_repo_root)
 
