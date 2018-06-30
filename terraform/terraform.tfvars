@@ -14,6 +14,8 @@ aws_region = "us-east-1"
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
 name_prefix = ""
 
+//option for safe alerts to be enabled
+enable_safe_alerts = 0
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
 enable_carbon_black_downloader = 0

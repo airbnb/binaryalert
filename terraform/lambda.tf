@@ -12,6 +12,7 @@ module "binaryalert_analyzer" {
   environment_variables = {
     YARA_MATCHES_DYNAMO_TABLE_NAME = "${aws_dynamodb_table.binaryalert_yara_matches.name}"
     YARA_ALERTS_SNS_TOPIC_ARN      = "${aws_sns_topic.yara_match_alerts.arn}"
+    SAFE_SNS_TOPIC_ARN             = "${join("", aws_sns_topic.safe_alerts.*.arn)}"
   }
 
   log_retention_days = "${var.lambda_log_retention_days}"
