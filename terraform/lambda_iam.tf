@@ -67,7 +67,7 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
     sid       = "PublishAlertsToSafeSNS"
     effect    = "Allow"
     actions   = ["sns:Publish"]
-    resources = ["*"]
+    resources = ["${var.enable_safe_alerts == "1" ? "${join("",aws_sns_topic.safe_alerts.*.arn)}" : "${aws_sns_topic.yara_match_alerts.arn}"}"]
   }
 
   statement {
