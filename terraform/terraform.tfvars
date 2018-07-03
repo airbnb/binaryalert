@@ -6,13 +6,13 @@
 // These are the only settings you need to get started.
 
 // 12-digit AWS account ID
-aws_account_id = ""
+aws_account_id = "324382802360"
 
 // AWS region in which to deploy the BinaryAlert components.
 aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = ""
+name_prefix = "steph3"
 
 //option for safe alerts to be enabled
 enable_safe_alerts = 0

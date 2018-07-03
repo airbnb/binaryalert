@@ -67,7 +67,7 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
     sid       = "PublishAlertsToSafeSNS"
     effect    = "Allow"
     actions   = ["sns:Publish"]
-    resources = ["${join("", aws_sns_topic.safe_alerts.*.arn)}"]
+    resources = ["*"]
   }
 
   statement {
