@@ -76,6 +76,10 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
                     {
                         "url": "https://github.com/test-user2/test-repo2",
                         "exclude": ["windows/*", "*_mobile.yara"]
+                    },
+                    {
+                        "url": "git@github.com:test-user3/test-repo3",
+
                     }
                 ]
             }
@@ -98,10 +102,12 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
         if cloned_repo_root.endswith('test-repo1'):
             self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
             self.fs.CreateFile(os.path.join(cloned_repo_root, 'not_included.yara'))
-        else:
+        elif cloned_repo_root.endswith('test-repo2'):
             self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
             self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'exluded_mobile.yara'))
             self.fs.CreateFile(os.path.join(cloned_repo_root, 'windows', 'excluded.yara'))
+        elif cloned_repo_root.endswith('test-repo3'):
+            self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
 
     @mock.patch.object(clone_rules, 'print')
     def test_clone_remote_rules(self, mock_print: mock.MagicMock):
@@ -110,18 +116,22 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
             clone_rules.clone_remote_rules()
 
         mock_print.assert_has_calls([
-            mock.call('[1/2] Cloning https://github.com/test-user1/test-repo1... ',
+            mock.call('[1/3] Cloning https://github.com/test-user1/test-repo1... ',
                       end='', flush=True),
             mock.call('1 YARA file copied'),
-            mock.call('[2/2] Cloning https://github.com/test-user2/test-repo2... ',
+            mock.call('[2/3] Cloning https://github.com/test-user2/test-repo2... ',
                       end='', flush=True),
             mock.call('1 YARA file copied'),
-            mock.call('Done! 2 YARA files cloned from 2 repositories.')
+            mock.call('[3/3] Cloning git@github.com:test-user3/test-repo3... ',
+                      end='', flush=True),
+            mock.call('1 YARA file copied'),
+            mock.call('Done! 3 YARA files cloned from 3 repositories.')
         ])
 
         expected_files = {
             'github.com/test-user1/test-repo1/yara/cloned.yara',
             'github.com/test-user2/test-repo2/yara/cloned.yara',
+            'github.com/test-user3/test-repo3/yara/cloned.yara',
             'private/private.yara'
         }
         self.assertEqual(expected_files, set(compile_rules._find_yara_files()))
