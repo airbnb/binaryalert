@@ -24,7 +24,7 @@ BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows
   sudo -H pip3 install --upgrade pip
   python3.6 --version
 
-.. warning:: Python 3.5 is installed by default on some systems, but BinaryAlert requires Python 3.6.
+.. warning:: Python 3.5 or 3.7 is installed by default on some systems, but AWS Lambda requires Python 3.6.
 
 2. Install `Terraform <https://www.terraform.io/downloads.html>`_ v0.11.X:
 
