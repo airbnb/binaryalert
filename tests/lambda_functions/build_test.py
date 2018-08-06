@@ -101,14 +101,6 @@ class BuildTest(unittest.TestCase):
         )
         mock_print.assert_called_once()
 
-    def test_build_dispatcher(self, mock_print: mock.MagicMock):
-        """Verify that a valid zipfile is generated for the dispatcher Lambda function."""
-        build._build_dispatcher(self._tempdir)
-        self._verify_filenames(
-            os.path.join(self._tempdir, build.DISPATCH_ZIPFILE + '.zip'), {'main.py'}
-        )
-        mock_print.assert_called_once()
-
     @mock.patch.object(build.subprocess, 'check_call', side_effect=_mock_pip_main)
     def test_build_downloader(self, mock_pip: mock.MagicMock, mock_print: mock.MagicMock):
         """Verify list of bundled files for the downloader."""
@@ -123,15 +115,12 @@ class BuildTest(unittest.TestCase):
 
     @mock.patch.object(build, '_build_analyzer')
     @mock.patch.object(build, '_build_batcher')
-    @mock.patch.object(build, '_build_dispatcher')
     @mock.patch.object(build, '_build_downloader')
-    def test_build_all(self, build_downloader: mock.MagicMock, build_dispatcher: mock.MagicMock,
-                       build_batcher: mock.MagicMock, build_analyzer: mock.MagicMock,
-                       mock_print: mock.MagicMock):
+    def test_build_all(self, build_downloader: mock.MagicMock, build_batcher: mock.MagicMock,
+                       build_analyzer: mock.MagicMock, mock_print: mock.MagicMock):
         """Verify that the top-level build function executes each individual builder."""
         build.build(self._tempdir, downloader=True)
         build_analyzer.assert_called_once()
         build_batcher.assert_called_once()
-        build_dispatcher.assert_called_once()
         build_downloader.assert_called_once()
         mock_print.assert_not_called()
