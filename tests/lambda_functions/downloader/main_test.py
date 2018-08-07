@@ -10,10 +10,10 @@ import cbapi
 from pyfakefs import fake_filesystem_unittest
 
 
-class MockBinary(object):
+class MockBinary:
     """Mock for cbapi.response.models.Binary."""
 
-    class MockVirusTotal(object):
+    class MockVirusTotal:
         """Mock for cbapi.response.models.VirusTotal."""
 
         def __init__(self, score: int = 0) -> None:

@@ -31,7 +31,7 @@ LAMBDA_VERSION = 1
 TEST_CONTEXT = common.MockLambdaContext(LAMBDA_VERSION)
 
 
-class MockS3Object(object):
+class MockS3Object:
     """Simple mock for boto3.resource('s3').Object"""
     def __init__(self, bucket_name, object_key):
         self.name = bucket_name

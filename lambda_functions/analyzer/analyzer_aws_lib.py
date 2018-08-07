@@ -138,7 +138,7 @@ def put_metric_data(num_yara_rules: int, binaries: List[BinaryInfo]) -> None:
     CLOUDWATCH.put_metric_data(Namespace='BinaryAlert', MetricData=metric_data)
 
 
-class DynamoMatchTable(object):
+class DynamoMatchTable:
     """Saves YARA match information into a Dynamo table.
 
     The table uses a composite key:
@@ -193,8 +193,8 @@ class DynamoMatchTable(object):
             if len(most_recent_items) >= 2:
                 previous_s3_objects = set(most_recent_items[1]['S3Objects'])
             return analyzer_version, matched_rules, s3_objects, previous_s3_objects
-        else:
-            return None
+
+        return None
 
     @staticmethod
     def _replace_empty_strings(data: Dict[str, str]) -> Dict[str, str]:

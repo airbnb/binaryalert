@@ -62,7 +62,7 @@ def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMat
     return matches
 
 
-class YaraAnalyzer(object):
+class YaraAnalyzer:
     """Encapsulates YARA analysis and matching functions."""
 
     def __init__(self, compiled_rules_file: str) -> None:
