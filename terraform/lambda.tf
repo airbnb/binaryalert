@@ -88,6 +88,7 @@ module "binaryalert_downloader" {
 
 // Invoke downloader Lambda from downloader SQS queue.
 resource "aws_lambda_event_source_mapping" "downloader_via_sqs" {
+  count            = "${var.enable_carbon_black_downloader == 1 ? 1 : 0}"
   batch_size       = "${var.download_queue_batch_size}"
   event_source_arn = "${aws_sqs_queue.downloader_queue.arn}"
   function_name    = "${module.binaryalert_downloader.alias_arn}"
