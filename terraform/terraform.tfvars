@@ -97,8 +97,9 @@ force_destroy = true
 
 
 // ##### SQS #####
-// Maximum number of messages that will be received by each invocation of the analyzer Lambda.
+// Maximum number of messages that will be received by each invocation of the respective function.
 analyze_queue_batch_size = 10
+download_queue_batch_size = 1
 
 // If an SQS message is not deleted (successfully processed) after the max number of receive
 // attempts, the message is delivered to the SQS dead-letter queue.

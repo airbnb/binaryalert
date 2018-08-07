@@ -30,4 +30,5 @@ variable "lambda_download_timeout_sec" {}
 variable "force_destroy" {}
 
 variable "analyze_queue_batch_size" {}
+variable "download_queue_batch_size" {}
 variable "download_queue_max_receives" {}

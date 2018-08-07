@@ -57,22 +57,21 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
 
     Args:
         event: SQS message batch - each message body is a JSON-encoded S3 notification - {
-            "Records": [
+            'Records': [
                 {
-                    "body": json.dumps({
-                        "Records": [
-                            "s3": {
-                                "bucket": {
-                                    "name": "..."
+                    'body': json.dumps({
+                        'Records': [
+                            's3': {
+                                'bucket': {
+                                    'name': '...'
                                 },
-                                "object": {
-                                    "key": "..."
+                                'object': {
+                                    'key': '...'
                                 }
                             }
                         ]
                     }),
-                    "messageId": "...",
-                    "receiptHandle": "..."
+                    'messageId': '...'
                 }
             ]
         }

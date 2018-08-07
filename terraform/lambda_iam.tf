@@ -145,7 +145,10 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
       "kms:GenerateDataKey",
     ]
 
-    resources = ["${aws_kms_key.sse_s3.arn}"]
+    resources = [
+      "${aws_kms_key.sse_s3.arn}",
+      "${aws_kms_key.sse_sqs.arn}",
+    ]
   }
 
   statement {
@@ -163,9 +166,16 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
   }
 
   statement {
-    sid       = "DeleteFromDownloadQueue"
-    effect    = "Allow"
-    actions   = ["sqs:DeleteMessage"]
+    sid    = "ProcessSQSMessages"
+    effect = "Allow"
+
+    actions = [
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ReceiveMessage",
+    ]
+
     resources = ["${aws_sqs_queue.downloader_queue.arn}"]
   }
 }

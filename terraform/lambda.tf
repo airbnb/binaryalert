@@ -85,3 +85,10 @@ module "binaryalert_downloader" {
   tagged_name        = "${var.tagged_name}"
   alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
 }
+
+// Invoke downloader Lambda from downloader SQS queue.
+resource "aws_lambda_event_source_mapping" "downloader_via_sqs" {
+  batch_size       = "${var.download_queue_batch_size}"
+  event_source_arn = "${aws_sqs_queue.downloader_queue.arn}"
+  function_name    = "${module.binaryalert_downloader.alias_arn}"
+}
