@@ -56,6 +56,7 @@ class BuildTest(unittest.TestCase):
                 'compiled_yara_rules.bin',
 
                 # Natively compiled binaries
+                'cryptography/',
                 'libarchive.so.13',
                 'libs/',
                 'libs/bayshore_file_type_detect.o',
@@ -89,7 +90,8 @@ class BuildTest(unittest.TestCase):
                 'YARA_LICENSE',
                 'YARA_PYTHON_LICENSE',
                 'YEXTEND_LICENSE'
-            }
+            },
+            subset=True
         )
         mock_print.assert_called_once()
 

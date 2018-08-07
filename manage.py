@@ -65,7 +65,7 @@ def _get_input(prompt: str, default_value: str) -> str:
     return input(prompt).strip().lower() or default_value
 
 
-class BinaryAlertConfig(object):
+class BinaryAlertConfig:
     """Wrapper around reading, validating, and updating the terraform.tfvars config file."""
     # Expected configuration value formats.
     VALID_AWS_ACCOUNT_ID_FORMAT = r'\d{12}'
@@ -349,7 +349,7 @@ class BinaryAlertConfig(object):
             config_file.write(raw_config)
 
 
-class Manager(object):
+class Manager:
     """BinaryAlert management utility."""
 
     def __init__(self) -> None:

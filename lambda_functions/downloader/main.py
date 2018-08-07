@@ -107,7 +107,7 @@ def _process_md5(md5: str) -> bool:
         binary = CARBON_BLACK.select(Binary, md5)
         download_path = _download_from_carbon_black(binary)
         metadata = _build_metadata(binary)
-        _upload_to_s3(binary.md5, download_path, metadata)
+        _upload_to_s3(binary.md5, download_path, metadata)  # pylint: disable=no-member
         return True
     except (BotoCoreError, ObjectNotFoundError, ServerError, zipfile.BadZipFile):
         LOGGER.exception('Error downloading %s', md5)
