@@ -167,8 +167,7 @@ EOF
 
   // Build common lists for batcher, dispatcher, downloader.
   other_functions = <<EOF
-    [".", ".", ".", "${module.binaryalert_batcher.function_name}", {"label": "Batcher"}],
-    [".", ".", ".", "${module.binaryalert_dispatcher.function_name}", {"label": "Dispatcher"}]
+    [".", ".", ".", "${module.binaryalert_batcher.function_name}", {"label": "Batcher"}]
     ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
 EOF
 
@@ -315,8 +314,7 @@ EOF
         "LogGroupName", "${module.binaryalert_analyzer.log_group_name}",
         {"label": "Analyzer"}
       ],
-      [".", ".", ".", "${module.binaryalert_batcher.log_group_name}", {"label": "Batcher"}],
-      [".", ".", ".", "${module.binaryalert_dispatcher.log_group_name}", {"label": "Dispatcher"}]
+      [".", ".", ".", "${module.binaryalert_batcher.log_group_name}", {"label": "Batcher"}]
       ${var.enable_carbon_black_downloader == 1 ? local.downloader_logs : ""}
     ]
   }

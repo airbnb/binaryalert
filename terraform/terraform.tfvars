@@ -64,14 +64,14 @@ dynamo_write_capacity = 5
 //     Download SQS   <<<<< --|
 //                            |
 // Downloader Lambda  <<<<< --|
-//        vv                  |
-//        S3                  |
-//        vv                  |
-//      S3 Events             |                Analyzer Lambda
-//               \            |              /
-//                SQS <<< Dispatch Lambda >>>  Analyzer Lambda
-//               /                           \
-//  Batch Lambda                               Analyzer Lambda
+//        vv
+//        S3
+//        vv
+//      S3 Events          Analyzer Lambda
+//               \        /
+//                SQS <<<< Analyzer Lambda
+//               /        \
+//  Batch Lambda           Analyzer Lambda
 
 // Memory and time limits for the analyzer functions.
 lambda_analyze_memory_mb = 1024
@@ -85,13 +85,6 @@ lambda_batch_objects_per_message = 5
 // Memory limit (MB) for the batching Lambda function. 128 is the minimum allowed by Lambda.
 lambda_batch_memory_mb = 128
 
-// How often the Lambda dispatcher will be invoked.
-lambda_dispatch_frequency_minutes = 5
-
-// Memory and time limits for the dispatching function.
-lambda_dispatch_memory_mb = 128
-lambda_dispatch_timeout_sec = 300
-
 // Memory and time limits for the downloader function.
 lambda_download_memory_mb = 128
 lambda_download_timeout_sec = 300
@@ -104,6 +97,9 @@ force_destroy = true
 
 
 // ##### SQS #####
+// Maximum number of messages that will be received by each invocation of the analyzer Lambda.
+analyze_queue_batch_size = 10
+
 // If an SQS message is not deleted (successfully processed) after the max number of receive
 // attempts, the message is delivered to the SQS dead-letter queue.
 download_queue_max_receives = 7
