@@ -1,29 +1,5 @@
 /* CloudWatch alarms fire if metrics look abnormal. */
 
-// The batch function had an error enqueueing an S3 key.
-resource "aws_cloudwatch_metric_alarm" "batch_enqueue_errors" {
-  alarm_name = "${module.binaryalert_batcher.function_name}_enqueue_errors"
-
-  alarm_description = <<EOF
-${module.binaryalert_batcher.function_name} failed to enqueue one or more S3 keys into the SQS queue
-${aws_sqs_queue.analyzer_queue.arn}.
-  - Check the batcher CloudWatch logs.
-  - SQS may be down.
-  - Once the problem has been resolved, re-execute the batcher (`manage.py analyze_all`) to analyze
-any files which might have been missed.
-EOF
-
-  namespace   = "BinaryAlert"
-  metric_name = "BatchEnqueueFailures"
-  statistic   = "Sum"
-
-  comparison_operator = "GreaterThanThreshold"
-  threshold           = 0
-  period              = 60
-  evaluation_periods  = 1
-  alarm_actions       = ["${aws_sns_topic.metric_alarms.arn}"]
-}
-
 // The production BinaryAlert analyzer is not analyzing binaries.
 resource "aws_cloudwatch_metric_alarm" "analyzed_binaries" {
   alarm_name = "${module.binaryalert_analyzer.function_name}_no_analyzed_binaries"

@@ -58,14 +58,6 @@ def _build_analyzer(target_directory: str) -> None:
     shutil.rmtree(temp_package_dir)
 
 
-def _build_batcher(target_directory: str) -> None:
-    """Build the batcher Lambda deployment package."""
-    print('Creating batcher deploy package...')
-    pathlib.Path(BATCH_SOURCE).touch()  # Change last modified time to force new Lambda deploy
-    with zipfile.ZipFile(os.path.join(target_directory, BATCH_ZIPFILE + '.zip'), 'w') as pkg:
-        pkg.write(BATCH_SOURCE, os.path.basename(BATCH_SOURCE))
-
-
 def _build_downloader(target_directory: str) -> None:
     """Build the downloader Lambda deployment package."""
     print('Creating downloader deploy package...')
@@ -97,6 +89,5 @@ def build(target_directory: str, downloader: bool = False) -> None:
         downloader: [bool] Whether the downloader should be built.
     """
     _build_analyzer(target_directory)
-    _build_batcher(target_directory)
     if downloader:
         _build_downloader(target_directory)

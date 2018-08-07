@@ -38,30 +38,6 @@ resource "aws_lambda_event_source_mapping" "analyzer_via_sqs" {
   function_name    = "${module.binaryalert_analyzer.alias_arn}"
 }
 
-// Create the batch Lambda function.
-module "binaryalert_batcher" {
-  source          = "modules/lambda"
-  function_name   = "${var.name_prefix}_binaryalert_batcher"
-  description     = "Enqueues all S3 objects into SQS for re-analysis"
-  base_policy_arn = "${aws_iam_policy.base_policy.arn}"
-  handler         = "main.batch_lambda_handler"
-  memory_size_mb  = "${var.lambda_batch_memory_mb}"
-  timeout_sec     = 300
-  filename        = "lambda_batcher.zip"
-
-  environment_variables = {
-    BATCH_LAMBDA_NAME      = "${var.name_prefix}_binaryalert_batcher"
-    BATCH_LAMBDA_QUALIFIER = "Production"
-    OBJECTS_PER_MESSAGE    = "${var.lambda_batch_objects_per_message}"
-    S3_BUCKET_NAME         = "${aws_s3_bucket.binaryalert_binaries.id}"
-    SQS_QUEUE_URL          = "${aws_sqs_queue.analyzer_queue.id}"
-  }
-
-  log_retention_days = "${var.lambda_log_retention_days}"
-  tagged_name        = "${var.tagged_name}"
-  alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
-}
-
 // Create the CarbonBlack downloading Lambda function.
 module "binaryalert_downloader" {
   enabled = "${var.enable_carbon_black_downloader}"

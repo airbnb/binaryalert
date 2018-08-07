@@ -4,7 +4,7 @@ data "aws_iam_policy_document" "lambda_execution_policy" {
   count = "${var.enabled}"
 
   statement {
-    effect  = "Allow"
+    sid     = "AllowLambdaToAssumeRole"
     actions = ["sts:AssumeRole"]
 
     principals {

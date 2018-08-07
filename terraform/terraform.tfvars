@@ -77,14 +77,6 @@ dynamo_write_capacity = 5
 lambda_analyze_memory_mb = 1024
 lambda_analyze_timeout_sec = 300
 
-// Number of S3 object keys to pack into a single SQS message.
-// Each downstream analyzer will process at most 10 SQS messages, each with this many objects.
-// Higher values allow for higher throughput, but are constrained by analyzer execution time limit.
-lambda_batch_objects_per_message = 5
-
-// Memory limit (MB) for the batching Lambda function. 128 is the minimum allowed by Lambda.
-lambda_batch_memory_mb = 128
-
 // Memory and time limits for the downloader function.
 lambda_download_memory_mb = 128
 lambda_download_timeout_sec = 300

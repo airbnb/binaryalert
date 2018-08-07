@@ -22,8 +22,6 @@ variable "dynamo_write_capacity" {}
 
 variable "lambda_analyze_memory_mb" {}
 variable "lambda_analyze_timeout_sec" {}
-variable "lambda_batch_objects_per_message" {}
-variable "lambda_batch_memory_mb" {}
 variable "lambda_download_memory_mb" {}
 variable "lambda_download_timeout_sec" {}
 
