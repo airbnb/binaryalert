@@ -22,7 +22,6 @@ CLOUDWATCH = boto3.client('cloudwatch')
 DYNAMODB = boto3.resource('dynamodb')
 S3 = boto3.resource('s3')
 SNS = boto3.resource('sns')
-SQS = boto3.resource('sqs')
 
 
 class FileDownloadError(Exception):
@@ -86,20 +85,6 @@ def publish_alert_to_sns(binary: BinaryInfo, topic_arn: str) -> None:
     SNS.Topic(topic_arn).publish(
         Subject=_elide_string_middle(subject, SNS_PUBLISH_SUBJECT_MAX_SIZE),
         Message=(json.dumps(binary.summary(), indent=4, sort_keys=True))
-    )
-
-
-def delete_sqs_messages(queue_url: str, receipts: List[str]) -> None:
-    """Mark a batch of SQS receipts as completed (removing them from the queue).
-
-    Args:
-        queue_url: The URL of the SQS queue containing the messages.
-        receipts: List of SQS receipt handles.
-    """
-    LOGGER.info('Deleting %d SQS receipt(s) from %s', len(receipts), queue_url)
-    SQS.Queue(queue_url).delete_messages(
-        Entries=[
-            {'Id': str(index), 'ReceiptHandle': receipt} for index, receipt in enumerate(receipts)]
     )
 
 
