@@ -11,4 +11,4 @@ pylint
 python-dateutil==2.6.1
 sphinx
 sphinx-rtd-theme
-yara-python==3.7.0
+yara-python==3.8.0
