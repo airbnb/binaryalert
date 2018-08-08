@@ -20,7 +20,11 @@ data "aws_iam_policy_document" "kms_allow_s3" {
       identifiers = ["s3.amazonaws.com"]
     }
 
-    actions   = ["kms:GenerateDataKey*"]
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey*",
+    ]
+
     resources = ["*"]
   }
 }
