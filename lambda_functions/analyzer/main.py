@@ -61,14 +61,18 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
                 {
                     'body': json.dumps({
                         'Records': [
-                            's3': {
-                                'bucket': {
-                                    'name': '...'
+                            {
+                                's3': {
+                                    'bucket': {
+                                        'name': '...'
+                                    },
+                                    'object': {
+                                        'key': '...'
+                                    }
                                 },
-                                'object': {
-                                    'key': '...'
-                                }
-                            }
+                                ...
+                            },
+                            ...
                         ]
                     }),
                     'messageId': '...'

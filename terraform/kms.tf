@@ -1,8 +1,7 @@
-// Allow S3 to use the SSE key when publishing events to SQS
+// Allow S3 to encrypt with either SSE key (to encrypt inventory or to enqueue SQS)
 data "aws_iam_policy_document" "kms_allow_s3" {
   statement {
-    sid    = "Enable IAM User Permissions"
-    effect = "Allow"
+    sid = "Enable IAM User Permissions"
 
     principals {
       type        = "AWS"
@@ -14,19 +13,14 @@ data "aws_iam_policy_document" "kms_allow_s3" {
   }
 
   statement {
-    sid    = "AllowS3ToUseKey"
-    effect = "Allow"
+    sid = "AllowS3ToUseKey"
 
     principals {
       type        = "Service"
       identifiers = ["s3.amazonaws.com"]
     }
 
-    actions = [
-      "kms:Decrypt",
-      "kms:GenerateDataKey",
-    ]
-
+    actions   = ["kms:GenerateDataKey*"]
     resources = ["*"]
   }
 }
@@ -39,6 +33,8 @@ resource "aws_kms_key" "sse_s3" {
   tags {
     Name = "${var.tagged_name}"
   }
+
+  policy = "${data.aws_iam_policy_document.kms_allow_s3.json}"
 }
 
 resource "aws_kms_alias" "sse_s3_alias" {

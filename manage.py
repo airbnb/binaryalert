@@ -3,14 +3,16 @@
 # Usage: python3 manage.py [--help] [command]
 import argparse
 import base64
+from datetime import datetime, timedelta
 import getpass
+import gzip
 import inspect
 import json
 import os
 import re
 import subprocess
 import sys
-from typing import Set
+from typing import Any, Callable, Dict, Generator, Iterable, Optional, Set
 import unittest
 
 import boto3
@@ -186,8 +188,8 @@ class BinaryAlertConfig:
         return '{}_binaryalert_analyzer'.format(self.name_prefix)
 
     @property
-    def binaryalert_batcher_name(self) -> str:
-        return '{}_binaryalert_batcher'.format(self.name_prefix)
+    def binaryalert_analyzer_queue_name(self) -> str:
+        return '{}_binaryalert_analyzer_queue'.format(self.name_prefix)
 
     @property
     def binaryalert_downloader_queue_name(self) -> str:
@@ -359,8 +361,9 @@ class Manager:
     @property
     def commands(self) -> Set[str]:
         """Return set of available management commands."""
-        return {'analyze_all', 'apply', 'build', 'cb_copy_all', 'clone_rules', 'compile_rules',
-                'configure', 'deploy', 'destroy', 'live_test', 'unit_test'}
+        return {'apply', 'build', 'cb_copy_all', 'clone_rules', 'compile_rules', 'configure',
+                'deploy', 'destroy', 'live_test', 'purge_queue', 'retro_fast', 'retro_slow',
+                'unit_test'}
 
     @property
     def help(self) -> str:
@@ -389,20 +392,33 @@ class Manager:
         except TestFailureError as error:
             sys.exit('TEST FAILED: {}'.format(error))
 
-    def analyze_all(self) -> None:
-        """Start a batcher to asynchronously re-analyze the entire S3 bucket."""
-        function_name = self._config.binaryalert_batcher_name
-        print('Asynchronously invoking {}...'.format(function_name))
-        boto3.client('lambda').invoke(
-            FunctionName=function_name,
-            InvocationType='Event',  # Asynchronous invocation.
-            Qualifier='Production'
-        )
-        print('Batcher invocation successful!')
+    @staticmethod
+    def _enqueue(queue_name: str, collection: Iterable[Any],
+                 key_func: Callable[[Any], str], body_func: Callable[[str], Dict[str, Any]]):
+        """Enumerate a collection of items onto an SQS queue."""
+        queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
+        keys = []
+
+        for index, element in enumerate(collection):
+            element_key = key_func(element)  # MD5 or object key
+            print('\r{} {:<120}'.format(index, element_key), flush=True, end='')
+            keys.append(element_key)
+
+            if len(keys) == 10:
+                response = queue.send_messages(
+                    Entries=[
+                        {'Id': str(i), 'MessageBody': json.dumps(body_func(key))}
+                        for i, key in enumerate(keys)
+                    ]
+                )
+                # If there were any failures sending to SQS, put those back in the md5s list.
+                keys = [keys[int(failure['Id'])] for failure in response.get('Failed', [])]
+
+        print()  # Print final newline when finished
 
     @staticmethod
     def apply() -> None:
-        """Terraform validate and apply any configuration/package changes."""
+        """Apply any configuration/package changes with Terraform"""
         # Validate and format the terraform files.
         os.chdir(TERRAFORM_DIR)
 
@@ -415,11 +431,11 @@ class Manager:
         subprocess.check_call(['terraform', 'apply', '-auto-approve=false'])
 
     def build(self) -> None:
-        """Build Lambda packages (saves *.zip files in terraform/)."""
+        """Build Lambda packages (saves *.zip files in terraform/)"""
         lambda_build(TERRAFORM_DIR, self._config.enable_carbon_black_downloader == 1)
 
     def cb_copy_all(self) -> None:
-        """Copy all binaries from CarbonBlack Response into BinaryAlert.
+        """Copy all binaries from CarbonBlack Response into BinaryAlert
 
         Raises:
             InvalidConfigError: If the CarbonBlack downloader is not enabled.
@@ -430,50 +446,38 @@ class Manager:
         print('Connecting to CarbonBlack server {} ...'.format(self._config.carbon_black_url))
         carbon_black = cbapi.CbResponseAPI(
             url=self._config.carbon_black_url, token=self._config.plaintext_carbon_black_api_token)
-        print('Connecting to SQS queue {} ...'.format(
-            self._config.binaryalert_downloader_queue_name))
-        queue = boto3.resource('sqs').get_queue_by_name(
-            QueueName=self._config.binaryalert_downloader_queue_name)
 
-        md5s = []
-        for index, binary in enumerate(carbon_black.select(Binary).all()):
-            print('\r{} {}'.format(index, binary.md5), flush=True, end='')
-            md5s.append(binary.md5)
-            if len(md5s) == 10:  # Up to 10 messages can be delivered at a time.
-                response = queue.send_messages(
-                    Entries=[
-                        {'Id': str(i), 'MessageBody': json.dumps({'md5': md5})}
-                        for i, md5 in enumerate(md5s)
-                    ]
-                )
-                # If there were any failures sending to SQS, put those back in the md5s list.
-                md5s = [md5s[int(failure['Id'])] for failure in response.get('Failed', [])]
+        self._enqueue(
+            self._config.binaryalert_downloader_queue_name,
+            carbon_black.select(Binary).all(),
+            lambda binary: binary.md5,
+            lambda md5: {'md5': md5}
+        )
 
     @staticmethod
     def clone_rules() -> None:
-        """Clone YARA rules from other open-source projects."""
+        """Clone YARA rules from other open-source projects"""
         clone_rules.clone_remote_rules()
 
     @staticmethod
     def compile_rules() -> None:
-        """Compile all of the YARA rules into a single binary file."""
+        """Compile all of the YARA rules into a single binary file"""
         compile_rules.compile_rules(COMPILED_RULES_FILENAME)
         print('Compiled rules saved to {}'.format(COMPILED_RULES_FILENAME))
 
     def configure(self) -> None:
-        """Update basic configuration, including region, prefix, and downloader settings."""
+        """Update basic configuration, including region, prefix, and downloader settings"""
         self._config.configure()
         print('Updated configuration successfully saved to terraform/terraform.tfvars!')
 
     def deploy(self) -> None:
-        """Deploy BinaryAlert. Equivalent to unit_test + build + apply + analyze_all."""
+        """Deploy BinaryAlert (equivalent to unit_test + build + apply)"""
         self.unit_test()
         self.build()
         self.apply()
-        self.analyze_all()
 
     def destroy(self) -> None:
-        """Teardown all of the BinaryAlert infrastructure."""
+        """Teardown all of the BinaryAlert infrastructure"""
         os.chdir(TERRAFORM_DIR)
 
         if not self._config.force_destroy:
@@ -493,7 +497,7 @@ class Manager:
         subprocess.call(['terraform', 'destroy'])
 
     def live_test(self) -> None:
-        """Upload test files to BinaryAlert which should trigger YARA matches.
+        """Upload test files to BinaryAlert which should trigger YARA matches
 
         Raises:
             TestFailureError: If the live test failed (YARA matches not found).
@@ -504,9 +508,87 @@ class Manager:
             raise TestFailureError(
                 '\nLive test failed! See https://binaryalert.io/troubleshooting-faq.html')
 
+    def purge_queue(self) -> None:
+        """Purge the analysis SQS queue (e.g. to stop a retroactive scan)"""
+        queue = boto3.resource('sqs').get_queue_by_name(
+            QueueName=self._config.binaryalert_analyzer_queue_name)
+        queue.purge()
+
+    @staticmethod
+    def _most_recent_manifest(bucket: boto3.resource) -> Optional[str]:
+        """Find the most recent S3 inventory manifest."""
+        today = datetime.today()
+        inv_prefix = 'inventory//{}/EntireBucketDaily'.format(bucket.name)  # TODO: fix prefix
+
+        # Check for each day, starting today, up to 8 days ago
+        for days_ago in range(0, 9):
+            date = today - timedelta(days=days_ago)
+            prefix = '{}/{}-{:02}-{:02}'.format(inv_prefix, date.year, date.month, date.day)
+            for object_summary in bucket.objects.filter(Prefix=prefix):
+                if object_summary.key.endswith('/manifest.json'):
+                    return object_summary.key
+
+    @staticmethod
+    def _enumerate_inventory(
+            bucket: boto3.resource, manifest_path: str) -> Generator[str, None, None]:
+        """Yield lines from the S3 inventory."""
+        response = bucket.Object(manifest_path).get()
+        manifest = json.loads(response['Body'].read())
+
+        # The manifest contains a list of .csv.gz files, each with a list of object keys
+        for record in manifest['files']:
+            response = bucket.Object(record['key']).get()
+            csv_data = gzip.decompress(response['Body'].read()).decode('utf-8')
+            yield from csv_data.strip().split('\n')
+
+    def _sqs_body(self, object_key: str) -> Dict[str, Any]:
+        """Convert an S3 object key to an SQS message body."""
+        return {
+            'Records': [
+                {
+                    's3': {
+                        'bucket': {
+                            'name': self._config.binaryalert_s3_bucket_name
+                        },
+                        'object': {
+                            'key': object_key
+                        }
+                    }
+                }
+            ]
+        }
+
+    def retro_fast(self) -> None:
+        """Enumerate the most recent S3 inventory for fast retroactive analysis"""
+        bucket = boto3.resource('s3').Bucket(self._config.binaryalert_s3_bucket_name)
+
+        manifest_path = self._most_recent_manifest(bucket)
+        if not manifest_path:
+            print('ERROR: No inventory manifest found in the last week')
+            print('You can run "./manage.py retro_slow" to manually enumerate the bucket')
+            return
+
+        print('Reading {}'.format(manifest_path))
+        self._enqueue(
+            self._config.binaryalert_analyzer_queue_name,
+            self._enumerate_inventory(bucket, manifest_path),
+            lambda line: line.split(',')[1].strip('"'),
+            self._sqs_body
+        )
+
+    def retro_slow(self) -> None:
+        """Enumerate the entire S3 bucket for slow retroactive analysis"""
+        bucket = boto3.resource('s3').Bucket(self._config.binaryalert_s3_bucket_name)
+        self._enqueue(
+            self._config.binaryalert_analyzer_queue_name,
+            bucket.objects.all(),
+            lambda summary: summary.key,
+            self._sqs_body
+        )
+
     @staticmethod
     def unit_test() -> None:
-        """Run unit tests (*_test.py).
+        """Run unit tests (*_test.py)
 
         Raises:
             TestFailureError: If any of the unit tests failed.
