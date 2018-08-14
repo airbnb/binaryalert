@@ -10,10 +10,10 @@ import cbapi
 from pyfakefs import fake_filesystem_unittest
 
 
-class MockBinary(object):
+class MockBinary:
     """Mock for cbapi.response.models.Binary."""
 
-    class MockVirusTotal(object):
+    class MockVirusTotal:
         """Mock for cbapi.response.models.VirusTotal."""
 
         def __init__(self, score: int = 0) -> None:
@@ -56,14 +56,14 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Create the test event.
         self.event = {
-            'messages': [
+            'Records': [
                 {
-                    'body': '{"md5": "ABC123"}',
-                    'receipt': 'TEST-RECEIPT',
-                    'receive_count': 1
+                    'attributes': {
+                        'ApproximateReceiveCount': 1
+                    },
+                    'body': '{"md5": "ABC123"}'
                 }
-            ],
-            'queue_url': 'TEST-QUEUE-URL'
+            ]
         }
 
         # Mock out cbapi and import the file under test.
@@ -106,6 +106,5 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 mock.call.info(
                     'Downloading %s to %s', self._binary.webui_link, mock.ANY),
                 mock.call.info('Uploading to S3 with key %s', mock.ANY),
-                mock.call.info('Deleting %d SQS receipt(s)', 1),
                 mock.call.info('Sending ReceiveCount metrics')
             ])

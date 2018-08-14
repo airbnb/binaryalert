@@ -19,7 +19,7 @@ else:
     from yara_analyzer import YaraAnalyzer, YaraMatch  # type: ignore
 
 
-class BinaryInfo(object):
+class BinaryInfo:
     """Organizes the analysis of a single binary blob in S3."""
 
     def __init__(self, bucket_name: str, object_key: str, yara_analyzer: YaraAnalyzer) -> None:

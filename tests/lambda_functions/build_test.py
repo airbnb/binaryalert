@@ -56,6 +56,7 @@ class BuildTest(unittest.TestCase):
                 'compiled_yara_rules.bin',
 
                 # Natively compiled binaries
+                'cryptography/',
                 'libarchive.so.13',
                 'libs/',
                 'libs/bayshore_file_type_detect.o',
@@ -89,7 +90,8 @@ class BuildTest(unittest.TestCase):
                 'YARA_LICENSE',
                 'YARA_PYTHON_LICENSE',
                 'YEXTEND_LICENSE'
-            }
+            },
+            subset=True
         )
         mock_print.assert_called_once()
 
@@ -98,14 +100,6 @@ class BuildTest(unittest.TestCase):
         build._build_batcher(self._tempdir)
         self._verify_filenames(
             os.path.join(self._tempdir, build.BATCH_ZIPFILE + '.zip'), {'main.py'}
-        )
-        mock_print.assert_called_once()
-
-    def test_build_dispatcher(self, mock_print: mock.MagicMock):
-        """Verify that a valid zipfile is generated for the dispatcher Lambda function."""
-        build._build_dispatcher(self._tempdir)
-        self._verify_filenames(
-            os.path.join(self._tempdir, build.DISPATCH_ZIPFILE + '.zip'), {'main.py'}
         )
         mock_print.assert_called_once()
 
@@ -123,15 +117,12 @@ class BuildTest(unittest.TestCase):
 
     @mock.patch.object(build, '_build_analyzer')
     @mock.patch.object(build, '_build_batcher')
-    @mock.patch.object(build, '_build_dispatcher')
     @mock.patch.object(build, '_build_downloader')
-    def test_build_all(self, build_downloader: mock.MagicMock, build_dispatcher: mock.MagicMock,
-                       build_batcher: mock.MagicMock, build_analyzer: mock.MagicMock,
-                       mock_print: mock.MagicMock):
+    def test_build_all(self, build_downloader: mock.MagicMock, build_batcher: mock.MagicMock,
+                       build_analyzer: mock.MagicMock, mock_print: mock.MagicMock):
         """Verify that the top-level build function executes each individual builder."""
         build.build(self._tempdir, downloader=True)
         build_analyzer.assert_called_once()
         build_batcher.assert_called_once()
-        build_dispatcher.assert_called_once()
         build_downloader.assert_called_once()
         mock_print.assert_not_called()

@@ -4,7 +4,7 @@ BinaryAlert utilizes a `serverless <https://aws.amazon.com/serverless/>`_ archit
 
 .. image:: ../images/architecture.png
   :align: center
-  :scale: 80%
+  :scale: 30%
   :alt: BinaryAlert Architecture
 
 
@@ -13,7 +13,7 @@ Analysis Lifecycle
 
 1. The organization collects files and `delivers them <uploading-files.html>`_ to their BinaryAlert S3 bucket. Files of interest could include executable binaries, email attachments, documents, etc.
 2. Every file uploaded to the S3 bucket is immediately queued for analysis (using `S3 event notifications <http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html>`_).
-3. A dispatching Lambda function runs every minute, grouping files into batches and invoking up to dozens of analyzers in parallel.
+3. The SQS queue automatically batches files and invokes many analyzers in parallel.
 4. Each analyzer scans its files using a list of pre-compiled `YARA rules <adding-yara-rules.html>`_.
 5. `YARA matches <yara-matches.html>`_ are saved to DynamoDB and an alert is sent to an SNS topic. You can subscribe to these alerts via `StreamAlert <https://streamalert.io>`_, email, or any other supported `SNS subscription <http://docs.aws.amazon.com/sns/latest/api/API_Subscribe.html>`_.
 6. For retroactive analysis, a batching Lambda function enqueues the entire S3 bucket to be re-analyzed.

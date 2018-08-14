@@ -25,15 +25,13 @@ EVIL_S3_OBJECT_KEY = 'evil.exe'
 
 MOCK_DYNAMO_TABLE_NAME = 'mock-dynamo-table'
 MOCK_SNS_TOPIC_ARN = 's3:mock-sns-arn'
-MOCK_SQS_URL = 'https://sqs.mock.url'
-MOCK_SQS_RECEIPTS = ['sqs_receipt1', 'sqs_receipt2']
 
 # Mimics minimal parts of S3:ObjectAdded event that triggers the lambda function.
 LAMBDA_VERSION = 1
 TEST_CONTEXT = common.MockLambdaContext(LAMBDA_VERSION)
 
 
-class MockS3Object(object):
+class MockS3Object:
     """Simple mock for boto3.resource('s3').Object"""
     def __init__(self, bucket_name, object_key):
         self.name = bucket_name
@@ -54,7 +52,6 @@ class MockS3Object(object):
 
 @mock.patch.dict(os.environ, values={
     'LAMBDA_TASK_ROOT': '/var/task',
-    'SQS_QUEUE_URL': MOCK_SQS_URL,
     'YARA_MATCHES_DYNAMO_TABLE_NAME': MOCK_DYNAMO_TABLE_NAME,
     'YARA_ALERTS_SNS_TOPIC_ARN': MOCK_SNS_TOPIC_ARN
 })
@@ -74,7 +71,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
 
         # Create test event.
         self._test_event = {
-            'messages': [
+            'Records': [
                 {
                     'body': json.dumps({
                         'Records': [
@@ -85,9 +82,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
                                 }
                             }
                         ]
-                    }),
-                    'receipt': MOCK_SQS_RECEIPTS[0],
-                    'receive_count': 1
+                    })
                 },
                 {
                     'body': json.dumps({
@@ -99,12 +94,9 @@ class MainTest(fake_filesystem_unittest.TestCase):
                                 }
                             }
                         ]
-                    }),
-                    'receipt': MOCK_SQS_RECEIPTS[1],
-                    'receive_count': 2
+                    })
                 }
-            ],
-            'queue_url': MOCK_SQS_URL
+            ]
         }
 
         # Import the module under test (now that YARA is mocked out).
@@ -119,7 +111,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
         self.main.analyzer_aws_lib.DYNAMODB = mock.MagicMock()
         self.main.analyzer_aws_lib.S3 = mock.MagicMock()
         self.main.analyzer_aws_lib.SNS = mock.MagicMock()
-        self.main.analyzer_aws_lib.SQS = mock.MagicMock()
 
         # Mock S3 Object
         self.main.analyzer_aws_lib.S3.Object = MockS3Object
@@ -127,7 +118,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
     def test_objects_to_analyze_sqs_event(self):
         """Test event parsing when invoked from dispatcher with SQS messages."""
         event = {
-            'messages': [
+            'Records': [
                 {
                     'body': json.dumps({
                         'Records': [
@@ -138,15 +129,11 @@ class MainTest(fake_filesystem_unittest.TestCase):
                                 }
                             },
                             {
-                                's3': {}  # Invalid record should be skipped
-                            },
-                            {
                                 's3': {
                                     'bucket': {'name': 'bucket1'},
                                     'object': {'key': 'key2'}
                                 }
-                            },
-
+                            }
                         ]
                     }),
                     'receipt': 'receipt1',
@@ -176,42 +163,9 @@ class MainTest(fake_filesystem_unittest.TestCase):
         with mock.patch.object(self.main, 'LOGGER') as mock_logger:
             result = list(self.main._objects_to_analyze(event))
             mock_logger.assert_has_calls([
-                mock.call.exception('Skipping invalid S3 record %s', mock.ANY),
                 mock.call.exception('Skipping invalid SQS message %s', mock.ANY)
             ])
 
-        expected = [
-            ('bucket1', 'key1'),
-            ('bucket1', 'key2'),
-            ('bucket2', 'key3')
-        ]
-        self.assertEqual(expected, result)
-
-    def test_objects_to_analyze_s3_event(self):
-        """Test event parsing when invoked from dispatcher with an S3 event."""
-        event = {
-            'Records': [
-                {
-                    's3': {
-                        'bucket': {'name': 'bucket1'},
-                        'object': {'key': 'key1'}
-                    }
-                },
-                {
-                    's3': {
-                        'bucket': {'name': 'bucket1'},
-                        'object': {'key': 'key2'}
-                    }
-                },
-                {
-                    's3': {
-                        'bucket': {'name': 'bucket2'},
-                        'object': {'key': 'key3'}
-                    }
-                }
-            ]
-        }
-        result = list(self.main._objects_to_analyze(event))
         expected = [
             ('bucket1', 'key1'),
             ('bucket1', 'key2'),
@@ -227,7 +181,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
             result = self.main.analyze_lambda_handler(self._test_event, TEST_CONTEXT)
             # Verify logging statements.
             mock_logger.assert_has_calls([
-                mock.call.info('Invoked from dispatcher with %d messages', 2),
                 mock.call.info('Analyzing "%s:%s"', MOCK_S3_BUCKET_NAME, GOOD_S3_OBJECT_KEY),
                 mock.call.warning(
                     '%s matched YARA rules: %s',
@@ -328,15 +281,6 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 Message=mock.ANY,
                 Subject='[BinaryAlert] /path/to/mock-evil.exe matches a YARA rule'
             )
-        ])
-
-        # Verify the SQS receipts were deleted.
-        self.main.analyzer_aws_lib.SQS.assert_has_calls([
-            mock.call.Queue(MOCK_SQS_URL),
-            mock.call.Queue().delete_messages(Entries=[
-                {'Id': '0', 'ReceiptHandle': 'sqs_receipt1'},
-                {'Id': '1', 'ReceiptHandle': 'sqs_receipt2'}
-            ])
         ])
 
         # Verify the correct metrics were published to Cloudwatch.

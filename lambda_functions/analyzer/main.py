@@ -5,7 +5,7 @@
 # Expects a binary YARA rules file to be at './compiled_yara_rules.bin'
 import json
 import os
-from typing import Any, Dict, Generator, List, Tuple
+from typing import Any, Dict, Generator, Tuple
 import urllib.parse
 
 from botocore.exceptions import ClientError
@@ -29,90 +29,52 @@ ANALYZER = yara_analyzer.YaraAnalyzer(COMPILED_RULES_FILEPATH)
 NUM_YARA_RULES = ANALYZER.num_rules
 
 
-def _s3_objects(s3_records: List[Dict[str, Any]]) -> Generator[Tuple[str, str], None, None]:
-    """Build list of objects in the given S3 record.
-
-    Args:
-        s3_records: List of S3 event records: [
-            {
-                's3': {
-                    'object': {
-                        'key': (str)
-                    },
-                    'bucket': {
-                        'name': (str)
-                    }
-                }
-            },
-            ...
-        ]
-
-    Yields:
-        (bucket_name, object_key) string tuple
-    """
-    for record in s3_records:
-        try:
-            bucket_name = record['s3']['bucket']['name']
-            object_key = urllib.parse.unquote_plus(record['s3']['object']['key'])
-            yield bucket_name, object_key
-        except (KeyError, TypeError):
-            LOGGER.exception('Skipping invalid S3 record %s', record)
-
-
 def _objects_to_analyze(event: Dict[str, Any]) -> Generator[Tuple[str, str], None, None]:
     """Parse the invocation event into a list of objects to analyze.
 
     Args:
-        event: Invocation event, from either the dispatcher or an S3 bucket
+        event: Invocation event (SQS message whose message body is an S3 event notification)
 
     Yields:
         (bucket_name, object_key) string tuples to analyze
     """
-    if set(event) == {'messages', 'queue_url'}:
-        LOGGER.info('Invoked from dispatcher with %d messages', len(event['messages']))
-        for sqs_record in event['messages']:
-            try:
-                s3_records = json.loads(sqs_record['body'])['Records']
-            except (json.JSONDecodeError, KeyError, TypeError):
-                LOGGER.exception('Skipping invalid SQS message %s', sqs_record)
-                continue
-            yield from _s3_objects(s3_records)
-    else:
-        LOGGER.info('Invoked with dictionary (S3 Event)')
-        yield from _s3_objects(event['Records'])
+    for sqs_message in event['Records']:
+        try:
+            msg_body = json.loads(sqs_message['body'])
+        except (KeyError, TypeError, json.JSONDecodeError):
+            LOGGER.exception('Skipping invalid SQS message %s', json.dumps(sqs_message))
+            continue
+
+        for s3_message in msg_body['Records']:
+            yield (
+                s3_message['s3']['bucket']['name'],
+                urllib.parse.unquote_plus(s3_message['s3']['object']['key'])
+            )
 
 
-def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[str, Dict[str, Any]]:
+def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[str, Any]:
     """Analyzer Lambda function entry point.
 
     Args:
-        event: SQS message batch sent by the dispatcher: {
-            'messages': [
+        event: SQS message batch - each message body is a JSON-encoded S3 notification - {
+            'Records': [
                 {
-                    'body': (str) JSON-encoded S3 put event: {
+                    'body': json.dumps({
                         'Records': [
-                            {
-                                's3': {
-                                    'object': {
-                                        'key': (str)
-                                    },
-                                    'bucket': {
-                                        'name': (str)
-                                    }
+                            's3': {
+                                'bucket': {
+                                    'name': '...'
+                                },
+                                'object': {
+                                    'key': '...'
                                 }
-                            },
-                            ...
+                            }
                         ]
-                    },
-                    'receipt': (str) SQS message receipt handle,
-                    'receive_count': (int) Approx. # of times this has been received
-                },
-                ...
-            ],
-            'queue_url': (str) SQS queue url from which the message originated
+                    }),
+                    'messageId': '...'
+                }
+            ]
         }
-            Alternatively, the event can be an S3 Put Event dictionary (with no sqs information).
-            This allows the analyzer to be linked directly to an S3 bucket notification if needed.
         lambda_context: LambdaContext object (with .function_version).
 
     Returns:
@@ -160,11 +122,6 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
             if os.environ['SAFE_SNS_TOPIC_ARN']:
                 binary.safe_alert_only(
                     os.environ['SAFE_SNS_TOPIC_ARN'])
-
-    # Delete all of the SQS receipts (mark them as completed).
-    receipts_to_delete = [msg['receipt'] for msg in event.get('messages', [])]
-    if receipts_to_delete:
-        analyzer_aws_lib.delete_sqs_messages(event['queue_url'], receipts_to_delete)
 
     # Publish metrics.
     if binaries:

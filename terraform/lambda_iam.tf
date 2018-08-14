@@ -38,10 +38,14 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
   }
 
   statement {
-    sid       = "DecryptSSE"
-    effect    = "Allow"
-    actions   = ["kms:Decrypt"]
-    resources = ["${aws_kms_key.sse_s3.arn}"]
+    sid     = "DecryptSSE"
+    effect  = "Allow"
+    actions = ["kms:Decrypt"]
+
+    resources = [
+      "${aws_kms_key.sse_s3.arn}",
+      "${aws_kms_key.sse_sqs.arn}",
+    ]
   }
 
   statement {
@@ -71,9 +75,16 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
   }
 
   statement {
-    sid       = "DeleteSQSMessages"
-    effect    = "Allow"
-    actions   = ["sqs:DeleteMessage"]
+
+    sid    = "ProcessSQSMessages"
+    effect = "Allow"
+    actions = [
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ReceiveMessage",
+    ]
+
     resources = ["${aws_sqs_queue.analyzer_queue.arn}"]
   }
 }
@@ -127,62 +138,6 @@ resource "aws_iam_role_policy" "binaryalert_batcher_policy" {
   policy = "${data.aws_iam_policy_document.binaryalert_batcher_policy.json}"
 }
 
-// ********** Dispatcher **********
-
-data "aws_iam_policy_document" "binaryalert_dispatcher_policy_analyzer" {
-  statement {
-    sid       = "DecryptSSE"
-    effect    = "Allow"
-    actions   = ["kms:Decrypt"]
-    resources = ["${aws_kms_key.sse_sqs.arn}"]
-  }
-
-  statement {
-    sid       = "InvokeBinaryAlertAnalyzer"
-    effect    = "Allow"
-    actions   = ["lambda:InvokeFunction"]
-    resources = ["${module.binaryalert_analyzer.function_arn}"]
-  }
-
-  statement {
-    sid       = "ProcessSQSMessages"
-    effect    = "Allow"
-    actions   = ["sqs:ReceiveMessage"]
-    resources = ["${aws_sqs_queue.analyzer_queue.arn}"]
-  }
-}
-
-resource "aws_iam_role_policy" "binaryalert_dispatcher_policy" {
-  name   = "${var.name_prefix}_binaryalert_dispatcher_policy_analyezr"
-  role   = "${module.binaryalert_dispatcher.role_id}"
-  policy = "${data.aws_iam_policy_document.binaryalert_dispatcher_policy_analyzer.json}"
-}
-
-data "aws_iam_policy_document" "binaryalert_dispatcher_policy_downloader" {
-  count = "${var.enable_carbon_black_downloader}"
-
-  statement {
-    sid       = "InvokeTargetFunctions"
-    effect    = "Allow"
-    actions   = ["lambda:InvokeFunction"]
-    resources = ["${module.binaryalert_downloader.function_arn}"]
-  }
-
-  statement {
-    sid       = "ProcessSQSMessages"
-    effect    = "Allow"
-    actions   = ["sqs:ReceiveMessage"]
-    resources = ["${aws_sqs_queue.downloader_queue.arn}"]
-  }
-}
-
-resource "aws_iam_role_policy" "binaryalert_dispatcher_policy_downloader" {
-  count  = "${var.enable_carbon_black_downloader}"
-  name   = "${var.name_prefix}_binaryalert_dispatcher_policy"
-  role   = "${module.binaryalert_dispatcher.role_id}"
-  policy = "${data.aws_iam_policy_document.binaryalert_dispatcher_policy_downloader.json}"
-}
-
 // ********** Downloader **********
 
 data "aws_iam_policy_document" "binaryalert_downloader_policy" {
@@ -197,7 +152,10 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
       "kms:GenerateDataKey",
     ]
 
-    resources = ["${aws_kms_key.sse_s3.arn}"]
+    resources = [
+      "${aws_kms_key.sse_s3.arn}",
+      "${aws_kms_key.sse_sqs.arn}",
+    ]
   }
 
   statement {
@@ -215,9 +173,16 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
   }
 
   statement {
-    sid       = "DeleteFromDownloadQueue"
-    effect    = "Allow"
-    actions   = ["sqs:DeleteMessage"]
+    sid    = "ProcessSQSMessages"
+    effect = "Allow"
+
+    actions = [
+      "sqs:ChangeMessageVisibility",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ReceiveMessage",
+    ]
+
     resources = ["${aws_sqs_queue.downloader_queue.arn}"]
   }
 }

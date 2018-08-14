@@ -27,7 +27,7 @@ rule filename_contains_win32 : mock_rule { condition: filename contains "win32" 
 """
 
 
-class YaraRulesMock(object):
+class YaraRulesMock:
     """A wrapper around Yara.Rules which redirects .match() to open files with Python's open()."""
 
     def __init__(self, yara_rules_object):

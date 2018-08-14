@@ -66,14 +66,6 @@ def _build_batcher(target_directory: str) -> None:
         pkg.write(BATCH_SOURCE, os.path.basename(BATCH_SOURCE))
 
 
-def _build_dispatcher(target_directory: str) -> None:
-    """Build the dispatcher Lambda deployment package."""
-    print('Creating dispatcher deploy package...')
-    pathlib.Path(DISPATCH_SOURCE).touch()
-    with zipfile.ZipFile(os.path.join(target_directory, DISPATCH_ZIPFILE + '.zip'), 'w') as pkg:
-        pkg.write(DISPATCH_SOURCE, os.path.basename(DISPATCH_SOURCE))
-
-
 def _build_downloader(target_directory: str) -> None:
     """Build the downloader Lambda deployment package."""
     print('Creating downloader deploy package...')
@@ -106,6 +98,5 @@ def build(target_directory: str, downloader: bool = False) -> None:
     """
     _build_analyzer(target_directory)
     _build_batcher(target_directory)
-    _build_dispatcher(target_directory)
     if downloader:
         _build_downloader(target_directory)

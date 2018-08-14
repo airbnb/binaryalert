@@ -32,6 +32,13 @@ EOF
   alarm_sns_arns             = ["${aws_sns_topic.metric_alarms.arn}"]
 }
 
+// Invoke analyzer Lambda from analyzer SQS queue.
+resource "aws_lambda_event_source_mapping" "analyzer_via_sqs" {
+  batch_size       = "${var.analyze_queue_batch_size}"
+  event_source_arn = "${aws_sqs_queue.analyzer_queue.arn}"
+  function_name    = "${module.binaryalert_analyzer.alias_arn}"
+}
+
 // Create the batch Lambda function.
 module "binaryalert_batcher" {
   source          = "modules/lambda"
@@ -56,46 +63,6 @@ module "binaryalert_batcher" {
   alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
 }
 
-// Create the dispatching Lambda function.
-module "binaryalert_dispatcher" {
-  source          = "modules/lambda"
-  function_name   = "${var.name_prefix}_binaryalert_dispatcher"
-  description     = "Poll SQS events and fire them off to analyzers"
-  base_policy_arn = "${aws_iam_policy.base_policy.arn}"
-  handler         = "main.dispatch_lambda_handler"
-  memory_size_mb  = "${var.lambda_dispatch_memory_mb}"
-  timeout_sec     = "${var.lambda_dispatch_timeout_sec}"
-  filename        = "lambda_dispatcher.zip"
-
-  environment_variables = {
-    SQS_QUEUE_URLS = "${
-        var.enable_carbon_black_downloader == 1 ?
-        format("%s,%s", aws_sqs_queue.analyzer_queue.id,
-               element(concat(aws_sqs_queue.downloader_queue.*.id, list("")), 0)) :
-        aws_sqs_queue.analyzer_queue.id}"
-
-    LAMBDA_TARGETS = "${
-        var.enable_carbon_black_downloader == 1 ?
-        format("%s:%s,%s:%s", module.binaryalert_analyzer.function_name, module.binaryalert_analyzer.alias_name,
-               module.binaryalert_downloader.function_name, module.binaryalert_downloader.alias_name) :
-        format("%s:%s", module.binaryalert_analyzer.function_name, module.binaryalert_analyzer.alias_name)}"
-  }
-
-  log_retention_days = "${var.lambda_log_retention_days}"
-  tagged_name        = "${var.tagged_name}"
-  alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
-}
-
-// Allow dispatcher to be invoked via a CloudWatch rule.
-resource "aws_lambda_permission" "allow_cloudwatch_to_invoke_dispatch" {
-  statement_id  = "AllowExecutionFromCloudWatch_${module.binaryalert_dispatcher.function_name}"
-  action        = "lambda:InvokeFunction"
-  function_name = "${module.binaryalert_dispatcher.function_name}"
-  principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.dispatch_cronjob.arn}"
-  qualifier     = "${module.binaryalert_dispatcher.alias_name}"
-}
-
 // Create the CarbonBlack downloading Lambda function.
 module "binaryalert_downloader" {
   enabled = "${var.enable_carbon_black_downloader}"
@@ -118,4 +85,12 @@ module "binaryalert_downloader" {
   log_retention_days = "${var.lambda_log_retention_days}"
   tagged_name        = "${var.tagged_name}"
   alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
+}
+
+// Invoke downloader Lambda from downloader SQS queue.
+resource "aws_lambda_event_source_mapping" "downloader_via_sqs" {
+  count            = "${var.enable_carbon_black_downloader == 1 ? 1 : 0}"
+  batch_size       = "${var.download_queue_batch_size}"
+  event_source_arn = "${aws_sqs_queue.downloader_queue.arn}"
+  function_name    = "${module.binaryalert_downloader.alias_arn}"
 }

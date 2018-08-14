@@ -19,17 +19,17 @@ def _mock_input(prompt: str) -> str:
     # pylint: disable=too-many-return-statements
     if prompt.startswith('AWS Account'):
         return '111122223333'
-    elif prompt.startswith('AWS Region'):
+    if prompt.startswith('AWS Region'):
         return 'us-west-2'
-    elif prompt.startswith('Unique name prefix'):
+    if prompt.startswith('Unique name prefix'):
         return ' NEW_NAME_PREFIX '  # Spaces and case shouldn't matter.
-    elif prompt.startswith('Enable the CarbonBlack downloader'):
+    if prompt.startswith('Enable the CarbonBlack downloader'):
         return 'yes'
-    elif prompt.startswith('CarbonBlack URL'):
+    if prompt.startswith('CarbonBlack URL'):
         return 'https://new-example.com'
-    elif prompt.startswith('Change the CarbonBlack API token'):
+    if prompt.startswith('Change the CarbonBlack API token'):
         return 'yes'
-    elif prompt.startswith('Delete all S3 objects'):
+    if prompt.startswith('Delete all S3 objects'):
         return 'yes'
     return 'UNKNOWN'
 

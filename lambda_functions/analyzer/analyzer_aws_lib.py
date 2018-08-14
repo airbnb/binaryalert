@@ -22,7 +22,6 @@ CLOUDWATCH = boto3.client('cloudwatch')
 DYNAMODB = boto3.resource('dynamodb')
 S3 = boto3.resource('s3')
 SNS = boto3.resource('sns')
-SQS = boto3.resource('sqs')
 
 
 class FileDownloadError(Exception):
@@ -103,20 +102,6 @@ def publish_safe_to_sns(binary: BinaryInfo, topic_arn: str) -> None:
     )
 
 
-def delete_sqs_messages(queue_url: str, receipts: List[str]) -> None:
-    """Mark a batch of SQS receipts as completed (removing them from the queue).
-
-    Args:
-        queue_url: The URL of the SQS queue containing the messages.
-        receipts: List of SQS receipt handles.
-    """
-    LOGGER.info('Deleting %d SQS receipt(s) from %s', len(receipts), queue_url)
-    SQS.Queue(queue_url).delete_messages(
-        Entries=[
-            {'Id': str(index), 'ReceiptHandle': receipt} for index, receipt in enumerate(receipts)]
-    )
-
-
 def _compute_statistics(values: List[Union[int, float]]) -> Dict[str, Union[int, float]]:
     """Compute summary statistics for a collection of values.
 
@@ -167,7 +152,7 @@ def put_metric_data(num_yara_rules: int, binaries: List[BinaryInfo]) -> None:
     CLOUDWATCH.put_metric_data(Namespace='BinaryAlert', MetricData=metric_data)
 
 
-class DynamoMatchTable(object):
+class DynamoMatchTable:
     """Saves YARA match information into a Dynamo table.
 
     The table uses a composite key:
@@ -222,8 +207,8 @@ class DynamoMatchTable(object):
             if len(most_recent_items) >= 2:
                 previous_s3_objects = set(most_recent_items[1]['S3Objects'])
             return analyzer_version, matched_rules, s3_objects, previous_s3_objects
-        else:
-            return None
+
+        return None
 
     @staticmethod
     def _replace_empty_strings(data: Dict[str, str]) -> Dict[str, str]:

@@ -207,7 +207,7 @@ class MainTest(unittest.TestCase):
 
     def test_batcher_re_invoke(self):
         """If the batcher runs out of time, it has to re-invoke itself."""
-        class MockEnumerator(object):
+        class MockEnumerator:
             """Simple mock for S3BucketEnumerator which never finishes."""
             def __init__(self, *args):  # pylint: disable=unused-argument
                 self.continuation_token = 'test-continuation-token'

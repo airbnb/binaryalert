@@ -23,7 +23,7 @@ SQS = boto3.resource('sqs')
 SQS_MAX_MESSAGES_PER_BATCH = 10
 
 
-class SQSMessage(object):
+class SQSMessage:
     """Encapsulates a single SQS message (which will contain multiple S3 keys)."""
 
     def __init__(self, msg_id: int) -> None:
@@ -70,7 +70,7 @@ class SQSMessage(object):
         self._keys = []
 
 
-class SQSBatcher(object):
+class SQSBatcher:
     """Collect groups of S3 keys and batch them into as few SQS requests as possible."""
 
     def __init__(self, queue_url: str, objects_per_message: int) -> None:
@@ -142,7 +142,7 @@ class SQSBatcher(object):
             self._send_batch()
 
 
-class S3BucketEnumerator(object):
+class S3BucketEnumerator:
     """Enumerates all of the S3 objects in a given bucket."""
 
     def __init__(self, bucket_name: str, prefix: Optional[str],
@@ -164,7 +164,7 @@ class S3BucketEnumerator(object):
         self.finished = False  # Have we finished enumerating all of the S3 bucket?
 
     @property
-    def continuation_token(self) -> str:
+    def continuation_token(self) -> Optional[str]:
         return self.kwargs.get('ContinuationToken')
 
     def next_page(self) -> List[str]:
