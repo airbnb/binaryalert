@@ -45,7 +45,7 @@ class BuildTest(unittest.TestCase):
         build.build(self._tempdir, downloader=True)
 
         self._verify_filenames(
-            os.path.join(self._tempdir, 'analyzer.zip'),
+            os.path.join(self._tempdir, 'lambda_analyzer.zip'),
             {
                 # Python source files
                 'lambda_functions/__init__.py',
@@ -100,7 +100,7 @@ class BuildTest(unittest.TestCase):
         )
 
         self._verify_filenames(
-            os.path.join(self._tempdir, 'downloader.zip'),
+            os.path.join(self._tempdir, 'lambda_downloader.zip'),
             {
                 # Python source files
                 'lambda_functions/',
