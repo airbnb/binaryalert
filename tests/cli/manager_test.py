@@ -1,4 +1,5 @@
 """Unit tests for cli/manager.py"""
+# pylint: disable=protected-access,too-many-public-methods
 import collections
 import inspect
 import subprocess

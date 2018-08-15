@@ -4,6 +4,7 @@ import getpass
 import os
 import re
 import subprocess
+from typing import Any
 
 import boto3
 import hcl
@@ -17,13 +18,40 @@ CONFIG_FILE = os.path.join(TERRAFORM_DIR, 'terraform.tfvars')
 VARIABLES_FILE = os.path.join(TERRAFORM_DIR, 'variables.tf')
 
 
-def get_input(prompt: str, default_value: str) -> str:
-    """Wrapper around input() which shows the current (default value)."""
+def get_input(prompt: str, default_value: str,
+              config: Any = None, property_name: str = None) -> str:
+    """Request user input, updating the underlying config if applicable.
+
+    Args:
+        prompt: On-screen prompt before user input
+        default_value: The default (existing) value
+        config: BinaryAlertConfig instance, if updating the underlying configuration
+            If None, the valid values are assumed to be 'yes' and 'no'
+        property_name: Name of the config property to update (applicable only if config != None)
+
+    Returns:
+        Lowercase user input, stripped of extra spaces, or the default value if no input was given
+    """
     if default_value:
         prompt = '{} ({}): '.format(prompt, default_value)
     else:
         prompt = '{}: '.format(prompt)
-    return input(prompt).strip().lower() or default_value
+
+    # Keep requesting user input until it is valid
+    while True:
+        user_input = input(prompt).strip().lower() or default_value
+        if config and property_name:
+            try:
+                setattr(config, property_name, user_input)
+                break
+            except InvalidConfigError as error:
+                print('ERROR: {}'.format(error))
+        elif user_input in {'yes', 'no'}:
+            break
+        else:
+            print('ERROR: Please enter exactly "yes" or "no"')
+
+    return user_input
 
 
 class BinaryAlertConfig:
@@ -203,22 +231,12 @@ class BinaryAlertConfig:
 
     def _configure_carbon_black(self) -> None:
         """If CarbonBlack downloader is enabled, request URL and credentials"""
-        while True:  # CarbonBlack URL
-            try:
-                self.carbon_black_url = get_input('CarbonBlack URL', self.carbon_black_url)
-                break
-            except InvalidConfigError as error:
-                print('ERROR: {}'.format(error))
+        get_input('CarbonBlack URL', self.carbon_black_url, self, 'carbon_black_url')
 
         update_api_token = 'yes'
         if self.encrypted_carbon_black_api_token:
             # API token already exists - ask if they want to update it.
-            while True:
-                update_api_token = get_input('Change the CarbonBlack API token?', 'no')
-                if update_api_token in {'yes', 'no'}:
-                    break
-                else:
-                    print('ERROR: Please enter exactly "yes" or "no"')
+            update_api_token = get_input('Change the CarbonBlack API token?', 'no')
 
         if update_api_token == 'yes':
             self.save()  # Save updates so far to enable the downloader for terraform.
@@ -229,38 +247,11 @@ class BinaryAlertConfig:
 
         Each request will be retried until the answer is in the correct format.
         """
-        while True:  # Get AWS account ID
-            try:
-                self.aws_account_id = get_input('AWS Account ID', self.aws_account_id)
-                break
-            except InvalidConfigError as error:
-                print('ERROR: {}'.format(error))
-
-        while True:  # Get AWS region.
-            try:
-                self.aws_region = get_input('AWS Region', self.aws_region)
-                break
-            except InvalidConfigError as error:
-                print('ERROR: {}'.format(error))
-
-        while True:  # Get name prefix.
-            try:
-                self.name_prefix = get_input(
-                    'Unique name prefix, e.g. "company_team"', self.name_prefix
-                )
-                break
-            except InvalidConfigError as error:
-                print('ERROR: {}'.format(error))
-
-        while True:  # Enable downloader?
-            enable_downloader = get_input(
-                'Enable the CarbonBlack downloader?',
-                'yes' if self.enable_carbon_black_downloader else 'no'
-            )
-            if enable_downloader in {'yes', 'no'}:
-                break
-            else:
-                print('ERROR: Please enter exactly "yes" or "no"')
+        get_input('AWS Account ID', self.aws_account_id, self, 'aws_account_id')
+        get_input('AWS Region', self.aws_region, self, 'aws_region')
+        get_input('Unique name prefix, e.g. "company_team"', self.name_prefix, self, 'name_prefix')
+        enable_downloader = get_input('Enable the CarbonBlack downloader?',
+                                      'yes' if self.enable_carbon_black_downloader else 'no')
         self.enable_carbon_black_downloader = 1 if enable_downloader == 'yes' else 0
 
         if self.enable_carbon_black_downloader:

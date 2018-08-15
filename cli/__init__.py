@@ -1,2 +1,2 @@
 """BinaryAlert release version"""
-VERSION = '1.1.0'
+__version__ = '1.1.0'

@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from cli import VERSION
+from cli import __version__
 from cli.manager import Manager
 
 
@@ -19,7 +19,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         'command', choices=sorted(manager.commands), help=manager.help, metavar='command')
-    parser.add_argument('--version', action='version', version='BinaryAlert v{}'.format(VERSION))
+    parser.add_argument(
+        '--version', action='version', version='BinaryAlert v{}'.format(__version__))
     args = parser.parse_args()
 
     manager.run(args.command)

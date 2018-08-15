@@ -170,9 +170,6 @@ class Manager:
         if not self._config.force_destroy:
             result = get_input('Delete all S3 objects as well?', 'no')
 
-            if result not in {'yes', 'no'}:
-                sys.exit('Please answer exactly "yes" or "no"')
-
             if result == 'yes':
                 print('Enabling force_destroy on the BinaryAlert S3 buckets...')
                 subprocess.check_call([
@@ -216,8 +213,8 @@ class Manager:
         today = datetime.today()
         inv_prefix = 'inventory/{}/EntireBucketDaily'.format(bucket.name)
 
-        # Check for each day, starting today, up to 8 days ago
-        for days_ago in range(0, 9):
+        # Check for each day, starting today, up to 3 days ago
+        for days_ago in range(4):
             date = today - timedelta(days=days_ago)
             prefix = '{}/{}-{:02}-{:02}'.format(inv_prefix, date.year, date.month, date.day)
             for object_summary in bucket.objects.filter(Prefix=prefix):
