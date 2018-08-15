@@ -7,10 +7,7 @@ from typing import Any, Dict, List
 
 import yara
 
-if __package__:
-    from lambda_functions.analyzer.common import LOGGER
-else:
-    from common import LOGGER  # type: ignore
+from lambda_functions.analyzer.common import LOGGER
 
 
 # YARA matches from both yara-python and yextend are stored in this generic YaraMatch tuple.
