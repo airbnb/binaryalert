@@ -117,6 +117,11 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
             binary.save_matches_and_alert(
                 lambda_version, os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'],
                 os.environ['YARA_ALERTS_SNS_TOPIC_ARN'])
+        else:
+            LOGGER.info('%s did not match any YARA rules', binary)
+            if os.environ['SAFE_SNS_TOPIC_ARN']:
+                binary.safe_alert_only(
+                    os.environ['SAFE_SNS_TOPIC_ARN'])
 
     # Publish metrics.
     if binaries:
