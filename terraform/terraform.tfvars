@@ -73,23 +73,17 @@ dynamo_write_capacity = 5
 //               \        /
 //                SQS <<<< Analyzer Lambda
 //               /        \
-//  Batch Lambda           Analyzer Lambda
+//     Retro Scan          Analyzer Lambda
 
-// Memory and time limits for the analyzer functions.
+// Memory, time, and concurrency limits for the analyzer function.
 lambda_analyze_memory_mb = 1024
 lambda_analyze_timeout_sec = 300
+lambda_analyze_concurrency_limit = 100
 
-// Number of S3 object keys to pack into a single SQS message.
-// Each downstream analyzer will process at most 10 SQS messages, each with this many objects.
-// Higher values allow for higher throughput, but are constrained by analyzer execution time limit.
-lambda_batch_objects_per_message = 5
-
-// Memory limit (MB) for the batching Lambda function. 128 is the minimum allowed by Lambda.
-lambda_batch_memory_mb = 128
-
-// Memory and time limits for the downloader function.
+// Memory, time, and concurrency limits for the downloader function.
 lambda_download_memory_mb = 128
 lambda_download_timeout_sec = 300
+lambda_download_concurrency_limit = 100
 
 
 // ##### S3 #####
@@ -102,6 +96,9 @@ force_destroy = true
 // Maximum number of messages that will be received by each invocation of the respective function.
 analyze_queue_batch_size = 10
 download_queue_batch_size = 1
+
+// During a retroactive scan, number of S3 objects to pack into a single SQS message.
+objects_per_retro_message = 5
 
 // If an SQS message is not deleted (successfully processed) after the max number of receive
 // attempts, the message is delivered to the SQS dead-letter queue.

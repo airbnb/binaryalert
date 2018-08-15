@@ -18,8 +18,7 @@ resource "aws_sqs_queue" "analyzer_queue" {
 
 data "aws_iam_policy_document" "analyzer_queue_policy" {
   statement {
-    sid    = "AllowBinaryAlertBucketToNotifySQS"
-    effect = "Allow"
+    sid = "AllowBinaryAlertBucketToNotifySQS"
 
     principals {
       type        = "AWS"

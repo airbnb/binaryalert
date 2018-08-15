@@ -10,16 +10,8 @@ import urllib.parse
 
 from botocore.exceptions import ClientError
 
-if __package__:
-    # Imported by unit tests or other external code.
-    from lambda_functions.analyzer import analyzer_aws_lib, binary_info, yara_analyzer
-    from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH, LOGGER
-else:
-    # mypy complains about duplicate definitions
-    import analyzer_aws_lib  # type: ignore
-    import binary_info  # type: ignore
-    from common import COMPILED_RULES_FILEPATH, LOGGER  # type: ignore
-    import yara_analyzer  # type: ignore
+from lambda_functions.analyzer import analyzer_aws_lib, binary_info, yara_analyzer
+from lambda_functions.analyzer.common import COMPILED_RULES_FILEPATH, LOGGER
 
 # Build the YaraAnalyzer from the compiled rules file at import time (i.e. once per container).
 # This saves 50-100+ ms per Lambda invocation, depending on the size of the rules file.
@@ -61,14 +53,18 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
                 {
                     'body': json.dumps({
                         'Records': [
-                            's3': {
-                                'bucket': {
-                                    'name': '...'
+                            {
+                                's3': {
+                                    'bucket': {
+                                        'name': '...'
+                                    },
+                                    'object': {
+                                        'key': '...'
+                                    }
                                 },
-                                'object': {
-                                    'key': '...'
-                                }
-                            }
+                                ...
+                            },
+                            ...
                         ]
                     }),
                     'messageId': '...'

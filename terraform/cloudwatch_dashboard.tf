@@ -165,12 +165,6 @@ EOF
     ,[".", ".", ".", "${local.downloader_function_name}", {"label": "Downloader"}]
 EOF
 
-  // Build common lists for batcher, dispatcher, downloader.
-  other_functions = <<EOF
-    [".", ".", ".", "${module.binaryalert_batcher.function_name}", {"label": "Batcher"}]
-    ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
-EOF
-
   lambda_invocations = <<EOF
 {
   "type": "metric",
@@ -184,8 +178,8 @@ EOF
         "AWS/Lambda", "Invocations",
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
-      ],
-      ${local.other_functions}
+      ]
+      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
     ]
   }
 }
@@ -204,8 +198,8 @@ EOF
         "AWS/Lambda", "Duration",
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
-      ],
-      ${local.other_functions}
+      ]
+      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
     ],
     "annotations": {
       "horizontal": [
@@ -232,8 +226,8 @@ EOF
         "AWS/Lambda", "Errors",
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
-      ],
-      ${local.other_functions}
+      ]
+      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
     ]
   }
 }
@@ -252,8 +246,8 @@ EOF
         "AWS/Lambda", "Throttles",
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
-      ],
-      ${local.other_functions}
+      ]
+      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
     ]
   }
 }
@@ -313,8 +307,7 @@ EOF
         "AWS/Logs", "IncomingBytes",
         "LogGroupName", "${module.binaryalert_analyzer.log_group_name}",
         {"label": "Analyzer"}
-      ],
-      [".", ".", ".", "${module.binaryalert_batcher.log_group_name}", {"label": "Batcher"}]
+      ]
       ${var.enable_carbon_black_downloader == 1 ? local.downloader_logs : ""}
     ]
   }

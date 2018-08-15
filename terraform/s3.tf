@@ -85,6 +85,16 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
     }
   }
 
+  lifecycle_rule {
+    id      = "delete_old_inventory"
+    prefix  = "inventory/"
+    enabled = true
+
+    expiration {
+      days = 7
+    }
+  }
+
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -105,6 +115,71 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
   force_destroy = "${var.force_destroy}"
 }
 
+// Policy for source bucket that allows inventory delivery
+data "aws_iam_policy_document" "allow_inventory" {
+  statement {
+    sid = "AllowSelfInventory"
+
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.binaryalert_binaries.arn}/inventory/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = ["${var.aws_account_id}"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["${aws_s3_bucket.binaryalert_binaries.arn}"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "allow_inventory" {
+  bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
+  policy = "${data.aws_iam_policy_document.allow_inventory.json}"
+}
+
+// Enable bucket inventory
+resource "aws_s3_bucket_inventory" "binary_inventory" {
+  bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
+  name   = "EntireBucketDaily"
+
+  included_object_versions = "Current"
+
+  schedule {
+    frequency = "Daily"
+  }
+
+  destination {
+    bucket {
+      format     = "CSV"
+      bucket_arn = "${aws_s3_bucket.binaryalert_binaries.arn}"
+      prefix     = "inventory"
+
+      encryption {
+        sse_kms {
+          key_id = "${aws_kms_key.sse_s3.arn}"
+        }
+      }
+    }
+  }
+}
+
+// New objects uploaded for analysis notify the analyzer queue
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
 

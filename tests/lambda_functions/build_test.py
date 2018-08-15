@@ -10,11 +10,12 @@ from lambda_functions import build
 
 
 def _mock_pip_main(args_list: List[str]) -> None:
-    """Mock pip install just creates the target directory."""
-    directory = args_list[6]
-    packages = args_list[7:]
-    for pkg in packages:
-        os.makedirs(os.path.join(directory, pkg.split('==')[0]))
+    """Mock pip install just creates the target directories."""
+    install_directory = args_list[6]
+    requirements_file = args_list[8]
+    with open(requirements_file) as f:
+        for pkg in f:
+            os.makedirs(os.path.join(install_directory, pkg.split('==')[0]))
 
 
 @mock.patch.object(build, 'print')
@@ -32,28 +33,32 @@ class BuildTest(unittest.TestCase):
         """Verify the set of filenames in the zip archive matches the expected list."""
         with zipfile.ZipFile(archive_path, 'r') as archive:
             filenames = set(zip_info.filename for zip_info in archive.filelist)
+
         if subset:
             self.assertTrue(expected_filenames.issubset(filenames))
         else:
             self.assertEqual(expected_filenames, filenames)
 
-    def test_build_analyzer(self, mock_print: mock.MagicMock):
-        """Verify that a valid zipfile is generated for analyzer Lambda function."""
-        build._build_analyzer(self._tempdir)
+    @mock.patch.object(build.subprocess, 'check_call', side_effect=_mock_pip_main)
+    def test_build_all(self, mock_pip: mock.MagicMock, mock_print: mock.MagicMock):
+        """Verify list of bundled files for each Lambda function."""
+        build.build(self._tempdir, downloader=True)
+
         self._verify_filenames(
-            os.path.join(self._tempdir, build.ANALYZE_ZIPFILE + '.zip'),
+            os.path.join(self._tempdir, 'lambda_analyzer.zip'),
             {
                 # Python source files
-                '__init__.py',
-                'analyzer_aws_lib.py',
-                'binary_info.py',
-                'common.py',
-                'file_hash.py',
-                'main.py',
-                'yara_analyzer.py',
+                'lambda_functions/__init__.py',
+                'lambda_functions/analyzer/__init__.py',
+                'lambda_functions/analyzer/analyzer_aws_lib.py',
+                'lambda_functions/analyzer/binary_info.py',
+                'lambda_functions/analyzer/common.py',
+                'lambda_functions/analyzer/file_hash.py',
+                'lambda_functions/analyzer/main.py',
+                'lambda_functions/analyzer/yara_analyzer.py',
 
                 # Compiled rules file
-                'compiled_yara_rules.bin',
+                'lambda_functions/analyzer/compiled_yara_rules.bin',
 
                 # Natively compiled binaries
                 'cryptography/',
@@ -93,36 +98,23 @@ class BuildTest(unittest.TestCase):
             },
             subset=True
         )
-        mock_print.assert_called_once()
 
-    def test_build_batcher(self, mock_print: mock.MagicMock):
-        """Verify that a valid zipfile is generated for the batcher Lambda function."""
-        build._build_batcher(self._tempdir)
         self._verify_filenames(
-            os.path.join(self._tempdir, build.BATCH_ZIPFILE + '.zip'), {'main.py'}
-        )
-        mock_print.assert_called_once()
+            os.path.join(self._tempdir, 'lambda_downloader.zip'),
+            {
+                # Python source files
+                'lambda_functions/',
+                'lambda_functions/__init__.py',
+                'lambda_functions/downloader/',
+                'lambda_functions/downloader/__init__.py',
+                'lambda_functions/downloader/main.py',
 
-    @mock.patch.object(build.subprocess, 'check_call', side_effect=_mock_pip_main)
-    def test_build_downloader(self, mock_pip: mock.MagicMock, mock_print: mock.MagicMock):
-        """Verify list of bundled files for the downloader."""
-        build._build_downloader(self._tempdir)
-        self._verify_filenames(
-            os.path.join(self._tempdir, build.DOWNLOAD_ZIPFILE + '.zip'),
-            {'cbapi/', 'main.py'},
-            subset=True
+                # Libraries (mock install)
+                'cbapi/',
+                'prompt-toolkit/',
+                'python-dateutil/'
+            },
         )
+
         mock_pip.assert_called_once()
-        mock_print.assert_called_once()
-
-    @mock.patch.object(build, '_build_analyzer')
-    @mock.patch.object(build, '_build_batcher')
-    @mock.patch.object(build, '_build_downloader')
-    def test_build_all(self, build_downloader: mock.MagicMock, build_batcher: mock.MagicMock,
-                       build_analyzer: mock.MagicMock, mock_print: mock.MagicMock):
-        """Verify that the top-level build function executes each individual builder."""
-        build.build(self._tempdir, downloader=True)
-        build_analyzer.assert_called_once()
-        build_batcher.assert_called_once()
-        build_downloader.assert_called_once()
-        mock_print.assert_not_called()
+        mock_print.assert_called()

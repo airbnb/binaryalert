@@ -4,23 +4,20 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import boto3
 from boto3.dynamodb.conditions import Key
+from botocore.client import Config
 from botocore.exceptions import ClientError
 
-if __package__:
-    # BinaryInfo is imported here just for the type annotation - the cyclic import will resolve
-    from lambda_functions.analyzer.binary_info import BinaryInfo  # pylint: disable=cyclic-import
-    from lambda_functions.analyzer.common import LOGGER
-else:
-    # mypy complains about duplicate definitions
-    from binary_info import BinaryInfo  # type: ignore
-    from common import LOGGER  # type: ignore
+# BinaryInfo is imported here just for the type annotation - the cyclic import will resolve
+from lambda_functions.analyzer.binary_info import BinaryInfo  # pylint: disable=cyclic-import
+from lambda_functions.analyzer.common import LOGGER
 
 SNS_PUBLISH_SUBJECT_MAX_SIZE = 99
 
 # Build boto3 resources at import time so they can be cached between invocations.
 CLOUDWATCH = boto3.client('cloudwatch')
 DYNAMODB = boto3.resource('dynamodb')
-S3 = boto3.resource('s3')
+S3 = boto3.resource('s3', config=Config(  # Force a retry after 3 seconds rather than 60
+    connect_timeout=3, read_timeout=3, retries={'max_attempts': 2}))
 SNS = boto3.resource('sns')
 
 

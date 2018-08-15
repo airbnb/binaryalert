@@ -6,17 +6,9 @@ import time
 from typing import Any, Dict, List, Set
 import uuid
 
-if __package__:
-    # Imported by unit tests or other external code.
-    from lambda_functions.analyzer import analyzer_aws_lib, file_hash
-    from lambda_functions.analyzer.common import LOGGER
-    from lambda_functions.analyzer.yara_analyzer import YaraAnalyzer, YaraMatch
-else:
-    # mypy complains about duplicate definitions
-    import analyzer_aws_lib  # type: ignore
-    from common import LOGGER  # type: ignore
-    import file_hash  # type: ignore
-    from yara_analyzer import YaraAnalyzer, YaraMatch  # type: ignore
+from lambda_functions.analyzer import analyzer_aws_lib, file_hash
+from lambda_functions.analyzer.common import LOGGER
+from lambda_functions.analyzer.yara_analyzer import YaraAnalyzer, YaraMatch
 
 
 class BinaryInfo:
