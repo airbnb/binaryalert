@@ -22,11 +22,14 @@ variable "dynamo_write_capacity" {}
 
 variable "lambda_analyze_memory_mb" {}
 variable "lambda_analyze_timeout_sec" {}
+variable "lambda_analyze_concurrency_limit" {}
 variable "lambda_download_memory_mb" {}
 variable "lambda_download_timeout_sec" {}
+variable "lambda_download_concurrency_limit" {}
 
 variable "force_destroy" {}
 
 variable "analyze_queue_batch_size" {}
 variable "download_queue_batch_size" {}
+variable "objects_per_retro_message" {}
 variable "download_queue_max_receives" {}

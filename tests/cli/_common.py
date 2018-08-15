@@ -49,6 +49,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
                 'carbon_black_url = "{}" //comment4'.format(cb_url),
                 'encrypted_carbon_black_api_token = "{}"'.format(encrypted_api_token),
                 'force_destroy = false',
+                'objects_per_retro_message = 5',
                 '// comment5'
             ]))
 

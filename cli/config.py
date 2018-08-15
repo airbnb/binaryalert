@@ -164,6 +164,10 @@ class BinaryAlertConfig:
             self.name_prefix.replace('_', '.'), self.aws_region
         )
 
+    @property
+    def retro_batch_size(self) -> int:
+        return self._config['objects_per_retro_message']
+
     def _encrypt_cb_api_token(self) -> None:
         """Save an encrypted CarbonBlack API token.
 

@@ -3,10 +3,12 @@ from datetime import datetime, timedelta
 import gzip
 import inspect
 import json
+import multiprocessing
+from multiprocessing import JoinableQueue
 import os
 import subprocess
 import sys
-from typing import Any, Callable, Dict, Generator, Iterable, Optional, Set
+from typing import Any, Callable, Dict, Generator, Iterable, Optional, Set, Tuple
 import unittest
 
 import boto3
@@ -14,6 +16,7 @@ import cbapi
 from cbapi.response.models import Binary
 
 from cli.config import get_input, BinaryAlertConfig, TERRAFORM_DIR
+from cli.enqueue_task import EnqueueTask, Worker
 from cli.exceptions import InvalidConfigError, TestFailureError
 from lambda_functions.analyzer.common import COMPILED_RULES_FILENAME
 from lambda_functions.build import build as lambda_build
@@ -62,40 +65,54 @@ class Manager:
             sys.exit('TEST FAILED: {}'.format(error))
 
     @staticmethod
-    def _enqueue(queue_name: str,
-                 collection: Iterable[Any],
-                 key_func: Callable[[Any], str],
-                 body_func: Callable[[str], Dict[str, Any]]) -> None:
-        """Enumerate a collection of items onto an SQS queue."""
-        queue = boto3.resource('sqs').get_queue_by_name(QueueName=queue_name)
-        keys = []
+    def _enqueue(
+            queue_name: str, messages: Iterable[Dict[str, Any]],
+            summary_func: Callable[[Dict[str, Any]], Tuple[int, str]]) -> None:
+        """Use multiple worker processes to enqueue messages onto an SQS queue in batches.
 
-        for index, element in enumerate(collection):
-            element_key = key_func(element)  # MD5 or object key
-            print('\r{} {:<120}'.format(index, element_key), flush=True, end='')
-            keys.append(element_key)
+        Args:
+            queue_name: Name of the target SQS queue
+            messages: Iterable of dictionaries, each representing a single SQS message body
+            summary_func: Function from message to (item_count, summary) to show progress
+        """
+        num_workers = multiprocessing.cpu_count() * 4
+        tasks: JoinableQueue = JoinableQueue(num_workers * 10)  # Max tasks waiting in queue
 
-            if len(keys) == 10:
-                response = queue.send_messages(
-                    Entries=[
-                        {'Id': str(i), 'MessageBody': json.dumps(body_func(key))}
-                        for i, key in enumerate(keys)
-                    ]
-                )
-                # If there were any failures sending to SQS, put those back in the md5s list.
-                keys = [keys[int(failure['Id'])] for failure in response.get('Failed', [])]
+        # Create and start worker processes
+        workers = [Worker(queue_name, tasks) for _ in range(num_workers)]
+        for worker in workers:
+            worker.start()
 
-        print()  # Print final newline when finished
+        # Create an EnqueueTask for each batch of 10 messages (max allowed by SQS)
+        message_batch = []
+        progress = 0  # Total number of relevant "items" processed so far
+        for message_body in messages:
+            count, summary = summary_func(message_body)
+            progress += count
+            print('\r{}: {:<90}'.format(progress, summary), end='', flush=True)
+
+            message_batch.append(json.dumps(message_body, separators=(',', ':')))
+
+            if len(message_batch) == 10:
+                tasks.put(EnqueueTask(message_batch))
+                message_batch = []
+
+        # Add final batch of messages
+        if message_batch:
+            tasks.put(EnqueueTask(message_batch))
+
+        # Add "poison pill" to mark the end of the task queue
+        for _ in range(num_workers):
+            tasks.put(None)
+
+        tasks.join()
+        print('\nDone!')
 
     @staticmethod
     def apply() -> None:
         """Apply any configuration/package changes with Terraform"""
-        # Validate and format the terraform files.
         os.chdir(TERRAFORM_DIR)
-
-        # Setup the backend if needed and reload modules.
         subprocess.check_call(['terraform', 'init'])
-
         subprocess.check_call(['terraform', 'fmt'])
 
         # Apply changes (requires interactive approval)
@@ -120,9 +137,8 @@ class Manager:
 
         self._enqueue(
             self._config.binaryalert_downloader_queue_name,
-            carbon_black.select(Binary).all(),
-            lambda binary: binary.md5,
-            lambda md5: {'md5': md5}
+            ({'md5': binary.md5} for binary in carbon_black.select(Binary).all()),
+            lambda msg: (1, msg['md5'])
         )
 
     @staticmethod
@@ -188,7 +204,15 @@ class Manager:
 
     @staticmethod
     def _most_recent_manifest(bucket: boto3.resource) -> Optional[str]:
-        """Find the most recent S3 inventory manifest."""
+        """Find the most recent S3 inventory manifest.
+
+        Args:
+            bucket: BinaryAlert S3 bucket resource
+
+        Returns:
+            Object key for the most recent inventory manifest.
+            Returns None if no inventory report was found from the last 8 days
+        """
         today = datetime.today()
         inv_prefix = 'inventory/{}/EntireBucketDaily'.format(bucket.name)
 
@@ -202,9 +226,17 @@ class Manager:
         return None
 
     @staticmethod
-    def _enumerate_inventory(
+    def _inventory_object_iterator(
             bucket: boto3.resource, manifest_path: str) -> Generator[str, None, None]:
-        """Yield lines from the S3 inventory."""
+        """Yield S3 object keys listed in the inventory.
+
+        Args:
+            bucket: BinaryAlert S3 bucket resource
+            manifest_path: S3 object key for an inventory manifest.json
+
+        Yields:
+            Object keys listed in the inventory
+        """
         response = bucket.Object(manifest_path).get()
         manifest = json.loads(response['Body'].read())
 
@@ -212,30 +244,52 @@ class Manager:
         for record in manifest['files']:
             response = bucket.Object(record['key']).get()
             csv_data = gzip.decompress(response['Body'].read()).decode('utf-8')
-            yield from csv_data.strip().split('\n')
+            for line in csv_data.strip().split('\n'):
+                yield line.split(',')[1].strip('"')
 
-    def _sqs_body(self, object_key: str) -> Dict[str, Any]:
-        """Convert an S3 object key to an SQS message body."""
-        return {
-            'Records': [
-                {
-                    's3': {
-                        'bucket': {
-                            'name': self._config.binaryalert_s3_bucket_name
-                        },
-                        'object': {
-                            'key': object_key
-                        }
+    def _s3_batch_iterator(
+            self, object_keys: Iterable[str]) -> Generator[Dict[str, Any], None, None]:
+        """Group multiple S3 objects into a single SQS message.
+
+        Args:
+            object_keys: Generator of S3 object keys
+
+        Yields:
+            A dictionary representing an SQS message
+        """
+        records = []
+
+        for key in object_keys:
+            records.append({
+                's3': {
+                    'bucket': {
+                        'name': self._config.binaryalert_s3_bucket_name
+                    },
+                    'object': {
+                        'key': key
                     }
                 }
-            ]
-        }
+            })
+
+            if len(records) == self._config.retro_batch_size:
+                yield {'Records': records}
+                records = []
+
+        if records:  # Final batch
+            yield {'Records': records}
+
+    @staticmethod
+    def _s3_msg_summary(sqs_message: Dict[str, Any]) -> Tuple[int, str]:
+        """Return a short summary string about this SQS message"""
+        last_key = sqs_message['Records'][-1]['s3']['object']['key']
+        summary = last_key if len(last_key) <= 80 else '...{}'.format(last_key[-80:])
+        return len(sqs_message['Records']), summary
 
     def retro_fast(self) -> None:
         """Enumerate the most recent S3 inventory for fast retroactive analysis"""
         bucket = boto3.resource('s3').Bucket(self._config.binaryalert_s3_bucket_name)
-
         manifest_path = self._most_recent_manifest(bucket)
+
         if not manifest_path:
             print('ERROR: No inventory manifest found in the last week')
             print('You can run "./manage.py retro_slow" to manually enumerate the bucket')
@@ -244,19 +298,19 @@ class Manager:
         print('Reading {}'.format(manifest_path))
         self._enqueue(
             self._config.binaryalert_analyzer_queue_name,
-            self._enumerate_inventory(bucket, manifest_path),
-            lambda line: line.split(',')[1].strip('"'),
-            self._sqs_body
+            self._s3_batch_iterator(self._inventory_object_iterator(bucket, manifest_path)),
+            self._s3_msg_summary
         )
 
     def retro_slow(self) -> None:
         """Enumerate the entire S3 bucket for slow retroactive analysis"""
         bucket = boto3.resource('s3').Bucket(self._config.binaryalert_s3_bucket_name)
+        key_iterator = (summary.key for summary in bucket.objects.all())
+
         self._enqueue(
             self._config.binaryalert_analyzer_queue_name,
-            bucket.objects.all(),
-            lambda summary: summary.key,
-            self._sqs_body
+            self._s3_batch_iterator(key_iterator),
+            self._s3_msg_summary
         )
 
     @staticmethod

@@ -49,8 +49,9 @@ resource "aws_lambda_function" "function" {
   role          = "${aws_iam_role.role.arn}"
   runtime       = "python3.6"
 
-  memory_size = "${var.memory_size_mb}"
-  timeout     = "${var.timeout_sec}"
+  memory_size                    = "${var.memory_size_mb}"
+  timeout                        = "${var.timeout_sec}"
+  reserved_concurrent_executions = "${var.reserved_concurrent_executions}"
 
   filename         = "${var.filename}"
   source_code_hash = "${base64sha256(file(var.filename))}"
@@ -95,34 +96,6 @@ EOF
   comparison_operator = "GreaterThanOrEqualToThreshold"
   threshold           = "${var.alarm_errors_threshold}"
   period              = "${var.alarm_errors_interval_secs}"
-  evaluation_periods  = 1
-
-  alarm_actions = ["${var.alarm_sns_arns}"]
-}
-
-// Alarm if the Lambda function is ever throttled.
-resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
-  count      = "${var.enabled}"
-  alarm_name = "${var.function_name}_throttles"
-
-  alarm_description = <<EOF
-${var.function_name} is being throttled,
-i.e. the number of concurrent Lambda invocations is exceeding your account limit in this region.
-Lower the lamda_dispatch_limit in the BinaryAlert config or request an AWS limit increase.
-EOF
-
-  namespace   = "AWS/Lambda"
-  metric_name = "Throttles"
-  statistic   = "Sum"
-
-  dimensions = {
-    FunctionName = "${aws_lambda_function.function.function_name}"
-    Resource     = "${aws_lambda_function.function.function_name}:${aws_lambda_alias.production_alias.name}"
-  }
-
-  comparison_operator = "GreaterThanThreshold"
-  threshold           = 0
-  period              = 60
   evaluation_periods  = 1
 
   alarm_actions = ["${var.alarm_sns_arns}"]

@@ -8,8 +8,3 @@ class MockLambdaContext:
         self.function_version = function_version
         self.time_limit_ms = time_limit_ms
         self.decrement_ms = decrement_ms
-
-    def get_remaining_time_in_millis(self) -> int:
-        """Decrements remaining time before returning."""
-        self.time_limit_ms -= self.decrement_ms
-        return self.time_limit_ms

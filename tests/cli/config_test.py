@@ -7,7 +7,6 @@ import sys
 from unittest import mock
 
 import boto3
-from pyfakefs.fake_filesystem_unittest import TestCase
 
 from cli import config as config_module
 from cli.config import BinaryAlertConfig, CONFIG_FILE
@@ -31,6 +30,11 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         self.assertEqual('A' * 100, config.encrypted_carbon_black_api_token)
         self.assertEqual('test.prefix.binaryalert-binaries.us-test-1',
                          config.binaryalert_s3_bucket_name)
+        self.assertEqual('test_prefix_binaryalert_analyzer_queue',
+                         config.binaryalert_analyzer_queue_name)
+        self.assertEqual('test_prefix_binaryalert_downloader_queue',
+                         config.binaryalert_downloader_queue_name)
+        self.assertEqual(5, config.retro_batch_size)
 
     def test_variable_not_defined(self):
         """InvalidConfigError is raised if a variable declaration is missing."""
@@ -75,6 +79,37 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         config = BinaryAlertConfig()
         with self.assertRaises(InvalidConfigError):
             config.encrypted_carbon_black_api_token = 'ABCD'
+
+    @mock.patch.object(boto3, 'client')
+    @mock.patch.object(getpass, 'getpass', return_value='abcd' * 10)
+    @mock.patch.object(config_module, 'print')
+    @mock.patch.object(subprocess, 'check_call')
+    def test_encrypt_cb_api_token(
+            self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock,
+            mock_getpass: mock.MagicMock, mock_client: mock.MagicMock):
+        """Verify that token encryption is done correctly."""
+        mock_client('kms').encrypt.return_value = {'CiphertextBlob': base64.b64encode(b'a'*50)}
+        config = BinaryAlertConfig()
+        config._encrypt_cb_api_token()
+
+        # Verify decrypted value
+        mock_client('kms').decrypt = lambda **kwargs: {
+            'Plaintext': base64.b64decode(kwargs['CiphertextBlob'])}
+        self.assertEqual(b'a'*50, config.plaintext_carbon_black_api_token)
+
+        # Verify that the mocks were called as expected.
+        mock_client.assert_has_calls([
+            mock.call().encrypt(KeyId=mock.ANY, Plaintext=mock_getpass.return_value)
+        ])
+        mock_getpass.assert_called_once()
+        mock_print.assert_has_calls([
+            mock.call('Terraforming KMS key...'),
+            mock.call('Encrypting API token...')
+        ])
+        mock_subprocess.assert_has_calls([
+            mock.call(['terraform', 'init']),
+            mock.call(['terraform', 'apply', '-target=aws_kms_alias.encrypt_credentials_alias'])
+        ])
 
     @mock.patch.object(config_module, 'input', side_effect=mock_input)
     @mock.patch.object(BinaryAlertConfig, '_encrypt_cb_api_token')
@@ -166,33 +201,3 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
             config.enable_carbon_black_downloader, new_config.enable_carbon_black_downloader)
         self.assertEqual(
             config.encrypted_carbon_black_api_token, new_config.encrypted_carbon_black_api_token)
-
-
-class BinaryAlertConfigTestRealFilesystem(TestCase):
-    """Tests of the BinaryAlertConfig class that use a real filesystem."""
-
-    @mock.patch.object(boto3, 'client')
-    @mock.patch.object(getpass, 'getpass', return_value='abcd' * 10)
-    @mock.patch.object(config_module, 'print')
-    @mock.patch.object(subprocess, 'check_call')
-    def test_encrypt_cb_api_token(
-            self, mock_subprocess: mock.MagicMock, mock_print: mock.MagicMock,
-            mock_getpass: mock.MagicMock, mock_client: mock.MagicMock):
-        """Verify that token encryption is done correctly."""
-        mock_client('kms').encrypt.return_value = {'CiphertextBlob': base64.b64encode(b'a'*50)}
-        config = BinaryAlertConfig()
-        config._encrypt_cb_api_token()
-
-        # Verify that the mocks were called as expected.
-        mock_client.assert_has_calls([
-            mock.call().encrypt(KeyId=mock.ANY, Plaintext=mock_getpass.return_value)
-        ])
-        mock_getpass.assert_called_once()
-        mock_print.assert_has_calls([
-            mock.call('Terraforming KMS key...'),
-            mock.call('Encrypting API token...')
-        ])
-        mock_subprocess.assert_has_calls([
-            mock.call(['terraform', 'init']),
-            mock.call(['terraform', 'apply', '-target=aws_kms_alias.encrypt_credentials_alias'])
-        ])

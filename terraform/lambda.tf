@@ -4,10 +4,12 @@ module "binaryalert_analyzer" {
   function_name   = "${var.name_prefix}_binaryalert_analyzer"
   description     = "Analyze a binary with a set of YARA rules"
   base_policy_arn = "${aws_iam_policy.base_policy.arn}"
-  handler         = "main.analyze_lambda_handler"
+  handler         = "lambda_functions.analyzer.main.analyze_lambda_handler"
   memory_size_mb  = "${var.lambda_analyze_memory_mb}"
   timeout_sec     = "${var.lambda_analyze_timeout_sec}"
   filename        = "lambda_analyzer.zip"
+
+  reserved_concurrent_executions = "${var.lambda_analyze_concurrency_limit}"
 
   environment_variables = {
     YARA_MATCHES_DYNAMO_TABLE_NAME = "${aws_dynamodb_table.binaryalert_yara_matches.name}"
@@ -46,10 +48,12 @@ module "binaryalert_downloader" {
   function_name   = "${var.name_prefix}_binaryalert_downloader"
   description     = "Copies binaries from CarbonBlack into the BinaryAlert S3 bucket"
   base_policy_arn = "${aws_iam_policy.base_policy.arn}"
-  handler         = "main.download_lambda_handler"
+  handler         = "lambda_functions.downloader.main.download_lambda_handler"
   memory_size_mb  = "${var.lambda_download_memory_mb}"
   timeout_sec     = "${var.lambda_download_timeout_sec}"
   filename        = "lambda_downloader.zip"
+
+  reserved_concurrent_executions = "${var.lambda_download_concurrency_limit}"
 
   environment_variables = {
     CARBON_BLACK_URL                 = "${var.carbon_black_url}"
