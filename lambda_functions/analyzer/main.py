@@ -1,5 +1,6 @@
 """AWS Lambda function for testing a binary against a list of YARA rules."""
 # Expects the following environment variables:
+#   NO_MATCHES_SNS_TOPIC_ARN: Optional ARN of an SNS topic to notify if there are no YARA matches.
 #   YARA_MATCHES_DYNAMO_TABLE_NAME: Name of the Dynamo table which stores YARA match results.
 #   YARA_ALERTS_SNS_TOPIC_ARN: ARN of the SNS topic which should be alerted on a YARA match.
 # Expects a binary YARA rules file to be at './compiled_yara_rules.bin'
@@ -30,14 +31,21 @@ def _objects_to_analyze(event: Dict[str, Any]) -> Generator[Tuple[str, str], Non
     Yields:
         (bucket_name, object_key) string tuples to analyze
     """
+    if 'BucketName' in event and 'ObjectKeys' in event:
+        # Direct (simple) invocation
+        for key in event['ObjectKeys']:
+            yield event['BucketName'], urllib.parse.unquote_plus(key)
+        return
+
+    # SQS message invocation
     for sqs_message in event['Records']:
         try:
-            msg_body = json.loads(sqs_message['body'])
+            s3_records = json.loads(sqs_message['body'])['Records']
         except (KeyError, TypeError, json.JSONDecodeError):
             LOGGER.exception('Skipping invalid SQS message %s', json.dumps(sqs_message))
             continue
 
-        for s3_message in msg_body['Records']:
+        for s3_message in s3_records:
             yield (
                 s3_message['s3']['bucket']['name'],
                 urllib.parse.unquote_plus(s3_message['s3']['object']['key'])
@@ -59,7 +67,7 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
                                         'name': '...'
                                     },
                                     'object': {
-                                        'key': '...'
+                                        'key': '...'  # URL-encoded key
                                     }
                                 },
                                 ...
@@ -67,10 +75,17 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
                             ...
                         ]
                     }),
-                    'messageId': '...'
+                    ...
                 }
             ]
         }
+
+        Alternatively, direct invocation is supported with the following event - {
+            'BucketName': '...',
+            'EnableSNSAlerts': True,
+            'ObjectKeys': ['key1', 'key2', ...],
+        }
+
         lambda_context: LambdaContext object (with .function_version).
 
     Returns:
@@ -97,6 +112,8 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
         LOGGER.warning('Invoked $LATEST instead of a versioned function')
         lambda_version = -1
 
+    alerts_enabled = event.get('EnableSNSAlerts', True)
+
     for bucket_name, object_key in _objects_to_analyze(event):
         LOGGER.info('Analyzing "%s:%s"', bucket_name, object_key)
 
@@ -112,12 +129,12 @@ def analyze_lambda_handler(event: Dict[str, Any], lambda_context: Any) -> Dict[s
             LOGGER.warning('%s matched YARA rules: %s', binary, binary.matched_rule_ids)
             binary.save_matches_and_alert(
                 lambda_version, os.environ['YARA_MATCHES_DYNAMO_TABLE_NAME'],
-                os.environ['YARA_ALERTS_SNS_TOPIC_ARN'])
+                os.environ['YARA_ALERTS_SNS_TOPIC_ARN'],
+                sns_enabled=alerts_enabled)
         else:
             LOGGER.info('%s did not match any YARA rules', binary)
-            if os.environ['SAFE_SNS_TOPIC_ARN']:
-                binary.safe_alert_only(
-                    os.environ['SAFE_SNS_TOPIC_ARN'])
+            if alerts_enabled and os.environ['NO_MATCHES_SNS_TOPIC_ARN']:
+                binary.publish_negative_match_result(os.environ['NO_MATCHES_SNS_TOPIC_ARN'])
 
     # Publish metrics.
     if binaries:

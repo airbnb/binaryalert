@@ -45,7 +45,7 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
                 'aws_account_id = "{}"'.format(account_id),
                 'aws_region = "{}" // comment2'.format(region),
                 'name_prefix = "{}" // comment3'.format(prefix),
-                'enable_carbon_black_downloader = {}'.format(1 if enable_downloader else 0),
+                'enable_carbon_black_downloader = {}'.format(str(enable_downloader).lower()),
                 'carbon_black_url = "{}" //comment4'.format(cb_url),
                 'encrypted_carbon_black_api_token = "{}"'.format(encrypted_api_token),
                 'force_destroy = false',

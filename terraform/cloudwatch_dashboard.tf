@@ -179,7 +179,7 @@ EOF
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
       ]
-      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
+      ${var.enable_carbon_black_downloader ? local.downloader : ""}
     ]
   }
 }
@@ -199,7 +199,7 @@ EOF
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
       ]
-      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
+      ${var.enable_carbon_black_downloader ? local.downloader : ""}
     ],
     "annotations": {
       "horizontal": [
@@ -227,7 +227,7 @@ EOF
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
       ]
-      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
+      ${var.enable_carbon_black_downloader ? local.downloader : ""}
     ]
   }
 }
@@ -247,7 +247,7 @@ EOF
         "FunctionName", "${module.binaryalert_analyzer.function_name}",
         {"label": "Analyzer"}
       ]
-      ${var.enable_carbon_black_downloader == 1 ? local.downloader : ""}
+      ${var.enable_carbon_black_downloader ? local.downloader : ""}
     ]
   }
 }
@@ -283,7 +283,7 @@ EOF
         "TopicName", "${aws_sns_topic.yara_match_alerts.name}",
         {"label": "YARA Match Alerts"}
       ],
-      [".", ".", ".", "${aws_sns_topic.metric_alarms.name}", {"label": "Metric Alarms"}]
+      [".", ".", ".", "${element(split(":", local.alarm_target), 5)}", {"label": "Metric Alarms"}]
     ]
   }
 }
@@ -308,7 +308,7 @@ EOF
         "LogGroupName", "${module.binaryalert_analyzer.log_group_name}",
         {"label": "Analyzer"}
       ]
-      ${var.enable_carbon_black_downloader == 1 ? local.downloader_logs : ""}
+      ${var.enable_carbon_black_downloader ? local.downloader_logs : ""}
     ]
   }
 }
@@ -341,7 +341,7 @@ EOF
 }
 EOF
 
-  dashboard_body = "${var.enable_carbon_black_downloader == 1 ? local.dashboard_body_with_downloader : local.dashboard_body_without_downloader}"
+  dashboard_body = "${var.enable_carbon_black_downloader ? local.dashboard_body_with_downloader : local.dashboard_body_without_downloader}"
 }
 
 resource "aws_cloudwatch_dashboard" "binaryalert" {

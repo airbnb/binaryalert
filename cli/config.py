@@ -123,14 +123,14 @@ class BinaryAlertConfig:
         self._config['name_prefix'] = value
 
     @property
-    def enable_carbon_black_downloader(self) -> int:
+    def enable_carbon_black_downloader(self) -> bool:
         return self._config['enable_carbon_black_downloader']
 
     @enable_carbon_black_downloader.setter
-    def enable_carbon_black_downloader(self, value: int) -> None:
-        if value not in {0, 1}:
+    def enable_carbon_black_downloader(self, value: bool) -> None:
+        if not isinstance(value, bool):
             raise InvalidConfigError(
-                'enable_carbon_black_downloader "{}" must be either 0 or 1.'.format(value)
+                'enable_carbon_black_downloader "{}" must be a boolean.'.format(value)
             )
         self._config['enable_carbon_black_downloader'] = value
 
@@ -252,7 +252,7 @@ class BinaryAlertConfig:
         get_input('Unique name prefix, e.g. "company_team"', self.name_prefix, self, 'name_prefix')
         enable_downloader = get_input('Enable the CarbonBlack downloader?',
                                       'yes' if self.enable_carbon_black_downloader else 'no')
-        self.enable_carbon_black_downloader = 1 if enable_downloader == 'yes' else 0
+        self.enable_carbon_black_downloader = (enable_downloader == 'yes')
 
         if self.enable_carbon_black_downloader:
             self._configure_carbon_black()

@@ -86,31 +86,36 @@ class BinaryInfo:
         return self.s3_metadata.get('filepath', '')
 
     def save_matches_and_alert(
-            self, analyzer_version: int, dynamo_table_name: str, sns_topic_arn: str) -> None:
+            self, analyzer_version: int, dynamo_table_name: str, sns_topic_arn: str,
+            sns_enabled: bool = True) -> None:
         """Save match results to Dynamo and publish an alert to SNS if appropriate.
 
         Args:
             analyzer_version: The currently executing version of the Lambda function.
             dynamo_table_name: Save YARA match results to this Dynamo table.
             sns_topic_arn: Publish match alerts to this SNS topic ARN.
+            sns_enabled: If True, match alerts are sent to SNS when applicable.
         """
         table = analyzer_aws_lib.DynamoMatchTable(dynamo_table_name)
         needs_alert = table.save_matches(self, analyzer_version)
 
         # Send alert if appropriate.
-        if needs_alert:
-            LOGGER.info('Publishing an SNS alert')
-            analyzer_aws_lib.publish_alert_to_sns(self, sns_topic_arn)
+        if needs_alert and sns_enabled:
+            LOGGER.info('Publishing a YARA match alert to %s', sns_topic_arn)
+            subject = '[BinaryAlert] {} matches a YARA rule'.format(
+                self.filepath or self.computed_sha)
+            analyzer_aws_lib.publish_to_sns(self, sns_topic_arn, subject)
 
-    # alerts on files that are safe
-    def safe_alert_only(
-            self, sns_topic_arn: str) -> None:
-        """Publish an alert to SNS .
+    def publish_negative_match_result(self, sns_topic_arn: str) -> None:
+        """Publish a negative match result (no YARA matches found).
+
         Args:
-            sns_topic_arn: Publish match alerts to this SNS topic ARN.
+            sns_topic_arn: Target topic ARN for negative match alerts.
         """
-        LOGGER.info('Publishing an SNS alert')
-        analyzer_aws_lib.publish_safe_to_sns(self, sns_topic_arn)
+        LOGGER.info('Publishing a negative match result to %s', sns_topic_arn)
+        subject = '[BinaryAlert] {} did not match any YARA rules'.format(
+            self.filepath or self.computed_sha)
+        analyzer_aws_lib.publish_to_sns(self, sns_topic_arn, subject)
 
     def summary(self) -> Dict[str, Any]:
         """Generate a summary dictionary of binary attributes."""

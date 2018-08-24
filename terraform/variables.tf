@@ -4,7 +4,6 @@ variable "aws_account_id" {}
 variable "aws_region" {}
 variable "name_prefix" {}
 
-variable "enable_safe_alerts" {}
 variable "enable_carbon_black_downloader" {}
 variable "carbon_black_url" {}
 variable "encrypted_carbon_black_api_token" {}
@@ -16,6 +15,7 @@ variable "lambda_log_retention_days" {}
 
 variable "tagged_name" {}
 
+variable "metric_alarm_sns_topic_arn" {}
 variable "expected_analysis_frequency_minutes" {}
 
 variable "dynamo_read_capacity" {}
@@ -30,7 +30,19 @@ variable "lambda_download_concurrency_limit" {}
 
 variable "force_destroy" {}
 
+variable "external_s3_bucket_resources" {
+  type = "list"
+}
+
+variable "external_kms_key_resources" {
+  type = "list"
+}
+
+variable "enable_negative_match_alerts" {}
+
 variable "analyze_queue_batch_size" {}
 variable "download_queue_batch_size" {}
+variable "analyze_queue_retention_secs" {}
+variable "download_queue_retention_secs" {}
 variable "objects_per_retro_message" {}
 variable "download_queue_max_receives" {}
