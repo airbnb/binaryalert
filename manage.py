@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Command-line tool for easily managing BinaryAlert."""
 import argparse
+import os
 import sys
 
 from cli import __version__
@@ -23,6 +24,7 @@ def main() -> None:
         '--version', action='version', version='BinaryAlert v{}'.format(__version__))
     args = parser.parse_args()
 
+    os.environ['TF_IN_AUTOMATION'] = '1'
     manager.run(args.command)
 
 
