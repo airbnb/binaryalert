@@ -25,7 +25,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         self.assertEqual('123412341234', config.aws_account_id)
         self.assertEqual('us-test-1', config.aws_region)
         self.assertEqual('test_prefix', config.name_prefix)
-        self.assertEqual(1, config.enable_carbon_black_downloader)
+        self.assertEqual(True, config.enable_carbon_black_downloader)
         self.assertEqual('https://cb-example.com', config.carbon_black_url)
         self.assertEqual('A' * 100, config.encrypted_carbon_black_api_token)
         self.assertEqual('test.prefix.binaryalert-binaries.us-test-1',
@@ -182,7 +182,7 @@ class BinaryAlertConfigTestFakeFilesystem(FakeFilesystemBase):
         config._config['force_destroy'] = True
         config.aws_region = 'us-west-2'
         config.name_prefix = 'new_name_prefix'
-        config.enable_carbon_black_downloader = 0
+        config.enable_carbon_black_downloader = False
         config.carbon_black_url = 'https://example2.com'
         config.encrypted_carbon_black_api_token = 'B' * 100
         config.save()

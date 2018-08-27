@@ -1,11 +1,8 @@
 // Analysis queue - S3 objects which need to be analyzed
 resource "aws_sqs_queue" "analyzer_queue" {
-  name = "${var.name_prefix}_binaryalert_analyzer_queue"
-
-  kms_master_key_id = "${aws_kms_key.sse_sqs.arn}"
-
-  // Messages are dropped from the queue after 12 hours
-  message_retention_seconds = 43200
+  name                      = "${var.name_prefix}_binaryalert_analyzer_queue"
+  kms_master_key_id         = "${aws_kms_key.sse_sqs.arn}"
+  message_retention_seconds = "${var.analyze_queue_retention_secs}"
 
   // When a message is received, it will be invisible to other consumers for this long.
   // Set to just a few seconds after the lambda analyzer would timeout.
@@ -45,14 +42,10 @@ resource "aws_sqs_queue_policy" "analyzer_queue_policy" {
 
 // Downloader queue - MD5s to download from CarbonBlack
 resource "aws_sqs_queue" "downloader_queue" {
-  count = "${var.enable_carbon_black_downloader}"
-  name  = "${var.name_prefix}_binaryalert_downloader_queue"
-
-  kms_master_key_id = "${aws_kms_key.sse_sqs.arn}"
-
-  // Messages are dropped from the queue after 12 hours
-  // (In practice, the redrive policy should kick in long before then)
-  message_retention_seconds = 43200
+  count                     = "${var.enable_carbon_black_downloader ? 1 : 0}"
+  name                      = "${var.name_prefix}_binaryalert_downloader_queue"
+  kms_master_key_id         = "${aws_kms_key.sse_sqs.arn}"
+  message_retention_seconds = "${var.download_queue_retention_secs}"
 
   // When a message is received, it will be invisible to other consumers for this long.
   // Set to just a few seconds after the downloader would timeout.
@@ -70,7 +63,7 @@ resource "aws_sqs_queue" "downloader_queue" {
 // Messages sent here are meant for human consumption (debugging) and are retained for 14 days.
 // This is only used for the downloader queue (for now).
 resource "aws_sqs_queue" "dead_letter_queue" {
-  count                     = "${var.enable_carbon_black_downloader}"
+  count                     = "${var.enable_carbon_black_downloader ? 1 : 0}"
   name                      = "${var.name_prefix}_binaryalert_sqs_dead_letter_queue"
   message_retention_seconds = 1209600
 

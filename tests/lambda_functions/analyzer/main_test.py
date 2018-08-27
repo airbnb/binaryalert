@@ -115,6 +115,22 @@ class MainTest(fake_filesystem_unittest.TestCase):
         # Mock S3 Object
         self.main.analyzer_aws_lib.S3.Object = MockS3Object
 
+    def test_objects_to_analyze_simple(self):
+        """Test event parsing for a simple/direct invocation event."""
+        event = {
+            'BucketName': 'bucket1',
+            'EnableSNSAlerts': True,
+            'ObjectKeys': ['key1', 'key2', 'key3']
+        }
+
+        result = list(self.main._objects_to_analyze(event))
+        expected = [
+            ('bucket1', 'key1'),
+            ('bucket1', 'key2'),
+            ('bucket1', 'key3')
+        ]
+        self.assertEqual(expected, result)
+
     def test_objects_to_analyze_sqs_event(self):
         """Test event parsing when invoked from dispatcher with SQS messages."""
         event = {
@@ -140,7 +156,12 @@ class MainTest(fake_filesystem_unittest.TestCase):
                     'receive_count': 1
                 },
                 {
-                    'body': {'Records': []}  # Invalid SQS message should be skipped
+                    'body': json.dumps({  # Invalid SQS message should be skipped
+                        'Bucket': 'bucket-name',
+                        'Event': 's3:TestEvent',
+                        'Service': 'Amazon S3',
+                        'Time': 'now'
+                    })
                 },
                 {
                     'body': json.dumps({

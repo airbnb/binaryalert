@@ -14,17 +14,16 @@ aws_region = "us-east-1"
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
 name_prefix = ""
 
-//option for safe alerts to be enabled
-enable_safe_alerts = 0
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
-enable_carbon_black_downloader = 0
+enable_carbon_black_downloader = false
 
 // URL of the CarbonBlack server.
 carbon_black_url = ""
 
 // The encrypted CarbonBlack API token will automatically be generated and saved here:
 encrypted_carbon_black_api_token = ""
+
 
 /* ********** Log Retention ********** */
 // Pre-existing bucket in which to store S3 access logs. If not specified, one will be created.
@@ -48,6 +47,9 @@ tagged_name = "BinaryAlert"
 
 
 // ##### Alarms #####
+// Use an existing SNS topic for metric alarms (instead of creating one automatically).
+metric_alarm_sns_topic_arn = ""
+
 // Alarm if no binaries are analyzed for this amount of time.
 expected_analysis_frequency_minutes = 30
 
@@ -91,14 +93,28 @@ lambda_download_concurrency_limit = 100
 // `terraform destroy`
 force_destroy = true
 
+// If using BinaryAlert to scan existing S3 buckets, add the S3 and KMS resource ARNs here to grant
+// the appropriate permissions to the analyzer Lambda function.
+external_s3_bucket_resources = []
+external_kms_key_resources = []
+
+
+// ##### SNS #####
+// Create a separate SNS topic which reports files that do NOT match any YARA rules.
+enable_negative_match_alerts = false
+
 
 // ##### SQS #####
 // Maximum number of messages that will be received by each invocation of the respective function.
 analyze_queue_batch_size = 10
 download_queue_batch_size = 1
 
+// Messages in the queue will be retained and retried for the specified duration until expiring.
+analyze_queue_retention_secs = 86400
+download_queue_retention_secs = 86400
+
 // During a retroactive scan, number of S3 objects to pack into a single SQS message.
-objects_per_retro_message = 5
+objects_per_retro_message = 4
 
 // If an SQS message is not deleted (successfully processed) after the max number of receive
 // attempts, the message is delivered to the SQS dead-letter queue.

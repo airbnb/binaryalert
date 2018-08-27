@@ -12,26 +12,18 @@ module "binaryalert_analyzer" {
   reserved_concurrent_executions = "${var.lambda_analyze_concurrency_limit}"
 
   environment_variables = {
+    NO_MATCHES_SNS_TOPIC_ARN       = "${element(concat(aws_sns_topic.no_yara_match.*.arn, list("")), 0)}"
     YARA_MATCHES_DYNAMO_TABLE_NAME = "${aws_dynamodb_table.binaryalert_yara_matches.name}"
     YARA_ALERTS_SNS_TOPIC_ARN      = "${aws_sns_topic.yara_match_alerts.arn}"
-    SAFE_SNS_TOPIC_ARN             = "${var.enable_safe_alerts == "1" ? "${join("",aws_sns_topic.safe_alerts.*.arn)}" : ""}"
   }
 
   log_retention_days = "${var.lambda_log_retention_days}"
   tagged_name        = "${var.tagged_name}"
 
-  // During batch operations, the analyzer will have a high error rate because of S3 latency.
-  alarm_errors_help = <<EOF
-If (a) the number of errors is not growing unbounded,
-(b) the errors are correlated with a rise in S3 download latency, and
-(c) the batcher is currently running (e.g. after a deploy),
-then you can resolve this alert (and consider increasing the threshold for this alarm).
-Otherwise, there is an unknown problem with the analyzers (which may still be related to S3).
-EOF
-
-  alarm_errors_threshold     = 50
+  // There may be a few errors during a batch analysis when waiting on S3
+  alarm_errors_threshold     = 10
   alarm_errors_interval_secs = 300
-  alarm_sns_arns             = ["${aws_sns_topic.metric_alarms.arn}"]
+  alarm_sns_arns             = ["${local.alarm_target}"]
 }
 
 // Invoke analyzer Lambda from analyzer SQS queue.
@@ -43,7 +35,7 @@ resource "aws_lambda_event_source_mapping" "analyzer_via_sqs" {
 
 // Create the CarbonBlack downloading Lambda function.
 module "binaryalert_downloader" {
-  enabled = "${var.enable_carbon_black_downloader}"
+  enabled = "${var.enable_carbon_black_downloader ? 1 : 0}"
 
   source          = "modules/lambda"
   function_name   = "${var.name_prefix}_binaryalert_downloader"
@@ -64,12 +56,12 @@ module "binaryalert_downloader" {
 
   log_retention_days = "${var.lambda_log_retention_days}"
   tagged_name        = "${var.tagged_name}"
-  alarm_sns_arns     = ["${aws_sns_topic.metric_alarms.arn}"]
+  alarm_sns_arns     = ["${local.alarm_target}"]
 }
 
 // Invoke downloader Lambda from downloader SQS queue.
 resource "aws_lambda_event_source_mapping" "downloader_via_sqs" {
-  count            = "${var.enable_carbon_black_downloader == 1 ? 1 : 0}"
+  count            = "${var.enable_carbon_black_downloader ? 1 : 0}"
   batch_size       = "${var.download_queue_batch_size}"
   event_source_arn = "${aws_sqs_queue.downloader_queue.arn}"
   function_name    = "${module.binaryalert_downloader.alias_arn}"

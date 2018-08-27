@@ -36,37 +36,31 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
   }
 
   statement {
-    sid     = "DecryptSSE"
-    actions = ["kms:Decrypt"]
+    sid = "DecryptSSE"
 
-    resources = [
-      "${aws_kms_key.sse_s3.arn}",
-      "${aws_kms_key.sse_sqs.arn}",
+    actions = [
+      "kms:Decrypt",
+      "kms:Describe*",
     ]
+
+    resources = ["${concat(list(aws_kms_key.sse_s3.arn, aws_kms_key.sse_sqs.arn), var.external_kms_key_resources)}"]
   }
 
   statement {
-    sid = "GetFromBinaryAlertBucket"
+    sid = "GetFromS3Bucket"
 
     actions = [
-      "s3:GetObject",
+      "s3:GetObject*",
       "s3:HeadObject",
     ]
 
-    resources = ["${aws_s3_bucket.binaryalert_binaries.arn}/*"]
+    resources = ["${concat(list(format("%s/*", aws_s3_bucket.binaryalert_binaries.arn)), var.external_s3_bucket_resources)}"]
   }
 
   statement {
     sid       = "PublishAlertsToSNS"
     actions   = ["sns:Publish"]
-    resources = ["${aws_sns_topic.yara_match_alerts.arn}"]
-  }
-
-  statement {
-    sid       = "PublishAlertsToSafeSNS"
-    effect    = "Allow"
-    actions   = ["sns:Publish"]
-    resources = ["${var.enable_safe_alerts == "1" ? "${join("",aws_sns_topic.safe_alerts.*.arn)}" : "${aws_sns_topic.yara_match_alerts.arn}"}"]
+    resources = ["${concat(list(aws_sns_topic.yara_match_alerts.arn), aws_sns_topic.no_yara_match.*.arn)}"]
   }
 
   statement {
@@ -92,7 +86,7 @@ resource "aws_iam_role_policy" "binaryalert_analyzer_policy" {
 // ********** Downloader **********
 
 data "aws_iam_policy_document" "binaryalert_downloader_policy" {
-  count = "${var.enable_carbon_black_downloader}"
+  count = "${var.enable_carbon_black_downloader ? 1 : 0}"
 
   statement {
     sid = "AllowSSE"
@@ -135,7 +129,7 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
 }
 
 resource "aws_iam_role_policy" "binaryalert_downloader_policy" {
-  count  = "${var.enable_carbon_black_downloader}"
+  count  = "${var.enable_carbon_black_downloader ? 1 : 0}"
   name   = "${var.name_prefix}_binaryalert_downloader_policy"
   role   = "${module.binaryalert_downloader.role_id}"
   policy = "${data.aws_iam_policy_document.binaryalert_downloader_policy.json}"

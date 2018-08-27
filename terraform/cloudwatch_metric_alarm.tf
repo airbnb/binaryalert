@@ -1,5 +1,10 @@
 /* CloudWatch alarms fire if metrics look abnormal. */
 
+locals {
+  // Use the existing SNS alarm topic if specified, otherwise use the created one
+  alarm_target = "${element(concat(aws_sns_topic.metric_alarms.*.arn, list(var.metric_alarm_sns_topic_arn)), 0)}"
+}
+
 // The production BinaryAlert analyzer is not analyzing binaries.
 resource "aws_cloudwatch_metric_alarm" "analyzed_binaries" {
   alarm_name = "${module.binaryalert_analyzer.function_name}_no_analyzed_binaries"
@@ -19,8 +24,8 @@ EOF
   threshold                 = 0
   period                    = "${format("%d", var.expected_analysis_frequency_minutes * 60)}"
   evaluation_periods        = 1
-  alarm_actions             = ["${aws_sns_topic.metric_alarms.arn}"]
-  insufficient_data_actions = ["${aws_sns_topic.metric_alarms.arn}"]
+  alarm_actions             = ["${local.alarm_target}"]
+  insufficient_data_actions = ["${local.alarm_target}"]
 }
 
 // The analyzer SQS queue is falling behind.
@@ -28,12 +33,10 @@ resource "aws_cloudwatch_metric_alarm" "analyzer_sqs_age" {
   alarm_name = "${aws_sqs_queue.analyzer_queue.name}_old_age"
 
   alarm_description = <<EOF
-The queue ${aws_sqs_queue.analyzer_queue.name} is falling behind and items are growing old.
-This can sometimes happen during a batch analysis of the entire bucket (e.g. after a deploy).
-  - If the SQS age is growing unbounded ("up and to the right"), either the analyzers are down or
-    they are unable to pull from SQS. Check the analyzer logs.
-  - If the batcher is currently running and the SQS age is relatively stable, resolve the alert and
-    consider increasing the threshold for this alert.
+The queue ${aws_sqs_queue.analyzer_queue.name} is not being processed quickly enough:
+messages are reaching 75% of the queue retention and may be expired soon.
+  - Consider increasing the lambda_analyze_concurrency_limit to process more events
+  - Consider raising the retention period for this queue
 EOF
 
   namespace   = "AWS/SQS"
@@ -44,23 +47,24 @@ EOF
     QueueName = "${aws_sqs_queue.analyzer_queue.name}"
   }
 
-  // The queue is consistently more than 2 hours behind.
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = 7200
+  threshold                 = "${format("%d", ceil(var.analyze_queue_retention_secs * 0.75))}"
   period                    = 60
-  evaluation_periods        = 15
-  alarm_actions             = ["${aws_sns_topic.metric_alarms.arn}"]
-  insufficient_data_actions = ["${aws_sns_topic.metric_alarms.arn}"]
+  evaluation_periods        = 10
+  alarm_actions             = ["${local.alarm_target}"]
+  insufficient_data_actions = ["${local.alarm_target}"]
 }
 
 // The downloader SQS queue is falling behind.
 resource "aws_cloudwatch_metric_alarm" "downloader_sqs_age" {
-  count      = "${var.enable_carbon_black_downloader}"
+  count      = "${var.enable_carbon_black_downloader ? 1 : 0}"
   alarm_name = "${aws_sqs_queue.downloader_queue.name}_old_age"
 
   alarm_description = <<EOF
-The queue ${aws_sqs_queue.downloader_queue.name} is falling behind and items are growing old.
-Make sure the dispatcher is invoking the downloader, and that the downloader is running correctly.
+The queue ${aws_sqs_queue.downloader_queue.name} is not being processed quickly enough:
+messages are reaching 75% of the queue retention and may be expired soon.
+  - Consider increasing the lambda_download_concurrency_limit to process more events
+  - Consider raising the retention period for this queue
 EOF
 
   namespace   = "AWS/SQS"
@@ -71,39 +75,12 @@ EOF
     QueueName = "${aws_sqs_queue.downloader_queue.name}"
   }
 
-  // The queue is consistently more than 2 hours behind.
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = 7200
+  threshold                 = "${format("%d", ceil(var.download_queue_retention_secs * 0.75))}"
   period                    = 60
-  evaluation_periods        = 15
-  alarm_actions             = ["${aws_sns_topic.metric_alarms.arn}"]
-  insufficient_data_actions = ["${aws_sns_topic.metric_alarms.arn}"]
-}
-
-// A message was delivered to the dead letter queue (this only happens from the downloader).
-resource "aws_cloudwatch_metric_alarm" "dlq_message_received" {
-  count      = "${var.enable_carbon_black_downloader}"
-  alarm_name = "${aws_sqs_queue.dead_letter_queue.name}_message_received"
-
-  alarm_description = <<EOF
-An SQS message permanently failed to be processed by the downloader and was delivered to the
-dead-letter-queue. From the SQS console, manually view the failed message in
-${aws_sqs_queue.dead_letter_queue.name}.
-EOF
-
-  namespace   = "AWS/SQS"
-  metric_name = "ApproximateNumberOfMessagesVisible"
-  statistic   = "Maximum"
-
-  dimensions = {
-    QueueName = "${aws_sqs_queue.dead_letter_queue.name}"
-  }
-
-  comparison_operator = "GreaterThanThreshold"
-  threshold           = 0
-  period              = 60
-  evaluation_periods  = 1
-  alarm_actions       = ["${aws_sns_topic.metric_alarms.arn}"]
+  evaluation_periods        = 10
+  alarm_actions             = ["${local.alarm_target}"]
+  insufficient_data_actions = ["${local.alarm_target}"]
 }
 
 // There are very few YARA rules.
@@ -124,7 +101,7 @@ EOF
   threshold           = 5
   period              = 300
   evaluation_periods  = 1
-  alarm_actions       = ["${aws_sns_topic.metric_alarms.arn}"]
+  alarm_actions       = ["${local.alarm_target}"]
 }
 
 // Dynamo requests are being throttled.
@@ -132,13 +109,12 @@ resource "aws_cloudwatch_metric_alarm" "dynamo_throttles" {
   alarm_name = "${aws_dynamodb_table.binaryalert_yara_matches.name}_throttles"
 
   alarm_description = <<EOF
-Read or write requests to the DynamoDB table are being throttled.
+Read or write requests to the BinaryAlert DynamoDB table are being throttled.
   - Check the ReadThrottleEvents and WriteThrottleEvents Dynamo metrics to understand which
     operation is causing throttles.
   - If there was a recent deploy with new YARA rules, there may be more matches than Dynamo has been
     provisioned to handle. In this case, rollback the analyzer in the AWS Console and fix the rules.
-  - If this is normal/expected behavior, increase the read capacity for the Dynamo table in the
-    BinaryAlert terraform.tfvars config file.
+  - If this is normal/expected behavior, increase the dynamo_read_capacity in the BinaryAlet config.
 EOF
 
   namespace   = "AWS/DynamoDB"
@@ -153,5 +129,5 @@ EOF
   threshold           = 0
   period              = 60
   evaluation_periods  = 1
-  alarm_actions       = ["${aws_sns_topic.metric_alarms.arn}"]
+  alarm_actions       = ["${local.alarm_target}"]
 }

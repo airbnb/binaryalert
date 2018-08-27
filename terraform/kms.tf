@@ -65,7 +65,7 @@ resource "aws_kms_alias" "sse_sqs_alias" {
 
 // KMS key to encrypt CarbonBlack credentials
 resource "aws_kms_key" "carbon_black_credentials" {
-  count               = "${var.enable_carbon_black_downloader}"
+  count               = "${var.enable_carbon_black_downloader ? 1 : 0}"
   description         = "Encrypts CarbonBlack credentials for the BinaryAlert downloader."
   enable_key_rotation = true
 
@@ -75,7 +75,7 @@ resource "aws_kms_key" "carbon_black_credentials" {
 }
 
 resource "aws_kms_alias" "encrypt_credentials_alias" {
-  count         = "${var.enable_carbon_black_downloader}"
+  count         = "${var.enable_carbon_black_downloader ? 1 : 0}"
   name          = "alias/${var.name_prefix}_binaryalert_carbonblack_credentials"
   target_key_id = "${aws_kms_key.carbon_black_credentials.key_id}"
 }
