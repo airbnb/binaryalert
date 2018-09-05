@@ -12,7 +12,7 @@ A ``deploy`` is equivalent to the following 3 operations executed in sequence:
 
   $ ./manage.py unit_test  # Unit tests ensure YARA rules compile correctly
   $ ./manage.py build      # Build the Lambda ".zip" deployment package(s)
-  $ ./manage.py apply      # Run "terraform apply" to update the infrastructure
+  $ ./manage.py apply      # Update the infrastructure and deploy Lambda functions
 
 
 .. _lambda_versioning:
