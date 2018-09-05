@@ -79,7 +79,7 @@ In summary, BinaryAlert will copy a file from a remote repository if and only if
 
 Write Your Own Rules
 --------------------
-You can add your own ``.yar`` or ``.yara`` files anywhere in the ``rules/`` directory tree. Refer to the `writing YARA rules <http://yara.readthedocs.io/en/latest/writingrules.html>`_ documentation for guidance and examples. Note that when BinaryAlert finds a file which matches a YARA rule, the rule name, `metadata <http://yara.readthedocs.io/en/latest/writingrules.html#metadata>`_, `tags <http://yara.readthedocs.io/en/latest/writingrules.html#rule-tags>`_, and matched `string <http://yara.readthedocs.io/en/latest/writingrules.html#strings>`_ names will be included in the alert for your convenience.
+You can add your own ``.yar`` or ``.yara`` files anywhere in the ``rules/`` directory tree. Refer to the `writing YARA rules <http://yara.readthedocs.io/en/latest/writingrules.html>`_ documentation for guidance and examples. Note that when BinaryAlert finds a file which matches a YARA rule, the rule name, `metadata <http://yara.readthedocs.io/en/latest/writingrules.html#metadata>`_, `tags <http://yara.readthedocs.io/en/latest/writingrules.html#rule-tags>`_, and matched `string <http://yara.readthedocs.io/en/latest/writingrules.html#strings>`_ names and string data will be included in the alert for your convenience.
 
 .. note:: Because the folders for each remote source will be overwritten during rule cloning, we recommend keeping your own YARA rules in ``rules/private`` or similar.
 
@@ -87,7 +87,7 @@ You can add your own ``.yar`` or ``.yara`` files anywhere in the ``rules/`` dire
 
 External Variables
 ------------------
-In order to support the rule repositories listed above, BinaryAlert provides the following `external variables <http://yara.readthedocs.io/en/latest/writingrules.html#external-variables>`_:
+In order to support the rule repositories listed above, BinaryAlert provides the following `external variables <http://yara.readthedocs.io/en/latest/writingrules.html#external-variables>`_ to YARA:
 
 * ``extension`` - File extension (".docx", ".exe", ".pdf", etc)
 * ``filename`` - File basename ("file.exe")
@@ -120,7 +120,7 @@ Disabling Rules
 ---------------
 There may be times you want to disable certain YARA rules, but not delete them (e.g. rules with high false-positive rates). Since only ``.yar`` and ``.yara`` files in the ``rules/`` directory tree are bundled in a BinaryAlert deploy, you can simply rename ``rules.yar`` to any other extension, e.g. ``rules.yar.DISABLED``, to skip it during rules compilation.
 
-If you want to disable an individual rule (not the entire file), you can either comment it out or prefix the rule with the ``private`` modifier to elide it from reported YARA match results. Unfortunately, there is no easy way to automatically *remove* individual rules from a file.
+If you want to disable an individual rule (not the entire file), you can either comment it out or prefix the rule with the ``private`` modifier to elide it from reported YARA match results.
 
 
 .. _testing_yara_rules:
@@ -141,13 +141,8 @@ To test *all* of your YARA rules, you first need to compile them into a single b
 
   $ ./manage.py compile_rules  # Saves "compiled_yara_rules.bin"
 
-This compiled rules file is what gets bundled with the BinaryAlert analyzers. Now, from a Python interpreter:
+This compiled rules file is what gets bundled with the BinaryAlert analyzers, and you can use it with YARA just like any other rules file:
 
-.. code-block:: python
+.. code-block:: bash
 
-  import yara
-  rules = yara.load('compiled_yara_rules.bin')
-  matches = rules.match('file_to_text.exe')
-  print(matches)
-
-See the `yara-python <http://yara.readthedocs.io/en/latest/yarapython.html>`_ docs for more information about using YARA from Python.
+  $ yara compiled_yara_rules.bin file_to_test

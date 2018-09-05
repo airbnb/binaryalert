@@ -78,7 +78,6 @@ modify, and destroy all of the BinaryAlert infrastructure:
         resources = ["*"]
       }
 
-      # This allows users to create a new KMS key for CarbonBlack credentials
       statement {
         effect = "Allow"
 
@@ -99,7 +98,7 @@ modify, and destroy all of the BinaryAlert infrastructure:
         resources = [
           "arn:aws:kms:${var.region}:${var.account}:alias/${var.prefix}_binaryalert*",
 
-          # NOTE: Once a new key is generated, add permissions to use that key here:
+          # NOTE: For each new key that is generated, add permissions to use that key here:
           # "arn:aws:kms:${var.region}:${var.account}:key/KEY-UUID",
         ]
       }
