@@ -152,13 +152,15 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
                     'description': ('A helpful description about why this rule '
                                     'matches dastardly evil files.')
                 },
-                matched_strings={'$evil_string'}
+                matched_strings={'$evil_string'},
+                matched_data={'evil'}
             ),
             yara_analyzer.YaraMatch(
                 rule_name='Rule1',
                 rule_namespace='yextend',
                 rule_metadata={'scan_type': 'Scan1'},
-                matched_strings={'$a', '$b', '$c'}
+                matched_strings={'$a', '$b', '$c'},
+                matched_data=set()
             ),
             yara_analyzer.YaraMatch(
                 rule_name='Rule3',
@@ -168,7 +170,8 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
                     'description': 'Hello, YARA world',
                     'scan_type': 'Scan3'
                 },
-                matched_strings={'$longer_string_name'}
+                matched_strings={'$longer_string_name'},
+                matched_data=set()
             )
         ]
         self.assertEqual(expected, yara_matches)
@@ -214,7 +217,15 @@ class YextendConversionTest(unittest.TestCase):
             ],
             'yara_matches_found': True
         }
-        expected = [yara_analyzer.YaraMatch('Rule1', 'yextend', {'scan_type': 'ScanType1'}, set())]
+        expected = [
+            yara_analyzer.YaraMatch(
+                rule_name='Rule1',
+                rule_namespace='yextend',
+                rule_metadata={'scan_type': 'ScanType1'},
+                matched_strings=set(),
+                matched_data=set()
+            )
+        ]
 
         self.assertEqual(expected, yara_analyzer._convert_yextend_to_yara_match(yextend))
 
@@ -222,11 +233,23 @@ class YextendConversionTest(unittest.TestCase):
         """Multiple rule matches, with offsets and more rule metadata."""
         yextend = _YEXTEND_MATCH[0]
         expected = [
-            yara_analyzer.YaraMatch('Rule1', 'yextend', {'scan_type': 'Scan1'}, {'$a', '$b', '$c'}),
             yara_analyzer.YaraMatch(
-                'Rule3', 'yextend',
-                {'author': 'Airbnb', 'description': 'Hello, YARA world', 'scan_type': 'Scan3'},
-                {'$longer_string_name'}
+                rule_name='Rule1',
+                rule_namespace='yextend',
+                rule_metadata={'scan_type': 'Scan1'},
+                matched_strings={'$a', '$b', '$c'},
+                matched_data=set()
+            ),
+            yara_analyzer.YaraMatch(
+                rule_name='Rule3',
+                rule_namespace='yextend',
+                rule_metadata={
+                    'author': 'Airbnb',
+                    'description': 'Hello, YARA world',
+                    'scan_type': 'Scan3'
+                },
+                matched_strings={'$longer_string_name'},
+                matched_data=set()
             )
         ]
 

@@ -33,14 +33,7 @@ BinaryAlert can be deployed from any MacOS/Linux environment (and likely Windows
   $ brew install terraform  # MacOS Homebrew
   $ terraform --version  # Must be v0.11.X
 
-3. Install `virtualenv <https://virtualenv.pypa.io/en/stable/installation>`_:
-
-.. code-block:: bash
-
-  $ sudo -H pip3 install virtualenv
-  $ virtualenv --version
-
-4. Install the OpenSSL development library if it isn't already (OS X should have it).
+3. Install the OpenSSL development library if it isn't already (OS X should have it).
 This is required for YARA's `hash module <http://yara.readthedocs.io/en/stable/modules/hash.html>`_
 and must be installed *before* installing the BinaryAlert requirements.
 
@@ -56,14 +49,14 @@ Download BinaryAlert
 
 .. code-block:: bash
 
-  $ git clone --branch v1.1.0 --depth 1 https://github.com/airbnb/binaryalert
+  $ git clone --branch v1.2.0 https://github.com/airbnb/binaryalert
 
 2. Create and activate a virtual environment:
 
 .. code-block:: bash
 
   $ cd binaryalert
-  $ virtualenv -p python3.6 venv
+  $ python3.6 -m venv venv
   $ source venv/bin/activate
 
 3. Install the BinaryAlert requirements:

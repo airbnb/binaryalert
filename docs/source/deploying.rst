@@ -6,16 +6,13 @@ After you've `setup your environment <getting-started.html>`_, deploying BinaryA
 
   $ ./manage.py deploy
 
-A ``deploy`` is equivalent to the following 4 operations executed in sequence:
+A ``deploy`` is equivalent to the following 3 operations executed in sequence:
 
 .. code-block:: bash
 
-  $ ./manage.py unit_test    # Unit tests ensure YARA rules compile correctly
-  $ ./manage.py build        # Build the Lambda ".zip" deployment packages
-  $ ./manage.py apply        # Runs "terraform apply" to update the infrastructure
-  $ ./manage.py analyze_all  # Starts a batch analysis of the entire S3 bucket
-
-.. warning:: To ensure new YARA rules are applied ASAP, **every** ``deploy`` starts a batch analysis. If a batch analysis is already running or if you are not updating any YARA rules, you can just ``build`` and ``apply`` your changes.
+  $ ./manage.py unit_test  # Unit tests ensure YARA rules compile correctly
+  $ ./manage.py build      # Build the Lambda ".zip" deployment package(s)
+  $ ./manage.py apply      # Update the infrastructure and deploy Lambda functions
 
 
 .. _lambda_versioning:
@@ -41,7 +38,7 @@ By default, Terraform will save the state of the infrastructure locally in ``ter
 
 Terraform Commands
 ------------------
-We recommend using the ``manage.py`` wrapper script for most BinaryAlert management because it provides additional validation. However, you can run ``terraform`` commands directly from the ``terraform/`` directory. Examples:
+We recommend using the ``manage.py`` wrapper script for most BinaryAlert management, but you can also run ``terraform`` commands directly from the ``terraform/`` directory:
 
 .. code-block:: bash
 
@@ -60,10 +57,10 @@ To teardown all of the BinaryAlert infrastructure:
 
   $ ./manage.py destroy
 
+Terraform will build a destroy plan which you must approve before the delete will proceed.
+
 By default, the BinaryAlert S3 buckets can't be deleted until they are empty. You will be asked
 if you want to override this setting and delete all objects as well. If so, the new setting will
 be applied before building the destroy plan.
 
 .. note:: You can set ``force_destroy = true`` in the ``terraform/terraform.tfvars`` config file and ``apply`` the change if you want to manually disable S3 delete protections.
-
-Terraform will build a destroy plan which you must approve before the delete will proceed.

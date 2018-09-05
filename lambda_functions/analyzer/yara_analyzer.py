@@ -14,10 +14,11 @@ from lambda_functions.analyzer.common import LOGGER
 YaraMatch = collections.namedtuple(
     'YaraMatch',
     [
-        'rule_name',       # str: Name of the YARA rule
-        'rule_namespace',  # str: Namespace of YARA rule (original YARA filename)
-        'rule_metadata',   # Dict: String metadata associated with the YARA rule
-        'matched_strings'  # Set: Set of string string names matched (e.g. "{$a, $b}")
+        'rule_name',        # str: Name of the YARA rule
+        'rule_namespace',   # str: Namespace of YARA rule (original YARA filename)
+        'rule_metadata',    # Dict: String metadata associated with the YARA rule
+        'matched_strings',  # Set: Set of string string names matched (e.g. "{$a, $b}")
+        'matched_data'      # Set: Matched YARA data
     ]
 )
 
@@ -45,7 +46,8 @@ def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMat
             # This isn't actually a YARA match result, so we elide it.
             continue
 
-        rule_namespace = 'yextend'  # TODO: Yextend does not yet report namespaces
+        # Note: Yextend does not report rule namespaces nor the match data
+        rule_namespace = 'yextend'
         matched_strings = set(
             x.split(':')[1] for x in result.get('detected offsets', []) if ':' in x)
 
@@ -54,7 +56,7 @@ def _convert_yextend_to_yara_match(yextend_json: Dict[str, Any]) -> List[YaraMat
             if key not in _YEXTEND_RESULT_KEYS:
                 rule_metadata[key] = value
 
-        matches.append(YaraMatch(rule_name, rule_namespace, rule_metadata, matched_strings))
+        matches.append(YaraMatch(rule_name, rule_namespace, rule_metadata, matched_strings, set()))
 
     return matches
 
@@ -158,11 +160,20 @@ class YaraAnalyzer:
 
         # Raw YARA matches (yara-python)
         raw_yara_matches = self._rules.match(
-            target_file, externals=self._yara_variables(original_target_path)
-        )
-        yara_python_matches = [
-            YaraMatch(m.rule, m.namespace, m.meta, set(t[1] for t in m.strings))
-            for m in raw_yara_matches
-        ]
+            target_file, externals=self._yara_variables(original_target_path))
+        yara_python_matches = []
+
+        for match in raw_yara_matches:
+            string_names = set()
+            string_data = set()
+            for _, name, data in match.strings:
+                string_names.add(name)
+                try:
+                    string_data.add(data.decode('utf-8'))
+                except UnicodeDecodeError:
+                    # Bytes string is not unicode - print its hex values instead
+                    string_data.add(data.hex())
+            yara_python_matches.append(
+                YaraMatch(match.rule, match.namespace, match.meta, string_names, string_data))
 
         return yara_python_matches + self._yextend_matches(target_file)

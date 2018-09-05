@@ -15,7 +15,8 @@ def _mock_pip_main(args_list: List[str]) -> None:
     requirements_file = args_list[8]
     with open(requirements_file) as f:
         for pkg in f:
-            os.makedirs(os.path.join(install_directory, pkg.split('==')[0]))
+            pkg_name = pkg.split('/')[-1].split('==')[0].split('@')[0]
+            os.makedirs(os.path.join(install_directory, pkg_name))
 
 
 @mock.patch.object(build, 'print')
@@ -110,10 +111,10 @@ class BuildTest(unittest.TestCase):
                 'lambda_functions/downloader/main.py',
 
                 # Libraries (mock install)
-                'cbapi/',
+                'cbapi-python.git/',
                 'prompt-toolkit/',
                 'python-dateutil/'
-            },
+            }
         )
 
         mock_pip.assert_called_once()

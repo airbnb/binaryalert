@@ -7,7 +7,7 @@ BinaryAlert automatically generates logs, custom metrics, alarms, and a dashboar
 
 Logging
 -------
-Each BinaryAlert Lambda function logs information about its execution; logs are saved for 60 days (by default) and are accessible from AWS CloudWatch.
+Each BinaryAlert Lambda function logs information about its execution; logs are saved for 14 days (by default) and are accessible from AWS CloudWatch.
 
 
 Custom Metrics
@@ -18,7 +18,6 @@ In addition to the wide array of `metrics provided automatically AWS <http://doc
 **Metric Name**       **Unit**      **Description**
 --------------------  ------------  ---------------------------------------------
 AnalyzedBinaries      Count         Number of binaries analyzed
-BatchEnqueueFailures  Count         Number of SQS messages that failed to enqueue
 MatchedBinaries       Count         Number of binaries which matched a YARA rule
 S3DownloadLatency     Milliseconds  Time to download binaries from S3
 YaraRules             Count         Number of compiled YARA rules
@@ -37,11 +36,9 @@ Alarms can be configured from the ``terraform/terraform.tfvars`` configuration f
 **Namespace**  **Metric Name**                **Alarm Condition**
 -------------  -----------------------------  --------------------------------------
 AWS/DynamoDB   ThrottledRequests              > 0
-AWS/Lambda     Errors                         > threshold (for each Lambda function)
-AWS/Lambda     Throttles                      > 0 (for each Lambda function)
-AWS/SQS        ApproximateAgeOfOldestMessage  >= 30 minutes
+AWS/Lambda     Errors                         > 0 (for each Lambda function)
+AWS/SQS        ApproximateAgeOfOldestMessage  >= 75% of max age (for each SQS queue)
 BinaryAlert    AnalyzedBinaries               == 0 for an hour
-BinaryAlert    BatchEnqueueFailures           > 0
 BinaryAlert    YaraRules                      < 5
 =============  =============================  ======================================
 
