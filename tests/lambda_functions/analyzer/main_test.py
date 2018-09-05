@@ -242,6 +242,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 },
                 'MatchedRules': {
                     'Rule1': {
+                        'MatchedData': [],
                         'MatchedStrings': [],
                         'Meta': {},
                         'RuleFile': 'externals.yar',
@@ -260,6 +261,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
                 },
                 'MatchedRules': {
                     'Rule1': {
+                        'MatchedData': ['evil'],
                         'MatchedStrings': ['$evil_string'],
                         'Meta': {
                             'author': 'Austin Byers',
@@ -270,6 +272,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
                         'RuleName': 'contains_evil',
                     },
                     'Rule2': {
+                        'MatchedData': [],
                         'MatchedStrings': [],
                         'Meta': {},
                         'RuleFile': 'externals.yar',

@@ -121,8 +121,8 @@ class BinaryInfo:
         """Generate a summary dictionary of binary attributes."""
         matched_rules = {
             'Rule{}'.format(index): {
-                # YARA string IDs, e.g. "$string1"
-                'MatchedStrings': list(sorted(match.matched_strings)),
+                'MatchedData': list(sorted(match.matched_data)),  # E.g. "HelloWorld"
+                'MatchedStrings': list(sorted(match.matched_strings)),  # E.g. "$string1"
                 'Meta': match.rule_metadata,
                 'RuleFile': match.rule_namespace,
                 'RuleName': match.rule_name
