@@ -3,7 +3,6 @@ boto3
 cbapi==1.3.6
 coverage
 coveralls
-moto
 mypy
 pyfakefs
 pyhcl
