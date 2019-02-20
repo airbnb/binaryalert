@@ -10,8 +10,8 @@ from cli.manager import Manager
 
 def main() -> None:
     """Main command dispatcher."""
-    if not (sys.version_info.major == 3 and sys.version_info.minor == 6):
-        print('ERROR: Python 3.6 is required, found Python {}.{}.{}'.format(
+    if not (sys.version_info.major == 3 and sys.version_info.minor in {6, 7}):
+        print('ERROR: Python 3.6/7 is required, found Python {}.{}.{}'.format(
             sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
         exit(1)
 
