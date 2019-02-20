@@ -53,6 +53,39 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
   force_destroy = "${var.force_destroy}"
 }
 
+// Policy for log bucket that forces ssl only access
+data "aws_iam_policy_document" "force_ssl_only_access" {
+  # Force SSL access only
+  statement {
+    sid = "ForceSSLOnlyAccess"
+
+    effect = "Deny"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+
+    actions = ["s3:*"]
+
+    resources = [
+      "${aws_s3_bucket.binaryalert_log_bucket.arn}",
+      "${aws_s3_bucket.binaryalert_log_bucket.arn}/*",
+    ]
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "force_ssl_only_access" {
+  bucket = "${aws_s3_bucket.binaryalert_log_bucket.id}"
+  policy = "${data.aws_iam_policy_document.force_ssl_only_access.json}"
+}
+
 // Source S3 bucket: binaries uploaded here will be automatically analyzed.
 resource "aws_s3_bucket" "binaryalert_binaries" {
   bucket = "${replace(var.name_prefix, "_", ".")}.binaryalert-binaries.${var.aws_region}"
@@ -144,6 +177,31 @@ data "aws_iam_policy_document" "allow_inventory" {
       test     = "ArnLike"
       variable = "aws:SourceArn"
       values   = ["${aws_s3_bucket.binaryalert_binaries.arn}"]
+    }
+  }
+
+  # Force SSL access only
+  statement {
+    sid = "ForceSSLOnlyAccess"
+
+    effect = "Deny"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+
+    actions = ["s3:*"]
+
+    resources = [
+      "${aws_s3_bucket.binaryalert_binaries.arn}",
+      "${aws_s3_bucket.binaryalert_binaries.arn}/*",
+    ]
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
     }
   }
 }
