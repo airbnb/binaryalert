@@ -12,7 +12,7 @@ printf "\n~~~~~~~~~~ [4] Measure Coverage ~~~~~~~~~~\n" &&
 coverage report &&  # Required coverage threshold specified in .coveragerc
 
 printf "\n~~~~~~~~~~ [5] Pylint ~~~~~~~~~~\n" &&
-pylint cli lambda_functions rules tests *.py -j 1 &&  # Config in .pylintrc
+pylint --init-hook="import sys; sys.setrecursionlimit(2000)" cli lambda_functions rules tests *.py -j 1 &&  # Config in .pylintrc. Max recursion needed in python3.7
 
 printf "\n~~~~~~~~~~ [6] Build Documentation ~~~~~~~~~~\n" &&
 sphinx-build -W docs/source docs/build &&
