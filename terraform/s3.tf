@@ -55,6 +55,8 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
 
 // Policy for log bucket that forces ssl only access
 data "aws_iam_policy_document" "force_ssl_only_access" {
+  count = "${var.s3_log_bucket == "" ? 1 : 0}" // Create only if no pre-existing log bucket.
+
   # Force SSL access only
   statement {
     sid = "ForceSSLOnlyAccess"
@@ -82,6 +84,8 @@ data "aws_iam_policy_document" "force_ssl_only_access" {
 }
 
 resource "aws_s3_bucket_policy" "force_ssl_only_access" {
+  count = "${var.s3_log_bucket == "" ? 1 : 0}" // Create only if no pre-existing log bucket.
+
   bucket = "${aws_s3_bucket.binaryalert_log_bucket.id}"
   policy = "${data.aws_iam_policy_document.force_ssl_only_access.json}"
 }
