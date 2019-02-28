@@ -32,13 +32,13 @@ mypy-extensions==0.4.1
 packaging==19.0
 pbr==5.1.2
 pika==0.13.0
-ply==3.10
+ply==3.11
 prompt-toolkit==2.0.9
 protobuf==3.6.1
 pycparser==2.19
 pyfakefs==3.5.7
 Pygments==2.3.1
-pyhcl==0.3.10
+pyhcl==0.3.11
 pylint==2.2.2
 pyOpenSSL==19.0.0
 pyparsing==2.3.1
