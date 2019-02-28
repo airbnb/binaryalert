@@ -15,11 +15,11 @@ class FileUtilsTest(fake_filesystem_unittest.TestCase):
         """Enable the fake filesystem and write some test files."""
         self.setUpPyfakefs()
 
-        self.fs.CreateFile('/empty_file', contents='')
+        self.fs.create_file('/empty_file', contents='')
 
         self._test_contents = 'Hello, World! This is a test file.'
         self._file_size = len(self._test_contents)
-        self.fs.CreateFile('/hello_world', contents=self._test_contents)
+        self.fs.create_file('/hello_world', contents=self._test_contents)
 
     def test_read_in_chunks(self):
         """File chunking works with different size chunks."""

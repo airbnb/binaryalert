@@ -59,7 +59,7 @@ class YaraAnalyzerTest(fake_filesystem_unittest.TestCase):
 
         # Write target file.
         # pylint: disable=no-member
-        self.fs.CreateFile('./target.exe', contents='This is definitely not an evil file. ^_^\n')
+        self.fs.create_file('./target.exe', contents='This is definitely not an evil file. ^_^\n')
 
     @staticmethod
     def _rule_id(match):
