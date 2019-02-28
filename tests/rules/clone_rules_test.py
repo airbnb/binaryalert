@@ -66,7 +66,7 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
         os.makedirs(clone_rules.RULES_DIR)
 
         # Add fake rule sources.
-        self.fs.CreateFile(clone_rules.REMOTE_RULE_SOURCES, contents=json.dumps(
+        self.fs.create_file(clone_rules.REMOTE_RULE_SOURCES, contents=json.dumps(
             {
                 "repos": [
                     {
@@ -86,13 +86,13 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
         ))
 
         # Add extra rules (which should be deleted).
-        self.fs.CreateFile(os.path.join(
+        self.fs.create_file(os.path.join(
             clone_rules.RULES_DIR,
             'github.com', 'test-user1', 'test-repo1', 'CVE_Rules', 'delete-me.yara'
         ))
 
         # Add some other rules (which should be preserved).
-        self.fs.CreateFile(os.path.join(clone_rules.RULES_DIR, 'private', 'private.yara'))
+        self.fs.create_file(os.path.join(clone_rules.RULES_DIR, 'private', 'private.yara'))
 
     def _mock_git_clone(self, args: List[str]) -> None:
         """Mock out git clone by creating the "cloned" directory."""
@@ -100,14 +100,14 @@ class CloneRulesTest(fake_filesystem_unittest.TestCase):
 
         # Create "cloned" directory and subfolders.
         if cloned_repo_root.endswith('test-repo1'):
-            self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
-            self.fs.CreateFile(os.path.join(cloned_repo_root, 'not_included.yara'))
+            self.fs.create_file(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
+            self.fs.create_file(os.path.join(cloned_repo_root, 'not_included.yara'))
         elif cloned_repo_root.endswith('test-repo2'):
-            self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
-            self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'exluded_mobile.yara'))
-            self.fs.CreateFile(os.path.join(cloned_repo_root, 'windows', 'excluded.yara'))
+            self.fs.create_file(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
+            self.fs.create_file(os.path.join(cloned_repo_root, 'yara', 'exluded_mobile.yara'))
+            self.fs.create_file(os.path.join(cloned_repo_root, 'windows', 'excluded.yara'))
         elif cloned_repo_root.endswith('test-repo3'):
-            self.fs.CreateFile(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
+            self.fs.create_file(os.path.join(cloned_repo_root, 'yara', 'cloned.yara'))
 
     @mock.patch.object(clone_rules, 'print')
     def test_clone_remote_rules(self, mock_print: mock.MagicMock):

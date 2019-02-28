@@ -61,10 +61,10 @@ class FakeFilesystemBase(fake_filesystem_unittest.TestCase):
         # pyhcl automatically writes "parsetab.dat" in its site-package path.
         for path in sys.path:
             if path.endswith('site-packages'):
-                self.fs.MakeDirectories(os.path.join(path, 'hcl'))
+                self.fs.makedirs(os.path.join(path, 'hcl'))
 
         # Create variables.tf file (and terraform/ directory).
-        self.fs.CreateFile(
+        self.fs.create_file(
             VARIABLES_FILE,
             contents='\n'.join([
                 'variable "aws_account_id" {}',

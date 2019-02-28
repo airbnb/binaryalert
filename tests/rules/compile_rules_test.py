@@ -25,25 +25,25 @@ class FindYaraFilesTest(fake_filesystem_unittest.TestCase):
 
     def test_find_yara_rules(self):
         """Make sure all .yar and .yara files are found."""
-        self.fs.CreateFile('/rules/file1.yar')
-        self.fs.CreateFile('/rules/file2.yara')
-        self.fs.CreateFile('/rules/community/nested.yar')
-        self.fs.CreateFile('/rules/a/b/c/d/e/deep_nested.yara')
+        self.fs.create_file('/rules/file1.yar')
+        self.fs.create_file('/rules/file2.yara')
+        self.fs.create_file('/rules/community/nested.yar')
+        self.fs.create_file('/rules/a/b/c/d/e/deep_nested.yara')
         expected = ['a/b/c/d/e/deep_nested.yara', 'community/nested.yar', 'file1.yar', 'file2.yara']
         self.assertEqual(expected, self._sorted_find())
 
     def test_find_yara_rules_mixed_case(self):
         """Uppercase .yar or .yara extensions are allowed, but the original filename is returned."""
-        self.fs.CreateFile('/rules/file1.YAR')
-        self.fs.CreateFile('/rules/file2.YaRa')
+        self.fs.create_file('/rules/file1.YAR')
+        self.fs.create_file('/rules/file2.YaRa')
         self.assertEqual(['file1.YAR', 'file2.YaRa'], self._sorted_find())
 
     def test_find_yara_rules_skip_other_files(self):
         """Non-YARA files are skipped during the traversal."""
-        self.fs.CreateFile('/rules/clone_rules.py')
-        self.fs.CreateFile('/rules/compile_rules.py')
-        self.fs.CreateFile('/rules/eicar.yar')
-        self.fs.CreateFile('/rules/README.md')
+        self.fs.create_file('/rules/clone_rules.py')
+        self.fs.create_file('/rules/compile_rules.py')
+        self.fs.create_file('/rules/eicar.yar')
+        self.fs.create_file('/rules/README.md')
         self.assertEqual(['eicar.yar'], self._sorted_find())
 
 
