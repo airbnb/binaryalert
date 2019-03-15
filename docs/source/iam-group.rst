@@ -164,5 +164,13 @@ modify, and destroy all of the BinaryAlert infrastructure:
       policy_arn = "${aws_iam_policy.binaryalert_admin.arn}"
     }
 
+To authenticate with environment variables set the following:
+
+.. code-block:: bash
+
+  export AWS_ACCESS_KEY_ID="an-access-key"
+  export AWS_SECRET_ACCESS_KEY="a-secret-key"
+  export AWS_DEFAULT_REGION="us-west-2"
+
 Once you ``terraform apply`` to create the IAM group, you can add new or existing users to the group
 (manually or with Terraform).
