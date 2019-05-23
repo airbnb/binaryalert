@@ -172,5 +172,12 @@ To authenticate with environment variables set the following:
   export AWS_SECRET_ACCESS_KEY="a-secret-key"
   export AWS_DEFAULT_REGION="us-west-2"
 
+If you have any other AWS credentials it is often easier to use a `Named Profile https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html`_
+which can be used like this:
+
+.. code-block:: bash
+
+  export AWS_PROFILE=binaryalert
+
 Once you ``terraform apply`` to create the IAM group, you can add new or existing users to the group
 (manually or with Terraform).
