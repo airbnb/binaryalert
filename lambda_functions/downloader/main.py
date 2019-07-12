@@ -109,9 +109,24 @@ def _process_md5(md5: str) -> bool:
         metadata = _build_metadata(binary)
         _upload_to_s3(binary.md5, download_path, metadata)  # pylint: disable=no-member
         return True
-    except (BotoCoreError, ObjectNotFoundError, ServerError, zipfile.BadZipFile):
-        LOGGER.exception('Error downloading %s', md5)
+    except zipfile.BadZipFile:
+        LOGGER.exception('[BadZipFile] Error downloading %s', md5)
+        LOGGER.info('This md5 is invalid and will not retried')
         return False
+    except (BotoCoreError, ServerError):
+        LOGGER.exception('Error downloading %s', md5)
+        LOGGER.error(
+            'A temporary error was encountered during downloading. This md5 will be '
+            'retried at a later time.'
+        )
+        raise
+    except ObjectNotFoundError:
+        LOGGER.exception('Error downloading %s', md5)
+        LOGGER.info(
+            'This may be caused due to a race condition where the requested binary is not yet '
+            'available for download from the server. This binary will be retried at a later time.'
+        )
+        raise
     finally:
         if download_path:
             # Shred downloaded file before exiting.
