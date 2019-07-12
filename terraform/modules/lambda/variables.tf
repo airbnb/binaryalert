@@ -60,7 +60,10 @@ variable "alarm_errors_help" {
 
 variable "alarm_errors_threshold" {
   description = "If at least this many errors occur within alarm_errors_interval_secs, a metric alarm will trigger"
-  default     = 1
+  # The error threshold has been increased significantly; this is due to a recent change that
+  # retries HTTP 404s by raising errors on Lambda, designed to accommodate for race conditions
+  # on the availability of the binary resource.
+  default     = 250
 }
 
 variable "alarm_errors_interval_secs" {
