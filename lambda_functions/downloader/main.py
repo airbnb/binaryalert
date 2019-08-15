@@ -7,9 +7,6 @@ import base64
 import json
 import logging
 import os
-import shutil
-import subprocess
-import tempfile
 from typing import Any, Dict, Generator, List, Tuple
 import zipfile
 
@@ -46,25 +43,6 @@ def _iter_download_records(event: Any) -> Generator[Tuple[str, int], None, None]
             continue
 
 
-def _download_from_carbon_black(binary: Binary) -> str:
-    """Download the binary from CarbonBlack into /tmp.
-
-    WARNING: CarbonBlack truncates binaries to 25MB. The MD5 will cover the entire file, but only
-    the first 25MB of the binary will be downloaded.
-
-    Args:
-        binary: CarbonBlack binary instance.
-
-    Returns:
-        Path where file was downloaded.
-    """
-    download_path = os.path.join(tempfile.gettempdir(), 'carbonblack_{}'.format(binary.md5))
-    LOGGER.info('Downloading %s to %s', binary.webui_link, download_path)
-    with binary.file as cb_file, open(download_path, 'wb') as target_file:
-        shutil.copyfileobj(cb_file, target_file)
-    return download_path
-
-
 def _build_metadata(binary: Binary) -> Dict[str, str]:
     """Return basic metadata to make it easier to triage YARA match alerts."""
     return {
@@ -83,31 +61,23 @@ def _build_metadata(binary: Binary) -> Dict[str, str]:
     }
 
 
-def _upload_to_s3(md5: str, local_file_path: str, metadata: Dict[str, str]) -> None:
+def _upload_to_s3(binary: Binary) -> None:
     """Upload the binary contents to S3 along with the given object metadata.
 
     Args:
-        md5: CarbonBlack MD5 key (used as the S3 object key).
-        local_file_path: Path to the file to upload.
-        metadata: Binary metadata to attach to the S3 object.
-
-    Returns:
-        The newly added S3 object key (based on CarbonBlack's MD5).
+        binary: CarbonBlack binary instance.
     """
-    s3_object_key = 'carbonblack/{}'.format(md5)
+    metadata = _build_metadata(binary)
+    s3_object_key = 'carbonblack/{}'.format(binary.md5)
     LOGGER.info('Uploading to S3 with key %s', s3_object_key)
-    with open(local_file_path, 'rb') as target_file:
-        S3_BUCKET.put_object(Body=target_file, Key=s3_object_key, Metadata=metadata)
+    S3_BUCKET.upload_fileobj(binary.file, s3_object_key, ExtraArgs={'Metadata': metadata})
 
 
 def _process_md5(md5: str) -> bool:
     """Download the given file from CarbonBlack and upload to S3, returning True if successful."""
-    download_path = None
     try:
         binary = CARBON_BLACK.select(Binary, md5)
-        download_path = _download_from_carbon_black(binary)
-        metadata = _build_metadata(binary)
-        _upload_to_s3(binary.md5, download_path, metadata)  # pylint: disable=no-member
+        _upload_to_s3(binary)
         return True
     except zipfile.BadZipFile:
         LOGGER.exception('[BadZipFile] Error downloading %s', md5)
@@ -127,10 +97,6 @@ def _process_md5(md5: str) -> bool:
             'available for download from the server. This binary will be retried at a later time.'
         )
         raise
-    finally:
-        if download_path:
-            # Shred downloaded file before exiting.
-            subprocess.check_call(['shred', '--remove', download_path])
 
 
 def _publish_metrics(receive_counts: List[int]) -> None:
