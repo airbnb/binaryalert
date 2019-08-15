@@ -72,11 +72,10 @@ class MainTest(fake_filesystem_unittest.TestCase):
             from lambda_functions.downloader import main
             self.download_main = main
 
-    def test_download_from_carbon_black(self):
+    def test_upload_to_s3(self):
         """Verify that a CarbonBlack binary is uploaded correctly to S3."""
         with mock.patch.object(self.download_main.CARBON_BLACK, 'select') as mock_select, \
-                mock.patch.object(self.download_main, 'LOGGER') as mock_logger, \
-                mock.patch.object(self.download_main, 'subprocess') as mock_subprocess:
+                mock.patch.object(self.download_main, 'LOGGER') as mock_logger:
             mock_select.return_value = self._binary
 
             self.download_main.download_lambda_handler(self.event, None)
@@ -92,19 +91,13 @@ class MainTest(fake_filesystem_unittest.TestCase):
             }
 
             self.download_main.S3_BUCKET.assert_has_calls([
-                mock.call.put_object(
-                    Body=mock.ANY, Key='carbonblack/ABC123', Metadata=expected_metadata
+                mock.call.upload_fileobj(
+                    mock.ANY, 'carbonblack/ABC123', ExtraArgs={'Metadata': expected_metadata}
                 )
-            ])
-
-            mock_subprocess.assert_has_calls([
-                mock.call.check_call(['shred', '--remove', mock.ANY])
             ])
 
             # Verify the log statements.
             mock_logger.assert_has_calls([
-                mock.call.info(
-                    'Downloading %s to %s', self._binary.webui_link, mock.ANY),
                 mock.call.info('Uploading to S3 with key %s', mock.ANY),
                 mock.call.info('Sending ReceiveCount metrics')
             ])
