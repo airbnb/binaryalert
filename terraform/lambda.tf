@@ -50,6 +50,7 @@ module "binaryalert_downloader" {
 
   environment_variables = {
     CARBON_BLACK_URL                 = "${var.carbon_black_url}"
+    CARBON_BLACK_TIMEOUT             = "${var.carbon_black_timeout}"
     ENCRYPTED_CARBON_BLACK_API_TOKEN = "${var.encrypted_carbon_black_api_token}"
     TARGET_S3_BUCKET                 = "${aws_s3_bucket.binaryalert_binaries.id}"
   }

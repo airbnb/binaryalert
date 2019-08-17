@@ -20,6 +20,10 @@ enable_carbon_black_downloader = false
 // URL of the CarbonBlack server.
 carbon_black_url = ""
 
+// Timeout to use for Carbon Black API client.
+// The client default is 60, so set to something lower if desired.
+carbon_black_timeout = 60
+
 // The encrypted CarbonBlack API token will automatically be generated and saved here:
 encrypted_carbon_black_api_token = ""
 

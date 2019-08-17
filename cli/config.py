@@ -148,6 +148,18 @@ class BinaryAlertConfig:
         self._config['carbon_black_url'] = value
 
     @property
+    def carbon_black_timeout(self) -> str:
+        return self._config['carbon_black_timeout']
+
+    @carbon_black_timeout.setter
+    def carbon_black_timeout(self, value: str) -> None:
+        try:
+            int_value = int(value)
+        except ValueError:
+            raise InvalidConfigError('carbon_black_timeout "{}" is not an integer'.format(value))
+        self._config['carbon_black_timeout'] = int_value
+
+    @property
     def encrypted_carbon_black_api_token(self) -> str:
         return self._config['encrypted_carbon_black_api_token']
 

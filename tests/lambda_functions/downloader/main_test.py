@@ -35,6 +35,7 @@ class MainTest(fake_filesystem_unittest.TestCase):
     def setUp(self):
         """Mock out CarbonBlack and boto3 before importing the module."""
         os.environ['CARBON_BLACK_URL'] = 'test-carbon-black-url'
+        os.environ['CARBON_BLACK_TIMEOUT'] = '15'
         os.environ['ENCRYPTED_CARBON_BLACK_API_TOKEN'] = base64.b64encode(
             b'super-secret').decode('ascii')
         os.environ['TARGET_S3_BUCKET'] = 'test-s3-bucket'
