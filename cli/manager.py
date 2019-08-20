@@ -133,7 +133,10 @@ class Manager:
 
         print('Connecting to CarbonBlack server {} ...'.format(self._config.carbon_black_url))
         carbon_black = cbapi.CbResponseAPI(
-            url=self._config.carbon_black_url, token=self._config.plaintext_carbon_black_api_token)
+            url=self._config.carbon_black_url,
+            timeout=self._config.carbon_black_timeout,
+            token=self._config.plaintext_carbon_black_api_token
+        )
 
         self._enqueue(
             self._config.binaryalert_downloader_queue_name,
