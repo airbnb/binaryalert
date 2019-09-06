@@ -1,6 +1,6 @@
 // Create the analyzer Lambda function.
 module "binaryalert_analyzer" {
-  source          = "modules/lambda"
+  source          = "./modules/lambda"
   function_name   = "${var.name_prefix}_binaryalert_analyzer"
   description     = "Analyze a binary with a set of YARA rules"
   base_policy_arn = "${aws_iam_policy.base_policy.arn}"
@@ -37,7 +37,7 @@ resource "aws_lambda_event_source_mapping" "analyzer_via_sqs" {
 module "binaryalert_downloader" {
   enabled = "${var.enable_carbon_black_downloader ? 1 : 0}"
 
-  source          = "modules/lambda"
+  source          = "./modules/lambda"
   function_name   = "${var.name_prefix}_binaryalert_downloader"
   description     = "Copies binaries from CarbonBlack into the BinaryAlert S3 bucket"
   base_policy_arn = "${aws_iam_policy.base_policy.arn}"
