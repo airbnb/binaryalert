@@ -54,7 +54,7 @@ Sphinx==1.8.4
 sphinx-rtd-theme==0.4.3
 sphinxcontrib-websupport==1.1.0
 stevedore==1.30.0
-typed-ast==1.3.1
+typed-ast==1.3.2
 urllib3==1.24.1
 wcwidth==0.1.7
 wrapt==1.11.1
