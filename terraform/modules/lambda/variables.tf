@@ -26,6 +26,7 @@ variable "memory_size_mb" {
 Memory allocated to the Lambda function (128 - 1536 MB).
 Lambda also allocates CPU and network resources in proportion to the configured memory.
 EOF
+
 }
 
 variable "timeout_sec" {
@@ -41,7 +42,7 @@ variable "reserved_concurrent_executions" {
 }
 
 variable "environment_variables" {
-  type        = "map"
+  type        = map(string)
   description = "Map of environment variables available to the running Lambda function"
 }
 
@@ -60,10 +61,11 @@ variable "alarm_errors_help" {
 
 variable "alarm_errors_threshold" {
   description = "If at least this many errors occur within alarm_errors_interval_secs, a metric alarm will trigger"
+
   # The error threshold has been increased significantly; this is due to a recent change that
   # retries HTTP 404s by raising errors on Lambda, designed to accommodate for race conditions
   # on the availability of the binary resource.
-  default     = 250
+  default = 250
 }
 
 variable "alarm_errors_interval_secs" {
@@ -72,6 +74,7 @@ variable "alarm_errors_interval_secs" {
 }
 
 variable "alarm_sns_arns" {
-  type        = "list"
+  type        = list(string)
   description = "A list of SNS topic ARNs which will be notified when a metric alarm triggers"
 }
+

@@ -27,6 +27,7 @@ locals {
 }
 EOF
 
+
   yara_rules = <<EOF
 {
   "type": "metric",
@@ -45,6 +46,7 @@ EOF
 }
 EOF
 
+
   analyzed_binaries = <<EOF
 {
   "type": "metric",
@@ -60,6 +62,7 @@ EOF
   }
 }
 EOF
+
 
   sqs_analyzer = <<EOF
 {
@@ -77,6 +80,7 @@ EOF
   }
 }
 EOF
+
 
   sqs_analyzer_age = <<EOF
 {
@@ -108,11 +112,12 @@ EOF
 }
 EOF
 
+
   // Due to https://github.com/hashicorp/terraform/issues/11574, both ternary branches are always
   // computed, so we have to use this special idiom (same as modules/lambda/outputs.tf).
-  downloader_function_name = "${module.binaryalert_downloader.function_name}"
+  downloader_function_name = module.binaryalert_downloader.function_name
 
-  downloader_queue_name = "${element(concat(aws_sqs_queue.downloader_queue.*.name, list("")), 0)}"
+  downloader_queue_name = element(concat(aws_sqs_queue.downloader_queue.*.name, [""]), 0)
 
   sqs_downloader = <<EOF
 {
@@ -130,6 +135,7 @@ EOF
   }
 }
 EOF
+
 
   sqs_downloader_age = <<EOF
 {
@@ -149,11 +155,23 @@ EOF
       "horizontal": [
         {
           "label": "Max",
-          "value": "${element(concat(aws_sqs_queue.downloader_queue.*.message_retention_seconds, list("")), 0)}"
+          "value": "${element(
+  concat(
+    aws_sqs_queue.downloader_queue.*.message_retention_seconds,
+    [""],
+  ),
+  0,
+  )}"
         },
         {
           "label": "Alarm",
-          "value": "${element(concat(aws_cloudwatch_metric_alarm.downloader_sqs_age.*.threshold, list("")), 0)}"
+          "value": "${element(
+  concat(
+    aws_cloudwatch_metric_alarm.downloader_sqs_age.*.threshold,
+    [""],
+  ),
+  0,
+)}"
         }
       ]
     }
@@ -161,11 +179,13 @@ EOF
 }
 EOF
 
-  downloader = <<EOF
+
+downloader = <<EOF
     ,[".", ".", ".", "${local.downloader_function_name}", {"label": "Downloader"}]
 EOF
 
-  lambda_invocations = <<EOF
+
+lambda_invocations = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -185,7 +205,8 @@ EOF
 }
 EOF
 
-  max_lambda_duration = <<EOF
+
+max_lambda_duration = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -213,7 +234,8 @@ EOF
 }
 EOF
 
-  lambda_errors = <<EOF
+
+lambda_errors = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -233,7 +255,8 @@ EOF
 }
 EOF
 
-  lambda_throttles = <<EOF
+
+lambda_throttles = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -253,7 +276,8 @@ EOF
 }
 EOF
 
-  s3_download_latency = <<EOF
+
+s3_download_latency = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -269,7 +293,8 @@ EOF
 }
 EOF
 
-  sns_publications = <<EOF
+
+sns_publications = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -289,11 +314,13 @@ EOF
 }
 EOF
 
-  downloader_logs = <<EOF
+
+downloader_logs = <<EOF
     ,[".", ".", ".", "/aws/lambda/${local.downloader_function_name}", {"label": "Downloader"}]
 EOF
 
-  log_bytes = <<EOF
+
+log_bytes = <<EOF
 {
   "type": "metric",
   "width": 12,
@@ -314,7 +341,8 @@ EOF
 }
 EOF
 
-  dashboard_body_without_downloader = <<EOF
+
+dashboard_body_without_downloader = <<EOF
 {
   "widgets": [
     ${local.s3_bucket_stats}, ${local.yara_rules},
@@ -327,7 +355,8 @@ EOF
 }
 EOF
 
-  dashboard_body_with_downloader = <<EOF
+
+dashboard_body_with_downloader = <<EOF
 {
   "widgets": [
     ${local.s3_bucket_stats}, ${local.yara_rules},
@@ -341,7 +370,8 @@ EOF
 }
 EOF
 
-  dashboard_body = "${var.enable_carbon_black_downloader ? local.dashboard_body_with_downloader : local.dashboard_body_without_downloader}"
+
+dashboard_body = var.enable_carbon_black_downloader ? local.dashboard_body_with_downloader : local.dashboard_body_without_downloader
 }
 
 resource "aws_cloudwatch_dashboard" "binaryalert" {
@@ -349,5 +379,6 @@ resource "aws_cloudwatch_dashboard" "binaryalert" {
 
   // Terraform automatically converts numbers to strings when putting them in a list.
   // We have to strip quotes around numbers, so that {"value": "123"} turns into {"value": 123}
-  dashboard_body = "${replace(local.dashboard_body, "/\"([0-9]+)\"/", "$1")}"
+  dashboard_body = replace(local.dashboard_body, "/\"([0-9]+)\"/", "$1")
 }
+
