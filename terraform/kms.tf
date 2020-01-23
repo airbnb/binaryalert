@@ -34,16 +34,16 @@ resource "aws_kms_key" "sse_s3" {
   description         = "BinaryAlert Server-Side Encryption - S3"
   enable_key_rotation = true
 
-  tags {
-    Name = "${var.tagged_name}"
+  tags = {
+    Name = var.tagged_name
   }
 
-  policy = "${data.aws_iam_policy_document.kms_allow_s3.json}"
+  policy = data.aws_iam_policy_document.kms_allow_s3.json
 }
 
 resource "aws_kms_alias" "sse_s3_alias" {
   name          = "alias/${var.name_prefix}_binaryalert_sse_s3"
-  target_key_id = "${aws_kms_key.sse_s3.key_id}"
+  target_key_id = aws_kms_key.sse_s3.key_id
 }
 
 // KMS key for server-side encryption (SSE) of SQS
@@ -51,31 +51,32 @@ resource "aws_kms_key" "sse_sqs" {
   description         = "BinaryAlert Server-Side Encryption - SQS"
   enable_key_rotation = true
 
-  tags {
-    Name = "${var.tagged_name}"
+  tags = {
+    Name = var.tagged_name
   }
 
-  policy = "${data.aws_iam_policy_document.kms_allow_s3.json}"
+  policy = data.aws_iam_policy_document.kms_allow_s3.json
 }
 
 resource "aws_kms_alias" "sse_sqs_alias" {
   name          = "alias/${var.name_prefix}_binaryalert_sse_sqs"
-  target_key_id = "${aws_kms_key.sse_sqs.key_id}"
+  target_key_id = aws_kms_key.sse_sqs.key_id
 }
 
 // KMS key to encrypt CarbonBlack credentials
 resource "aws_kms_key" "carbon_black_credentials" {
-  count               = "${var.enable_carbon_black_downloader ? 1 : 0}"
+  count               = var.enable_carbon_black_downloader ? 1 : 0
   description         = "Encrypts CarbonBlack credentials for the BinaryAlert downloader."
   enable_key_rotation = true
 
-  tags {
-    Name = "${var.tagged_name}"
+  tags = {
+    Name = var.tagged_name
   }
 }
 
 resource "aws_kms_alias" "encrypt_credentials_alias" {
-  count         = "${var.enable_carbon_black_downloader ? 1 : 0}"
+  count         = var.enable_carbon_black_downloader ? 1 : 0
   name          = "alias/${var.name_prefix}_binaryalert_carbonblack_credentials"
-  target_key_id = "${aws_kms_key.carbon_black_credentials.key_id}"
+  target_key_id = aws_kms_key.carbon_black_credentials[0].key_id
 }
+
