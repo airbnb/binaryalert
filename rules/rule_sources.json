@@ -9,7 +9,7 @@
     {
       "url": "https://github.com/YARA-Rules/rules.git",
       "include": [
-        "CVE_Rules/*"
+        "cve_rules/*"
       ]
     }
   ]
