@@ -21,8 +21,11 @@ variable "carbon_black_timeout" {
 variable "encrypted_carbon_black_api_token" {
 }
 
-variable "s3_log_bucket" {
-}
+variable "enable_carbon_black_downloader" {}
+variable "carbon_black_url" {}
+variable "carbon_black_timeout" {}
+variable "encrypted_carbon_black_api_token" {}
+
 
 variable "s3_log_prefix" {
 }

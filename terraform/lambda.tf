@@ -35,7 +35,9 @@ resource "aws_lambda_event_source_mapping" "analyzer_via_sqs" {
 
 // Create the CarbonBlack downloading Lambda function.
 module "binaryalert_downloader" {
+ 
   enabled         = var.enable_carbon_black_downloader ? 1 : 0
+ 
   source          = "./modules/lambda"
   function_name   = "${var.name_prefix}_binaryalert_downloader"
   description     = "Copies binaries from CarbonBlack into the BinaryAlert S3 bucket"
