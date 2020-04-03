@@ -3,8 +3,8 @@ resource "aws_dynamodb_table" "binaryalert_yara_matches" {
   name           = "${var.name_prefix}_binaryalert_matches"
   hash_key       = "SHA256"
   range_key      = "AnalyzerVersion"
-  read_capacity  = "${var.dynamo_read_capacity}"
-  write_capacity = "${var.dynamo_write_capacity}"
+  read_capacity  = var.dynamo_read_capacity
+  write_capacity = var.dynamo_write_capacity
 
   // Only attributes used as hash/range keys are defined here.
   attribute {
@@ -22,7 +22,8 @@ resource "aws_dynamodb_table" "binaryalert_yara_matches" {
     enabled = true
   }
 
-  tags {
-    Name = "${var.tagged_name}"
+  tags = {
+    Name = var.tagged_name
   }
 }
+
