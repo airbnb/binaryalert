@@ -5,6 +5,11 @@ variable "aws_account_id" {
   description = "12-digit AWS account ID"
 }
 
+variable "aws_account_name" {
+  type        = string
+  description = "AWS account name, last part of the ARN, right after the ':' (colon), for instance 'root', or 'user/thename'"
+}
+
 variable "aws_region" {
   type        = string
   description = "AWS region in which to deploy the BinaryAlert components"
