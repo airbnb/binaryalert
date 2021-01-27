@@ -58,6 +58,7 @@ class BinaryAlertConfig:
     """Wrapper around reading, validating, and updating the terraform.tfvars config file."""
     # Expected configuration value formats.
     VALID_AWS_ACCOUNT_ID_FORMAT = r'\d{12}'
+    VALID_AWS_ACCOUNT_NAME_FORMAT = r'[a-z]+\/?[a-z]+'
     VALID_AWS_REGION_FORMAT = r'[a-z]{2}-[a-z]{2,15}-\d'
     VALID_NAME_PREFIX_FORMAT = r'[a-z][a-z0-9_]{3,50}'
     VALID_CB_API_TOKEN_FORMAT = r'[a-f0-9]{40}'  # CarbonBlack API token.
@@ -95,6 +96,19 @@ class BinaryAlertConfig:
                     value, self.VALID_AWS_ACCOUNT_ID_FORMAT)
             )
         self._config['aws_account_id'] = value
+
+    @property
+    def aws_account_name(self) -> str:
+        return self._config['aws_account_name']
+
+    @aws_account_name.setter
+    def aws_account_name(self, value: str) -> None:
+        if not re.fullmatch(self.VALID_AWS_ACCOUNT_NAME_FORMAT, value, re.ASCII):
+            raise InvalidConfigError(
+                'aws_account_name "{}" does not match format {}'.format(
+                    value, self.VALID_AWS_ACCOUNT_NAME_FORMAT)
+            )
+        self._config['aws_account_name'] = value
 
     @property
     def aws_region(self) -> str:
@@ -260,6 +274,7 @@ class BinaryAlertConfig:
         Each request will be retried until the answer is in the correct format.
         """
         get_input('AWS Account ID', self.aws_account_id, self, 'aws_account_id')
+        get_input('AWS Account Name', self.aws_account_name, self, 'aws_account_name')
         get_input('AWS Region', self.aws_region, self, 'aws_region')
         get_input('Unique name prefix, e.g. "company_team"', self.name_prefix, self, 'name_prefix')
         enable_downloader = get_input('Enable the CarbonBlack downloader?',
@@ -285,6 +300,7 @@ class BinaryAlertConfig:
         """
         # Go through the internal setters which have the validation logic.
         self.aws_account_id = self.aws_account_id
+        self.aws_account_name = self.aws_account_name
         self.aws_region = self.aws_region
         self.name_prefix = self.name_prefix
         self.enable_carbon_black_downloader = self.enable_carbon_black_downloader
