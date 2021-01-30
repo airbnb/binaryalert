@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Command-line tool for easily managing BinaryAlert."""
 import argparse
 import os

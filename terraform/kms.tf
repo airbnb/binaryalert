@@ -5,7 +5,7 @@ data "aws_iam_policy_document" "kms_allow_s3" {
 
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.aws_account_id}:root"]
+      identifiers = ["arn:aws:iam::${var.aws_account_id}:${var.aws_account_name}"]
     }
 
     actions   = ["kms:*"]
