@@ -47,7 +47,7 @@ resource "aws_lambda_function" "function" {
   description   = var.description
   handler       = var.handler
   role          = aws_iam_role.role[0].arn
-  runtime       = "python3.6"
+  runtime       = "python3.7"
 
   memory_size                    = var.memory_size_mb
   timeout                        = var.timeout_sec
