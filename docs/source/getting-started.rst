@@ -58,6 +58,8 @@ Download BinaryAlert
   $ cd binaryalert
   $ python3.6 -m venv venv
   $ source venv/bin/activate
+  
+.. note:: If brew installed the latest python and you still don't have python3.6, you can download it from ``https://www.python.org/downloads/release/python-365/``, then retry the commands above.
 
 3. Install the BinaryAlert requirements:
 
@@ -72,6 +74,8 @@ Download BinaryAlert
 .. code-block:: bash
 
   $ ./manage.py unit_test
+
+.. note:: If you run into an error ``ModuleNotFoundError: No module named 'boto3'``, try ``python3.6 manage.py unit_test``.
 
 Set AWS Credentials
 -------------------
