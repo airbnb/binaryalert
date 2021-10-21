@@ -2,7 +2,7 @@ alabaster==0.7.12
 asn1crypto==0.24.0
 astroid==2.1.0
 attrdict==2.0.1
-Babel==2.6.0
+Babel==2.9.1
 bandit==1.5.1
 boto3==1.9.99
 botocore==1.12.99
