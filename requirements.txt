@@ -34,7 +34,7 @@ pbr==5.1.2
 pika==0.13.0
 ply==3.10
 prompt-toolkit==2.0.9
-protobuf==3.6.1
+protobuf==3.15.0
 pycparser==2.19
 pyfakefs==3.5.7
 Pygments==2.3.1
