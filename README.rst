@@ -25,6 +25,9 @@ BinaryAlert: Serverless, Real-Time & Retroactive Malware Detection
 
 Deploy terraform standalone
 ==========================
+0. Follow manage.py instruction above until deploy
+   python3 manage.py build
+
 1. Use profile and edit terraform.tfbars
    cd terraform
    vim terraform.tfvars
