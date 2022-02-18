@@ -1,4 +1,9 @@
 /* See terraform.tfvars for descriptions of each of the variables. */
+variable "aws_role" {
+}
+
+varialbe "aws_role_name" {
+}
 
 variable "aws_account_id" {
 }

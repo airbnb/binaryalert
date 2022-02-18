@@ -6,13 +6,16 @@
 // These are the only settings you need to get started.
 
 // 12-digit AWS account ID
-aws_account_id = ""
+aws_account_id = "123456789012"
+aws_role       = "arn:aws:iam::12345:role/team"
+aws_role_name  = "okta-team"
+
 
 // AWS region in which to deploy the BinaryAlert components.
-aws_region = "us-east-1"
+aws_region = "us-west-2"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = ""
+name_prefix = "team"
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
 enable_carbon_black_downloader = false
