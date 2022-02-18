@@ -2,7 +2,7 @@
 variable "aws_role" {
 }
 
-varialbe "aws_role_name" {
+variable "aws_role_name" {
 }
 
 variable "aws_account_id" {

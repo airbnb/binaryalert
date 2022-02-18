@@ -45,7 +45,6 @@ pyparsing==2.3.1
 python-dateutil==2.6.1
 pytz==2018.9
 PyYAML==3.13
-requests==2.21.0
 s3transfer==0.2.0
 six==1.12.0
 smmap2==2.0.5
@@ -59,3 +58,4 @@ urllib3==1.24.1
 wcwidth==0.1.7
 wrapt==1.11.1
 yara-python==3.8.0
+requests==2.24.0
