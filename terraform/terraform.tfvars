@@ -6,16 +6,18 @@
 // These are the only settings you need to get started.
 
 // 12-digit AWS account ID
-aws_account_id = "123456789012"
-aws_role       = "arn:aws:iam::12345:role/team"
-aws_role_name  = "okta-team"
+aws_account_id = "055040539746"
+#aws_role = "arn:aws:iam::055040539746:user/cloud_user"
+#aws_role_name = "default"
+aws_role_name = "default"
+aws_role = "arn:aws:iam::055040539746:user/cloud_user"
 
 
 // AWS region in which to deploy the BinaryAlert components.
-aws_region = "us-west-2"
+aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = "team"
+name_prefix = "freemountain"
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
 enable_carbon_black_downloader = false
@@ -84,14 +86,14 @@ lambda_analyze_memory_mb = 1024
 
 lambda_analyze_timeout_sec = 300
 
-lambda_analyze_concurrency_limit = 100
+lambda_analyze_concurrency_limit = -1
 
 // Memory, time, and concurrency limits for the downloader function.
 lambda_download_memory_mb = 256
 
 lambda_download_timeout_sec = 300
 
-lambda_download_concurrency_limit = 100
+lambda_download_concurrency_limit = -1
 
 // ##### S3 #####
 // WARNING: If force destroy is enabled, all objects in the S3 bucket(s) will be deleted during
