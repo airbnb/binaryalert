@@ -23,9 +23,17 @@ BinaryAlert: Serverless, Real-Time & Retroactive Malware Detection
   :scale: 75%
   :alt: BinaryAlert Logo
 
+BinaryAlert is an open-source serverless AWS pipeline where any file uploaded to an S3 bucket is
+immediately scanned with a configurable set of `YARA <https://virustotal.github.io/yara/>`_ rules.
+An alert will fire as soon as any match is found, giving an incident response team the ability to
+quickly contain the threat before it spreads.
+
+Read the documentation at `binaryalert.io <https://binaryalert.io>`_!
+
 Deploy terraform standalone
-==========================
+---------------------------
 0. Follow manage.py instruction above until deploy
+   python3 manage.py configure
    python3 manage.py build
 
 1. Use profile and edit terraform.tfbars
@@ -35,14 +43,7 @@ Deploy terraform standalone
 2. Use AWS_PROFILE if you need it. Code assumes local s3
    terraform init
    AWS_PROFILE="okta-team" terraform plan
-   AWS_PROFILE="okta-team" terraform apply 
-
-BinaryAlert is an open-source serverless AWS pipeline where any file uploaded to an S3 bucket is
-immediately scanned with a configurable set of `YARA <https://virustotal.github.io/yara/>`_ rules.
-An alert will fire as soon as any match is found, giving an incident response team the ability to
-quickly contain the threat before it spreads.
-
-Read the documentation at `binaryalert.io <https://binaryalert.io>`_!
+   AWS_PROFILE="okta-team" terraform apply
 
 
 Links
