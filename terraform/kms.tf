@@ -1,11 +1,11 @@
-
+// Allow S3 to encrypt with either SSE key (to encrypt inventory or to enqueue SQS)
 data "aws_iam_policy_document" "kms_allow_s3" {
   statement {
     sid = "Enable IAM User Permissions"
 
     principals {
       type        = "AWS"
-      identifiers = ["${var.aws_role}"]
+      identifiers = ["arn:aws:iam::${var.aws_account_id}:root"]
     }
 
     actions   = ["kms:*"]

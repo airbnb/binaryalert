@@ -6,18 +6,18 @@
 // These are the only settings you need to get started.
 
 // 12-digit AWS account ID
-aws_account_id = "055040539746"
-#aws_role = "arn:aws:iam::055040539746:user/cloud_user"
+aws_account_id = "661676943050"
+#aws_role = "arn:aws:iam::661676943050:user/cloud_user"
 #aws_role_name = "default"
-aws_role_name = "default"
-aws_role = "arn:aws:iam::055040539746:user/cloud_user"
+#aws_role_name = "default"
+#aws_role = "arn:aws:iam::661676943050:user/cloud_user"
 
 
 // AWS region in which to deploy the BinaryAlert components.
 aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = "freemountain"
+name_prefix = "crispychicken"
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
 enable_carbon_black_downloader = false
