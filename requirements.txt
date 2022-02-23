@@ -13,7 +13,7 @@ cffi
 chardet
 coverage
 coveralls
-cryptography==2.5
+cryptography>3.2
 docopt
 docutils
 futures==3.1.1
