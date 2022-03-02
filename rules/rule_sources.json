@@ -1,6 +1,12 @@
 {
   "repos": [
     {
+      "url": "https://github.com/ditekshen/detection.git",
+      "exclude": [
+	"yara/malware.yar"
+      ]
+    },
+    {
       "url": "https://github.com/Neo23x0/signature-base.git",
       "exclude": [
 	"yara/gen_susp_js_obfuscatorio.yar",
