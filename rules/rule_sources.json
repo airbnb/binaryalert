@@ -2,6 +2,12 @@
   "repos": [
     {
       "url": "https://github.com/Neo23x0/signature-base.git",
+      "exclude": [
+	"yara/gen_susp_js_obfuscatorio.yar",
+	"yara/apt_cobaltstrike.yar",
+	"yara/apt_tetris.yar",
+	"yara/yara_mixed_ext_vars.yar"
+      ],
       "include": [
         "yara/*"
       ]
@@ -20,12 +26,20 @@
     },
     {
       "url": "https://github.com/bartblaze/Yara-rules.git",
+      "exclude": [
+	"rules/crimeware/RedLine_Campaign_June2021.yar",
+	"rules/crimeware/RedLine.yar",
+        "rules/crimeware/ArechClient_Campaign_July2021.yar"
+      ],
       "include": [
         "rules/*"
       ]
     },
     {
       "url": "https://github.com/kevoreilly/CAPEv2.git",
+      "exclude": [
+	"data/yara/CAPE/CobaltStrikeBeacon.yar"
+      ],
       "include": [
         "analyzer/windows/data/yara/*",
         "data/yara/*"
@@ -44,10 +58,20 @@
       "url": "https://github.com/f0wl/yara_rules.git"
     },
     {
-      "url": "https://github.com/fboldewin/YARA-rules.git"
+      "url": "https://github.com/fboldewin/YARA-rules.git",
+      "exclude": [
+        "ATM.Malware.Ploutus-I.yar"
+      ]
     },
     {
-      "url": "https://github.com/imp0rtp3/yara-rules.git"
+      "url": "https://github.com/imp0rtp3/yara-rules.git",
+      "exclude": [
+	"2021-08-12 Tetris/tetris_advanced.yar",
+	"2021-06-10 Sborka/yar.yar",
+	"2021-08-25 JS obfuscator/yara.yar",
+        "2020-06-06 TSCoockie/yar.yar",
+	"2021-06-06 TSCoockie/yar.yar"
+      ]
     },
     {
       "url": "https://github.com/intezer/yara-rules.git"
@@ -68,7 +92,14 @@
       "url": "https://github.com/securitymagic/yara.git"
     },
     {
-      "url": "https://github.com/StrangerealIntel/DailyIOC.git"
+      "url": "https://github.com/StrangerealIntel/DailyIOC.git",
+      "exclude": [
+	"2020-04-29/Yara_Rule_APT_Bazar-April_2020_1.yar",
+	"2020-09-14/SLoad/Mal_Loader_Sload_Sep-2020-1.yar",
+        "2020-10-31/Ran_Egregor_Oct_2020_1 .yar",
+	"2020-06-26/Heinote_June_2020-1.yar",
+	"2020-07-23/Yara_Rule_APT_Lazarus_Stealer_July_2020_1.yar"
+      ]
     },
     {
       "url": "https://github.com/t4d/PhishingKit-Yara-Rules.git"
