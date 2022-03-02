@@ -1,3 +1,4 @@
+setuptools_rust
 alabaster
 asn1crypto
 astroid

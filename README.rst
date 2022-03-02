@@ -45,6 +45,11 @@ Deploy terraform standalone
    AWS_PROFILE="okta-team" terraform plan
    AWS_PROFILE="okta-team" terraform apply
 
+rules
+-----
+
+advanced-threat-research  eset  f0wl  intezer  malpedia  mandiant  reversinglabs  securitymagic  t4d  telekom-security
+
 
 Links
 -----

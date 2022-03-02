@@ -11,6 +11,70 @@
       "include": [
         "CVE_Rules/*"
       ]
+    },
+    {
+      "url": "https://github.com/reversinglabs/reversinglabs-yara-rules.git",
+      "include": [
+        "yara/*"
+      ]
+    },
+    {
+      "url": "https://github.com/bartblaze/Yara-rules.git",
+      "include": [
+        "rules/*"
+      ]
+    },
+    {
+      "url": "https://github.com/kevoreilly/CAPEv2.git",
+      "include": [
+        "analyzer/windows/data/yara/*",
+        "data/yara/*"
+      ]
+    },
+    {
+      "url": "https://github.com/eset/malware-ioc.git"
+    },
+    {
+      "url": "https://github.com/mandiant/red_team_tool_countermeasures.git",
+      "include": [
+        "all-yara.yar"
+      ]
+    },
+    {
+      "url": "https://github.com/f0wl/yara_rules.git"
+    },
+    {
+      "url": "https://github.com/fboldewin/YARA-rules.git"
+    },
+    {
+      "url": "https://github.com/imp0rtp3/yara-rules.git"
+    },
+    {
+      "url": "https://github.com/intezer/yara-rules.git"
+    },
+    {
+      "url": "https://github.com/malpedia/signator-rules.git",
+      "include": [
+        "rules/*"
+      ]
+    },
+    {
+      "url": "https://github.com/advanced-threat-research/Yara-Rules.git"
+    },
+    {
+      "url": "https://github.com/advanced-threat-research/Yara-Rules.git"
+    },
+    {
+      "url": "https://github.com/securitymagic/yara.git"
+    },
+    {
+      "url": "https://github.com/StrangerealIntel/DailyIOC.git"
+    },
+    {
+      "url": "https://github.com/t4d/PhishingKit-Yara-Rules.git"
+    },
+    {
+      "url": "https://github.com/telekom-security/malware_analysis.git"
     }
   ]
 }
