@@ -33,8 +33,11 @@ Read the documentation at `binaryalert.io <https://binaryalert.io>`_!
 Deploy terraform standalone
 ---------------------------
 0. Follow manage.py instruction above until deploy
+   # below skips the python3 manage.py compile_rules
+   unzip compiled_yara_rules.bin.zip
    python3 manage.py configure
    python3 manage.py build
+   python3 manage.py deploy
 
 1. Use profile and edit terraform.tfbars
    cd terraform
