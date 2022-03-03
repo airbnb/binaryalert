@@ -43,7 +43,8 @@ Deploy terraform standalone
    cd terraform
    vim terraform.tfvars
 
-2. Use AWS_PROFILE if you need it. Code assumes local s3
+2. Use AWS_PROFILE if you need it. Code assumes local s3, use tfswitch to get the best terraform binary
+   tfswitch 
    terraform init
    AWS_PROFILE="okta-team" terraform plan
    AWS_PROFILE="okta-team" terraform apply
