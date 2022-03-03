@@ -32,7 +32,7 @@ Read the documentation at `binaryalert.io <https://binaryalert.io>`_!
 
 Deploy terraform standalone
 ---------------------------
-0. Follow manage.py instruction above until deploy
+0. Follow manage.py instruction above until deploy for the first time.  deploy will always build a new lambda function
    # below skips the python3 manage.py compile_rules
    unzip compiled_yara_rules.bin.zip
    python3 manage.py configure
@@ -43,7 +43,7 @@ Deploy terraform standalone
    cd terraform
    vim terraform.tfvars
 
-2. Use AWS_PROFILE if you need it. Code assumes local s3, use tfswitch to get the best terraform binary
+2. Use AWS_PROFILE if you need it. Code assumes local s3, use tfswitch to get the best terraform binary. this won't build new lambda function and is perfect for testing infrastructure only
    tfswitch 
    terraform init
    AWS_PROFILE="okta-team" terraform plan
