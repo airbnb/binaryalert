@@ -6,7 +6,7 @@
 // These are the only settings you need to get started.
 
 // 12-digit AWS account ID
-aws_account_id = "661676943050"
+aws_account_id = "949538729929"
 #aws_role = "arn:aws:iam::661676943050:user/cloud_user"
 #aws_role_name = "default"
 #aws_role_name = "default"
@@ -17,7 +17,7 @@ aws_account_id = "661676943050"
 aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = "crispychicken"
+name_prefix = "fastnfurious"
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
 enable_carbon_black_downloader = false
@@ -42,6 +42,9 @@ s3_log_prefix = "s3-access-logs/"
 // Access logs expire after this many days. Has no effect if using pre-existing bucket for logs.
 s3_log_expiration_days = 90
 
+// enable s3 acceleration will cost some bucks
+s3_acceleration_enable = 1
+
 // How long to retain Lambda function logs.
 lambda_log_retention_days = 14
 
@@ -56,7 +59,7 @@ tagged_name = "BinaryAlert"
 metric_alarm_sns_topic_arn = ""
 
 // Alarm if no binaries are analyzed for this amount of time.
-expected_analysis_frequency_minutes = 30
+expected_analysis_frequency_minutes = 1
 
 // ##### Dynamo #####
 // Provisioned read/write capacity for the Dynamo table which stores match results.

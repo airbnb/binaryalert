@@ -30,6 +30,9 @@ variable "s3_log_prefix" {
 variable "s3_log_expiration_days" {
 }
 
+variable "s3_acceleration_enable" {
+}
+
 variable "lambda_log_retention_days" {
 }
 
