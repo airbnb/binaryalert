@@ -14,5 +14,6 @@ rule hacktool_windows_mimikatz_modules
         $s2 = "mimidrv" fullword ascii wide
         $s3 = "mimilove" fullword ascii wide
     condition:
-        any of them
+        uint16(0)==0x5a4d
+        and any of them
 }
